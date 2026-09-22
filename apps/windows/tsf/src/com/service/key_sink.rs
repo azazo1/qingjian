@@ -241,12 +241,20 @@ impl TextService_Impl {
                 true
             }
             // 放行的功能键：Server 没动缓冲区，交还应用（应用处理这个键时光标可能会移）。
+            // Server 顺带交出的已选词（组句里的延迟上屏）先插进文档，再让应用处理这个键。
             (
                 Next::Document {
-                    consumed: false, ..
+                    consumed: false,
+                    commit,
+                    preedit,
                 },
                 _,
-            ) => false,
+            ) => {
+                if commit.is_some() || !preedit.is_empty() {
+                    self.update_document(pic, commit, preedit);
+                }
+                false
+            }
             (
                 Next::Document {
                     commit, preedit, ..

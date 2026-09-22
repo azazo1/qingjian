@@ -36,6 +36,16 @@ TSV 解析、查询与生成工具把 `lue` / `nue` 统一成 `lve` / `nve`。
 光标后的键接在末尾 (`Query::rest_keys`), 辅码段照旧拼上; 注音与全拼没有「敲的键」这一层, 回落到 `marked_text`.
 候选窗口的拼音行仍走 `marked_segments`; macOS 壳按 `[general] inline_keys` (缺省开) 选行内用哪一套, Windows / Linux 只拿分段, 不受影响.
 
+组句里的上屏是延迟的 (`engine/pending.rs`): 一段拼音还没选完时 (`commit_with` 里 `buffer_left`), 选中的词进 `Engine.pending`,
+`commit` 返回空串表示这次不交给应用; 词里存上屏文本, 吃掉的拼音键 (`restore_keys`, 不含辅码段), 上屏链快照与这次的学习账 (`LastCommit`).
+preedit 里它作为 `MarkedKind::Pending` 段排在拼音前面 (`Query::pending`, `marked_text` / `marked_cursor` / `inline_text` / `inline_cursor` 都从这里往后算),
+候选窗口的拼音行同样带上它, 三端按正文色画. 这段拼音选完 (缓冲区空), 回车原样上屏 (`take_raw`), 取消组句 (`clear`) 或失焦 (`break_chain`) 时
+`take_pending` 把全文交出去并按上屏顺序补进 `recent_commits`; `set_input` 与 `discard_input` 直接丢弃 (前者是 CLI / 测试换段, 后者是隐私边界).
+退格 (`Engine::backspace`) 先 `undo_pending`: 键还回缓冲区开头 (`Composition::prepend`), 上屏链恢复快照, 这次上屏按「已经删掉」记账
+(`erased`, 之后改选别的词时由 `apply_retraction` 退回学习), 没有可拆的才删字符.
+壳侧交文本的时机: macOS 的 `commit_index` / `flush_pending` (`dispatch_event` 对「这一键交给应用」与「组句已结束却还有 pending」两种情形兜底),
+Windows / Linux 的 `settle_pending` (同上两种情形) 与 `Effect::Passthrough`; Windows 的 TSF 放行功能键时也先把 Server 顺带交出的文本插进文档.
+
 形码（五笔）在 `engine::query::code`。`Engine` 上有两个开关：`set_code_table`（码表）与 `set_phonetic`（拼音侧参不参与），
 在 `query_inner` 进切分之前按这两个分派——只有拼音 / 只有形码（`query_code`）/ **两边都开（`query_mixed`，混输）**。
 编码按前缀查表，`CandidateKind::Code` 的候选 `syllables` 为空、上屏吃掉整段作用域（`whole_scope`）。
@@ -156,7 +166,8 @@ macOS 另有 `[shortcut] mac_switch_single` / `mac_switch_dual` 两个开关（`
 （`[aux_code] disabled` 是黑名单，`[general] aux_code_key` 缺省 `;` 且校验后退回缺省、`aux_code_show` 是显示码开关）；
 `protocol` 模块是 Windows Server ↔ TSF DLL 的 IPC 协议类型
 （`ClientMessage` / `ServerMessage` / `Frame` / `PreeditSegment`，全 serde，两端共用，见 `docs/design/architecture.md`「Windows：TSF」；
-`PROTOCOL_VERSION` = 6，`PreeditKind::AuxCode` 对应 Core 的 `MarkedKind::AuxCode`，`Frame.aux_code_show` 随帧下发显示码开关）。
+`PROTOCOL_VERSION` = 7，`PreeditKind::AuxCode` / `PreeditKind::Pending` 对应 Core 的 `MarkedKind::AuxCode` / `MarkedKind::Pending`，
+`Frame.aux_code_show` 随帧下发显示码开关；协议比 Server 老的 DLL 收到这两类段会解析失败，所以 `downgrade_for_old_dll` 把它们降级成 `Typed`）。
 
 ## crates/qingjian-render
 

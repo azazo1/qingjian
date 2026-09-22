@@ -27,9 +27,8 @@ impl QingjianInputController {
             if let Some(before) = before {
                 h.engine.set_rescoring_context(before);
             }
-            // 查询失败（整段切不动）时退回显示原始字母
-            let mut marked = h.engine.composition().text().to_owned();
-            let mut cursor = h.engine.composition().cursor();
+            // 查询失败（整段切不动）时退回显示原始字母；还没交给应用的已选词排在前面
+            let (mut marked, mut cursor) = h.engine.plain_preedit();
             let mut preedit = Preedit::plain(&marked, cursor);
             let candidates = h
                 .engine

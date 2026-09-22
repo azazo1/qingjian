@@ -133,6 +133,8 @@ fn draw_top_line(hdc: HDC, data: &RenderData, y: i32) -> i32 {
             PreeditKind::Corrected => (theme.pos_color, true, false),
             // 辅码码段：与剩余拼音同一个淡色，再压一道下划线把它们区分开
             PreeditKind::AuxCode => (theme.pos_color, false, true),
+            // 已经选中、还没交给应用的词是正经文字，不是拼音，用正文色
+            PreeditKind::Pending => (theme.text_color, false, false),
         };
         let width = draw_text(hdc, theme.annotation_font, color, x, top, text);
         let weight = scale_line(theme);

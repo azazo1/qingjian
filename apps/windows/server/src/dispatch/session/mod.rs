@@ -53,13 +53,17 @@ impl Router {
 
     /// 焦点离开：把缓冲区原样交出并清组句。组句不属于 `session` 时只清不交，别把 A 应用的拼音落进 B。
     pub(super) fn commit_raw_for(&mut self, session: SessionId) -> Option<String> {
-        let text = (self.focused == Some(session) && !self.engine.composition().is_empty())
-            .then(|| self.engine.take_raw());
+        // 缓冲区空了但还有没交给应用的已选词时也要交出去（`take_raw` 把它们接在原样上屏的字母前面）
+        let text = (self.focused == Some(session)
+            && (!self.engine.composition().is_empty() || self.engine.has_pending()))
+        .then(|| self.engine.take_raw())
+        .filter(|text| !text.is_empty());
         self.reset_composition();
         text
     }
 
     /// 清掉组句、展示状态、在飞的云联想与翻译评审，收起候选窗口。
+    /// 还没交给应用的已选词在这里丢掉：失焦那一路（[`Self::commit_raw_for`]）已经先 `take_raw` 交出去了。
     pub(super) fn reset_composition(&mut self) {
         self.engine.break_chain();
         self.engine.clear();

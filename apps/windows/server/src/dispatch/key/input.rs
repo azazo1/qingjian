@@ -108,10 +108,11 @@ impl Router {
                 // 辅码态里 Esc 只清码段、拼音留着（与 Core 的 clear_aux 语义一致）
                 if self.engine.in_aux() {
                     self.engine.clear_aux();
+                    Effect::Changed(None)
                 } else {
-                    self.engine.clear();
+                    // 取消组句：拼音作废，但已经选中、还没交给应用的词（`clear` 的返回值）照样上屏
+                    Effect::Changed(Some(self.engine.clear()))
                 }
-                Effect::Changed(None)
             }
             codes::RETURN => {
                 if self.engine.is_zhuyin_mode() {

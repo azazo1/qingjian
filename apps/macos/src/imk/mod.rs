@@ -36,8 +36,10 @@ pub fn catch_panic<R>(what: &'static str, f: impl FnOnce() -> R) -> Option<R> {
 pub fn recover_from_panic(client: Option<TextClient<'_>>) {
     let recovered = catch_unwind(AssertUnwindSafe(|| {
         let pending = crate::host::with(|h| {
-            let text = h.engine.composition().text().to_owned();
-            h.engine.clear();
+            let typed = h.engine.composition().text().to_owned();
+            // 已经选中、还没交给应用的词排在敲过的字母前面（`clear` 把它们交出来）
+            let mut text = h.engine.clear();
+            text.push_str(&typed);
             h.cancel_prediction();
             h.window.hide();
             text

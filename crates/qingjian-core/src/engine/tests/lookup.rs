@@ -164,10 +164,13 @@ fn commit_consumes_only_the_candidate_syllables() {
         .find(|c| c.text == "开发")
         .unwrap()
         .clone();
-    assert_eq!(engine.commit(&kaifa), "开发");
+    // 这段拼音还没选完：上屏推迟到组句结束，选中的词先留在 Engine 里（preedit 显示它，退格能拆回）
+    assert_eq!(engine.commit(&kaifa), "");
+    assert_eq!(engine.pending_text(), "开发");
     assert_eq!(engine.composition().text(), "zhe");
 
     engine.set_input("kaif");
+    // 这次把整段选完（候选的最后一个音节比输入长）：连同上一段延迟的一起交出去
     assert_eq!(engine.commit(&kaifa), "开发");
     assert!(engine.composition().is_empty());
 

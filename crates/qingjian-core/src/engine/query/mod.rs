@@ -39,6 +39,8 @@ impl Engine {
                 )
             }
         };
+        // 组句里已经选中, 还没交给应用的词排在 preedit 最前面, 退格能把它们拆回候选 (见 `pending`)
+        query.pending = self.pending_text();
         query.aux = self.aux_segment();
         // 辅码态只出命中码的词：自定义短语没有码，不出
         if self.aux_filter().is_none() {

@@ -4,6 +4,7 @@ use super::alignment::Alignment;
 use super::annotation::AnnotationReport;
 use super::input_log::{InputLogEntry, InputLogger, InputSource};
 use super::learning::Learner;
+use super::pending::PendingWord;
 use super::query::EnglishTail;
 use super::{
     AUTO_WORD_MAX_CHARS, AUTO_WORD_THRESHOLD, AUTO_WORD_THRESHOLD_SAME_BUFFER,
@@ -61,29 +62,34 @@ impl Engine {
     ///
     /// 上屏候选的译文而不是候选本身（壳里修饰键 + 数字）：学习、拼音消耗都和选了这个候选一样，
     /// 返回第 `sense` 条释义的译文（0 是第一条，日文不带注音）。候选没有那么多条释义时不动，返回 `None`。
+    /// 这段拼音还没选完时返回空串：译文和别的候选一样推迟上屏，显示与退格都按译文算（见 [`Self::commit`]）。
     pub fn commit_translation(&mut self, candidate: &Candidate, sense: usize) -> Option<String> {
         let text = candidate
             .translation
             .as_ref()
             .and_then(|t| t.senses().get(sense))
             .map(|s| s.text.clone())?;
-        self.commit_with(candidate, InputSource::Translation, Some(sense));
-        Some(text)
+        Some(self.commit_with(candidate, InputSource::Translation, Some(sense), Some(&text)))
     }
 
     /// 候选比输入短时（`kaifazhe` 选了 开发），剩余拼音留在缓冲区，壳应接着 [`Self::query`]。
     /// 候选的最后一个音节比输入长时（`kaif` 选了 开发），把输入吃完。
+    ///
+    /// 返回值是要交给应用的文本：这段拼音还没选完时是空串，选中的词留在 Engine 里等组句结束
+    /// （见 [`pending`](super::pending)）；这一次把这段选完时，返回之前延迟的已选词加上这次选的词。
     pub fn commit(&mut self, candidate: &Candidate) -> String {
-        self.commit_with(candidate, InputSource::from(candidate.kind), None)
+        self.commit_with(candidate, InputSource::from(candidate.kind), None, None)
     }
 
     /// [`Self::commit`] 的内部形式：`source` 写进输入日志（上屏译词时不是候选本身），
-    /// `used_sense` 是直接打出去的那条译词的序号（词汇记录里算「用过」）。
+    /// `used_sense` 是直接打出去的那条译词的序号（词汇记录里算「用过」），
+    /// `display` 是交给应用的文本（译词路径上是译文，其余为 `None` 表示就是候选本身）。
     pub(super) fn commit_with(
         &mut self,
         candidate: &Candidate,
         source: InputSource,
         used_sense: Option<usize>,
+        display: Option<&str>,
     ) -> String {
         let traditional_text = candidate.text.clone();
         let mut candidate_owned = candidate.clone();
@@ -99,6 +105,8 @@ impl Engine {
             .flatten();
         // 下面每条路都可能改学习数据，格子候选的排序跟着变
         self.forget_span_cache();
+        // 这段拼音还没打完时这次上屏是延迟的 (见 `pending`), 上屏链与键都要留一份给退格拆回
+        let chain_before = self.chain.clone();
         // 一段拼音里的第一个词：记下整段的学习键，整段分几次选完时合起来看（见 [`Self::finish_buffer`]）；
         // `split` 表示这次上屏接在同一段拼音里前一次上屏之后
         let split = self.chain.same_buffer();
@@ -163,6 +171,8 @@ impl Engine {
         }
         let mut keys =
             self.composition.scope()[..consumed.min(self.composition.scope().len())].to_owned();
+        // 拆回时还回缓冲区的是拼音键, 辅码段单独记账 (它不在缓冲区里), 日志那份在下面接上码段
+        let restore_keys = keys.clone();
         // 输入日志按实际敲键原样记：辅码态把触发键与码段接在拼音后面（"kaifa;kf"），
         // replay 逐键重喂时不需要任何特殊逻辑
         if let Some(code) = &self.aux_code {
@@ -280,8 +290,23 @@ impl Engine {
             plain.chars = traditional_text.chars().count();
             plain
         };
+        // 缓冲区里还有拼音 (这段还没选完): 这次选中的词先不上屏, 留在 preedit 里, 退格能拆回 (见 `pending`)
+        // 交给应用的文本: 译词路径上是译文, 其余就是候选本身
+        let outgoing = display.unwrap_or(&traditional_text).to_owned();
+        if buffer_left {
+            self.pending.push(PendingWord {
+                text: outgoing,
+                keys: restore_keys,
+                chain: chain_before,
+                commit,
+            });
+            return String::new();
+        }
+        // 这段拼音选完了: 连同之前延迟的已选词一次交给应用
+        let mut text = self.take_pending();
         self.remember_commit(commit);
-        traditional_text
+        text.push_str(&outgoing);
+        text
     }
 
     /// 一段拼音分几次选完了（`jidiaole` 先选 挤、剩下的走整句 掉了）：这几个词合起来就是用户对这段拼音的答案。

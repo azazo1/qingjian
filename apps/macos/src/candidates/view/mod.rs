@@ -435,6 +435,8 @@ impl CandidateView {
                 PreeditStyle::Typed => (&theme.gloss_color, false),
                 PreeditStyle::Rest => (&theme.pos_color, false),
                 PreeditStyle::Struck => (&theme.pos_color, true),
+                // 已经选中、还没交给应用的词是正经文字，不是拼音，用正文色
+                PreeditStyle::Committed => (&theme.text_color, false),
             };
             let string = self.attributed(&segment.text, &theme.annotation_font, color, strike);
             string.drawAtPoint(NSPoint::new(cursor_x, top));

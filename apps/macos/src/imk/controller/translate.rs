@@ -91,7 +91,10 @@ impl QingjianInputController {
         match text {
             Some(text) => {
                 tracing::debug!(%text, "commit translation");
-                client.insert_text(&text);
+                // 这段拼音还没选完时是空串：译文和别的候选一样留在 Engine 里等组句结束
+                if !text.is_empty() {
+                    client.insert_text(&text);
+                }
                 self.refresh(client);
             }
             None => tracing::debug!(digit, sense, "这个候选没有这条译文"),

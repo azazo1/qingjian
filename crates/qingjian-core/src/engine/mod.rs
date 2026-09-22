@@ -16,6 +16,7 @@ mod input_log;
 mod learning;
 mod marked;
 mod mode_keys;
+mod pending;
 mod prediction;
 mod privacy;
 mod query;
@@ -176,6 +177,9 @@ pub struct Engine {
     /// 最近几次上屏各记了哪些学习、之后退格了几个字；用户把它们删掉重选时把学习退回去（见 [`Self::note_backspace`]）。
     /// 最新的在末尾，最多留 [`RECENT_COMMITS`] 条。
     recent_commits: Vec<LastCommit>,
+
+    /// 这段组句里已经选中, 还没交给应用的词 (延迟上屏, 见 [`pending`]): 退格按后进先出拆回.
+    pending: Vec<pending::PendingWord>,
 
     /// 本次 commit 里记下的词转移，commit 结束时搬进 `last_commit`。
     recording: Vec<Transition>,
@@ -412,6 +416,7 @@ impl Engine {
             correction_cache: std::cell::RefCell::new(None),
             span_cache: std::cell::RefCell::new(sentence::SpanCache::default()),
             recent_commits: Vec::new(),
+            pending: Vec::new(),
             logger: input_log::MutedLogger::new(Box::new(NoInputLogger)),
             private: false,
             log_sequence: 0,

@@ -17,6 +17,9 @@ pub enum PreeditKind {
 
     /// 辅码态的码段（触发键之后的字母序列）：画淡色 + 下划线。
     AuxCode,
+
+    /// 组句里已经选中、还没真正交给应用的词（延迟上屏）: 显示在拼音前面, 按普通文字画.
+    Pending,
 }
 
 impl From<MarkedKind> for PreeditKind {
@@ -26,6 +29,7 @@ impl From<MarkedKind> for PreeditKind {
             MarkedKind::Rest => Self::Rest,
             MarkedKind::Corrected => Self::Corrected,
             MarkedKind::AuxCode => Self::AuxCode,
+            MarkedKind::Pending => Self::Pending,
         }
     }
 }

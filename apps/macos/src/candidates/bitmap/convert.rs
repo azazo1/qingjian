@@ -28,6 +28,7 @@ fn preedit(preedit: &Preedit) -> qingjian_render::Preedit {
                     PreeditStyle::Typed => qingjian_render::PreeditStyle::Typed,
                     PreeditStyle::Rest => qingjian_render::PreeditStyle::Rest,
                     PreeditStyle::Struck => qingjian_render::PreeditStyle::Struck,
+                    PreeditStyle::Committed => qingjian_render::PreeditStyle::Committed,
                 },
             })
             .collect(),

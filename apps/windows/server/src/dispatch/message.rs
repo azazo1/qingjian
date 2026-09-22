@@ -137,11 +137,21 @@ impl Router {
         let (commit, outcome) = match self.apply_key(&event) {
             Effect::Changed(commit) => {
                 self.recompose();
-                (commit, KeyOutcome::Consumed)
+                // 空串（这段拼音还没选完，选中的词留在 Engine 里）不当上屏文本发
+                (commit.filter(|text| !text.is_empty()), KeyOutcome::Consumed)
             }
             Effect::Navigated => (None, KeyOutcome::Consumed),
-            Effect::Passthrough => (None, KeyOutcome::Passthrough),
+            // 这一键归应用：文本流越过了这段组句，还没交给应用的已选词先交出去（DLL 先插它再放行按键）
+            Effect::Passthrough => {
+                let pending = self.engine.take_pending();
+                (
+                    (!pending.is_empty()).then_some(pending),
+                    KeyOutcome::Passthrough,
+                )
+            }
         };
+        // 组句已经结束（删空拼音、Esc 之外的清空路径）却还有没交给应用的已选词：补上屏
+        let commit = self.settle_pending(commit);
         self.poll_prediction();
         // 自绘窗吃未降级的帧；发给 DLL 的那份按老协议降级（见 composed 的 current_frame）
         let shown = self.self_drawn_frame();
@@ -151,6 +161,20 @@ impl Router {
             outcome,
             commit,
             frame: self.current_frame(),
+        }
+    }
+
+    /// 组句已经结束却还有没交给应用的已选词时，把它们接在本次上屏文本前面一起交出去。
+    /// 组句还在时不动（词留在 Engine 里等组句结束，退格能拆回）。
+    pub(super) fn settle_pending(&mut self, commit: Option<String>) -> Option<String> {
+        if !self.engine.composition().is_empty() {
+            return commit;
+        }
+        let pending = self.engine.take_pending();
+        match (pending.is_empty(), commit) {
+            (true, commit) => commit,
+            (false, None) => Some(pending),
+            (false, Some(commit)) => Some(format!("{pending}{commit}")),
         }
     }
 

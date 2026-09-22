@@ -27,11 +27,21 @@ impl Router {
                 let (commit, outcome) = match self.apply_key(&event) {
                     Effect::Changed(commit) => {
                         self.recompose();
-                        (commit, KeyOutcome::Consumed)
+                        // 空串（这段拼音还没选完，选中的词留在 Engine 里）不当上屏文本发
+                        (commit.filter(|text| !text.is_empty()), KeyOutcome::Consumed)
                     }
                     Effect::Navigated => (None, KeyOutcome::Consumed),
-                    Effect::Passthrough => (None, KeyOutcome::Passthrough),
+                    // 这一键归应用：文本流越过了这段组句，还没交给应用的已选词先交出去
+                    Effect::Passthrough => {
+                        let pending = self.engine.take_pending();
+                        (
+                            (!pending.is_empty()).then_some(pending),
+                            KeyOutcome::Passthrough,
+                        )
+                    }
                 };
+                // 组句已经结束（删空拼音、Esc 之外的清空路径）却还有没交给应用的已选词：补上屏
+                let commit = self.settle_pending(commit);
                 let frame = self.current_frame();
                 Some(ServerMessage::KeyResult {
                     session,
@@ -49,7 +59,10 @@ impl Router {
             }
             ClientMessage::Commit { session } if self.sessions.contains_key(&session) => {
                 self.ensure_focus(session);
-                let text = (!self.engine.composition().is_empty()).then(|| self.engine.take_raw());
+                // 缓冲区空了但还有没交给应用的已选词时也要交出去
+                let text = (self.engine.has_pending() || !self.engine.composition().is_empty())
+                    .then(|| self.engine.take_raw())
+                    .filter(|text| !text.is_empty());
                 self.reset_composition();
                 self.flush_learning();
                 Some(ServerMessage::Committed { session, text })
