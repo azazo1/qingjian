@@ -81,12 +81,12 @@ pub struct Query {
     /// [触发键 `Typed`][码段 `AuxCode`] 两段，候选也已经按码段筛过。
     pub aux: Option<AuxSegment>,
 
-    /// 行内(应用侧 marked text)显示用的敲键串: 双拼下是按音节切开的键(`kd'fa've`).
-    /// `None` 表示行内与 [`Self::marked_text`] 相同(全拼 / 注音 / 形码 / 英文 / 表达式等).
+    /// 行内 (应用侧 marked text) 显示用的敲键串: 双拼下是按音节切开的键 (`kd'fa've`).
+    /// `None` 表示行内与 [`Self::marked_text`] 相同 (全拼 / 注音 / 形码 / 英文 / 表达式等).
     /// 候选窗口的拼音行不读它, 仍走 [`Self::marked_segments`].
     pub keys_display: Option<String>,
 
-    /// 光标停在中间时, 光标之后那部分的原样形式(敲的键); 只有 [`Self::keys_display`] 有值时才用得上.
+    /// 光标停在中间时, 光标之后那部分的原样形式 (敲的键); 只有 [`Self::keys_display`] 有值时才用得上.
     pub rest_keys: String,
 }
 
@@ -193,7 +193,7 @@ impl Query {
         position
     }
 
-    /// 行内(应用侧 marked text)的文本: 双拼下是敲的键(按音节切开, `kd'fa've`), 其余方案与
+    /// 行内 (应用侧 marked text) 的文本: 双拼下是敲的键 (按音节切开, `kd'fa've`), 其余方案与
     /// [`Self::marked_text`] 相同. 候选窗口的拼音行不受影响, 仍走 [`Self::marked_segments`].
     pub fn inline_text(&self) -> String {
         let Some(keys) = &self.keys_display else {
@@ -213,7 +213,7 @@ impl Query {
         text
     }
 
-    /// 光标在 [`Self::inline_text`] 里的字符下标(平台层传给应用的 selectionRange 按字符算).
+    /// 光标在 [`Self::inline_text`] 里的字符下标 (平台层传给应用的 selectionRange 按字符算).
     pub fn inline_cursor(&self) -> usize {
         if self.keys_display.is_none() {
             return self.marked_cursor();

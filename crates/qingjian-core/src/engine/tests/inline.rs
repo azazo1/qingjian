@@ -1,4 +1,4 @@
-//! 行内(应用侧 marked text)的显示：双拼下显示敲的键, 候选窗口的拼音行仍显示解出的全拼.
+//! 行内 (应用侧 marked text) 的显示: 双拼下显示敲的键, 候选窗口的拼音行仍显示解出的全拼.
 
 use qingjian_dictionary::AuxCodeTable;
 
@@ -100,7 +100,7 @@ fn mixed_input_inline_shows_the_keys() {
     assert_eq!(query.inline_text(), "kd'fa");
 }
 
-/// 残缺切分、解不动的尾巴等分支都不会让行内丢掉敲过的键.
+/// 残缺切分, 解不动的尾巴等分支都不会让行内丢掉敲过的键.
 #[test]
 fn inline_never_drops_a_typed_key() {
     let mut engine = xiaohe();

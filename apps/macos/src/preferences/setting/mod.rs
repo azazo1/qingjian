@@ -101,7 +101,7 @@ pub enum Setting {
     /// `[general] preedit`，弹出菜单。
     Preedit,
 
-    /// `[general] inline_keys`，勾选框：行内拼音显示敲的键（双拼下是双拼码）还是解出的全拼。
+    /// `[general] inline_keys`, 勾选框: 行内拼音显示敲的键 (双拼下是双拼码) 还是解出的全拼.
     InlineKeys,
 
     /// `[general] english_candidates`，勾选框。

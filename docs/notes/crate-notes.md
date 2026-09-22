@@ -32,9 +32,9 @@ TSV 解析、查询与生成工具把 `lue` / `nue` 统一成 `lve` / `nve`。
 （码表在 `Engine.aux_codes`，`set_aux_codes` 注入），不命中的隐藏，命中的按「完全匹配码 > 码长降序 > 原词频序」
 重排（stable sort 保住原序），命中码（没在筛码时是词的首条码）写进 `Candidate.aux_code`；码段非空时跳过整句 / 英文 / 快捷 / emoji / 自定义短语
 与云联想。preedit 分段多出 [触发键 `Typed`][码段 `MarkedKind::AuxCode`]，见 `Query::marked_segments`。
-行内(应用侧 marked text)那侧另有 `Query::inline_text` / `inline_cursor`: 双拼下按音节显示敲的键(`kd'fa've`，由 `shuangpin::Decoded::marked_keys` 经 `Query::keys_display` 传来)，
-光标后的键接在末尾(`Query::rest_keys`)，辅码段照旧拼上；注音与全拼没有「敲的键」这一层，回落到 `marked_text`。
-候选窗口的拼音行仍走 `marked_segments`；macOS 壳按 `[general] inline_keys`(缺省开)选行内用哪一套，Windows / Linux 只拿分段，不受影响。
+行内 (应用侧 marked text) 那侧另有 `Query::inline_text` / `inline_cursor`: 双拼下按音节显示敲的键 (`kd'fa've`, 由 `shuangpin::Decoded::marked_keys` 经 `Query::keys_display` 传来),
+光标后的键接在末尾 (`Query::rest_keys`), 辅码段照旧拼上; 注音与全拼没有「敲的键」这一层, 回落到 `marked_text`.
+候选窗口的拼音行仍走 `marked_segments`; macOS 壳按 `[general] inline_keys` (缺省开) 选行内用哪一套, Windows / Linux 只拿分段, 不受影响.
 
 形码（五笔）在 `engine::query::code`。`Engine` 上有两个开关：`set_code_table`（码表）与 `set_phonetic`（拼音侧参不参与），
 在 `query_inner` 进切分之前按这两个分派——只有拼音 / 只有形码（`query_code`）/ **两边都开（`query_mixed`，混输）**。

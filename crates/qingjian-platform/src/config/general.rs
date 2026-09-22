@@ -49,8 +49,8 @@ pub struct GeneralConfig {
     /// 组句中的拼音显示在行内、候选窗口还是两处都显示。
     pub preedit: PreeditMode,
 
-    /// 行内(应用里)的拼音行显示敲的键而不是解出的全拼: 双拼下就是双拼码(`kd'fa've`),
-    /// 候选窗口里的拼音行仍是解出的全拼(`kai'fa'zhe`)。缺省开。只有 macOS 用。
+    /// 行内 (应用里) 的拼音行显示敲的键而不是解出的全拼: 双拼下就是双拼码 (`kd'fa've`),
+    /// 候选窗口里的拼音行仍是解出的全拼 (`kai'fa'zhe`). 缺省开. 只有 macOS 用.
     pub inline_keys: bool,
 
     /// 英文模式（Caps Lock 亮着）是否给英文候选（补全与拼错纠正）。关掉就是纯直通。

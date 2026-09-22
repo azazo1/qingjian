@@ -85,7 +85,7 @@ impl Decoded {
         }
     }
 
-    /// 显示形式(敲的键版): 各单元的键按敲的顺序连起来, 音节之间插 `'`, 末尾接解不动的尾巴.
+    /// 显示形式 (敲的键版): 各单元的键按敲的顺序连起来, 音节之间插 `'`, 末尾接解不动的尾巴.
     ///
     /// 用户自己敲的显式分隔符由音节边界体现, 不会出现连续两个 `'`. `kdfave` → `kd'fa've`.
     pub fn marked_keys(&self) -> String {
@@ -188,7 +188,7 @@ mod tests {
         let decoded = Scheme::Xiaohe.decode("kdfave");
         assert_eq!(decoded.marked(), "kai'fa'zhe");
         assert_eq!(decoded.marked_keys(), "kd'fa've");
-        // 落单的键(残缺音节)照原样留着
+        // 落单的键 (残缺音节) 照原样留着
         assert_eq!(Scheme::Xiaohe.decode("kdf").marked_keys(), "kd'f");
         assert_eq!(Scheme::Xiaohe.decode("").marked_keys(), "");
         // 键一个都不丢: 去掉分隔符后与原输入一致

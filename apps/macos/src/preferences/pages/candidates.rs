@@ -31,7 +31,7 @@ pub struct CandidatesPage {
     /// 拼音显示位置。
     preedit: Retained<NSPopUpButton>,
 
-    /// 行内拼音显示敲的键还是解出的全拼。
+    /// 行内拼音显示敲的键还是解出的全拼.
     inline_keys: Retained<NSButton>,
 }
 
@@ -101,7 +101,7 @@ impl CandidatesPage {
         note(
             layout,
             mtm,
-            "双拼时行内显示敲的键（kd'fa've），候选窗口里仍是解出的全拼（kai'fa'zhe）；全拼与注音下两处一样。不勾则行内也显示解出的全拼。",
+            "双拼时行内显示敲的键 (kd'fa've), 候选窗口里仍是解出的全拼 (kai'fa'zhe); 全拼与注音下两处一样. 不勾则行内也显示解出的全拼.",
         );
         Self {
             theme,

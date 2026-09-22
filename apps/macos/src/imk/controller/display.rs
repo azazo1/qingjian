@@ -37,7 +37,7 @@ impl QingjianInputController {
                 .map(|mut query| {
                     h.engine.annotate(&mut query.candidates);
                     preedit = Preedit::from_marked(&query.marked_segments(), query.marked_cursor());
-                    // 行内那侧显示敲的键（双拼码）还是解出的全拼，见 `[general] inline_keys`；
+                    // 行内那侧显示敲的键 (双拼码) 还是解出的全拼, 见 `[general] inline_keys`;
                     // 候选窗口那侧不受它影响
                     if h.inline_keys {
                         marked = query.inline_text();

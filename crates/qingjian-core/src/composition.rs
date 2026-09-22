@@ -82,7 +82,7 @@ impl Composition {
         self.typed(self.scope().len())
     }
 
-    /// [`Self::rest`] 的原样形式。
+    /// [`Self::rest`] 的原样形式.
     pub fn typed_rest(&self) -> String {
         let scope_len = self.scope().len();
         self.typed_text()[scope_len..].to_owned()
