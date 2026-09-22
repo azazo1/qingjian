@@ -293,6 +293,15 @@ impl Host {
                     Err(error) => tracing::warn!(%error, "快捷键不合法，未改"),
                 }
             }
+            (Setting::LearnPhraseKeys, SettingValue::Text(text)) => {
+                match text.parse::<KeyBinding<KeyCombo>>() {
+                    Ok(chosen) => {
+                        self.settings
+                            .set_value("shortcut", "learn_phrase", chosen.to_string());
+                    }
+                    Err(error) => tracing::warn!(%error, "快捷键不合法，未改"),
+                }
+            }
             (Setting::MacSwitchSingle, SettingValue::Bool(on)) => {
                 self.settings.set_bool("shortcut", "mac_switch_single", on);
             }
@@ -348,6 +357,8 @@ impl Host {
                     "translate_selection",
                     defaults.translate_selection.to_string(),
                 );
+                self.settings
+                    .set_value("shortcut", "learn_phrase", defaults.learn_phrase.to_string());
                 self.settings.set_value(
                     "shortcut",
                     "delete_candidate",

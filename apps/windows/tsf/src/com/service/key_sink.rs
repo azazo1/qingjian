@@ -73,10 +73,18 @@ impl ITfKeyEventSink_Impl for TextService_Impl {
             self.set_english_mode(!self.mode_state.english());
             return Ok(true.into());
         }
-        if guid != preserved::GUID_TRANSLATE || self.keyboard_disabled(&pic) {
+        if self.keyboard_disabled(&pic) {
             return Ok(FALSE);
         }
-        let Some(combo) = self.translate_combo.get() else {
+        // 翻译选中文字与记词组各占一个保留键，命中的那个按配置取组合
+        let combo = if guid == preserved::GUID_TRANSLATE {
+            self.translate_combo.get()
+        } else if guid == preserved::GUID_LEARN_PHRASE {
+            self.learn_combo.get()
+        } else {
+            return Ok(FALSE);
+        };
+        let Some(combo) = combo else {
             return Ok(FALSE);
         };
         let event = preserved::key_event(combo, self.mode_state.english());
@@ -134,7 +142,7 @@ impl TextService_Impl {
         eats_key(
             event,
             self.shared.composing(),
-            self.shared.translating(),
+            self.shared.reviewing(),
             shift_letter_compose,
         )
     }
@@ -189,8 +197,9 @@ impl TextService_Impl {
                         String::new()
                     };
                     self.shared.set_composing(!response.frame.is_empty());
-                    // 翻译评审的任何键都结束评审（Server 侧已同步结束）。
-                    self.shared.set_translating(false);
+                    // 评审还在不在进行由 Server 的帧说了算：翻译评审的任何键都结束评审；
+                    // 记词组评审要连着收字母，Server 会一直带 reviewing。
+                    self.shared.set_reviewing(response.frame.reviewing);
                     let consumed = matches!(response.outcome, KeyOutcome::Consumed);
                     let m = event.modifiers;
                     log(&format!(
@@ -288,20 +297,15 @@ fn eats_without_server(event: &KeyEvent) -> bool {
 
 /// 这个键吃不吃（[`TextService_Impl::would_eat`] 的纯逻辑，便于单测）。
 ///
-/// - 翻译评审中一律吃，交给 Server 定接受 / 取消；
+/// - 评审中（翻译选中文字 / 记词组）一律吃，交给 Server 定接受 / 取消；
 /// - 带 Ctrl / Alt / Win：只有组句中的「修饰键 + 数字」吃（译词 / 删候选），其余归应用（翻译选中文字走保留键）；
 /// - 字母只有「中文模式、没在组句、按住 Shift 的大写」归应用，其中 V / U / I 仍吃：双拼下是表达式 / 问字入口。
 ///   `[general] shift_letter = "compose"`（Server 经 [`InputSettings`](qingjian_platform::protocol::InputSettings) 下发）时这种大写也吃：送去 Core 起一段组句，
 ///   `⇧C` 接 `pan` 才能出「C盘」；组句一开始，后面的 Shift 字母本来就被 `composing` 兜住；
 /// - 组句中功能键 / 方向键 / 可打印字符都吃；
 /// - 没在组句时数字 / 标点也先「测吃」送去转全角（中英各有一份开关），Server 不转的回 Passthrough 再放行；`?` 是问字前缀。
-fn eats_key(
-    event: &KeyEvent,
-    composing: bool,
-    translating: bool,
-    shift_letter_compose: bool,
-) -> bool {
-    if translating {
+fn eats_key(event: &KeyEvent, composing: bool, reviewing: bool, shift_letter_compose: bool) -> bool {
+    if reviewing {
         return true;
     }
     let modifiers = event.modifiers;

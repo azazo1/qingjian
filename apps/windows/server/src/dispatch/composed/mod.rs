@@ -142,10 +142,18 @@ impl Router {
         (!text.is_empty()).then_some(text)
     }
 
-    /// 按当前状态生成一帧：翻译评审优先；没在组句给空帧；否则给高亮所在的那一页。
+    /// 按当前状态生成一帧：翻译 / 记词组评审优先；没在组句给空帧；否则给高亮所在的那一页。
     /// 焦点会话的 DLL 比 Server 老时按老协议降级（见 [`Self::downgrade_for_old_dll`]）。
     pub(super) fn current_frame(&self) -> Frame {
         let mut frame = self.raw_frame();
+        // 评审帧与「记下了」那一帧只给 DLL 传一个 `reviewing`：拼音行与提示候选都画在 Server 自绘的候选窗里，
+        // 交给 DLL 会让它把拼音写进应用文档（评审期间应用内容一个字符都不该动）。
+        if frame.reviewing || self.phrase_notice.is_some() {
+            frame = Frame {
+                reviewing: frame.reviewing,
+                ..Frame::default()
+            };
+        }
         self.downgrade_for_old_dll(&mut frame);
         frame
     }
@@ -176,6 +184,12 @@ impl Router {
     }
 
     fn raw_frame(&self) -> Frame {
+        if let Some(message) = &self.phrase_notice {
+            return self.phrase_notice_frame(message);
+        }
+        if let Some(phrase) = &self.phrase {
+            return self.phrase_frame(phrase);
+        }
         if let Some(translation) = &self.translation {
             return self.translation_frame(translation);
         }
@@ -197,6 +211,7 @@ impl Router {
                 aux_code_show: self.config.aux_code_show,
                 sentence: None,
                 notice: self.notice.clone(),
+                reviewing: false,
             },
             Some(Composed::Candidates {
                 preedit,
@@ -226,6 +241,7 @@ impl Router {
                     aux_code_show: self.config.aux_code_show,
                     sentence: self.sentence.clone(),
                     notice: self.notice.clone(),
+                    reviewing: false,
                 }
             }
         }

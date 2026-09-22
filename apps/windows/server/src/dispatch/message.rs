@@ -7,6 +7,7 @@ use qingjian_platform::protocol::{
 
 use super::Router;
 use super::key::Effect;
+use super::selection::{PendingSelection, SelectionPurpose};
 use super::session::SessionInfo;
 
 impl Router {
@@ -77,9 +78,10 @@ impl Router {
                 None
             }
             ClientMessage::HideCandidates { session } => {
-                // 组句在 DLL 侧结束（应用终止组句 / 翻译评审失焦）：只收窗口；缓冲留给下一键的 Commit 清。
+                // 组句在 DLL 侧结束（应用终止组句 / 评审失焦）：只收窗口；缓冲留给下一键的 Commit 清。
                 if self.focused == Some(session) {
                     self.end_translation();
+                    self.end_phrase();
                     self.hide_candidate_window();
                 }
                 None
@@ -115,19 +117,43 @@ impl Router {
     fn handle_key(&mut self, session: SessionId, event: KeyEvent) -> ServerMessage {
         self.ensure_focus(session);
         self.notice = None;
+        // 提交成功后的那句提示只挂一拍：这一键照常处理
+        self.phrase_notice = None;
         if self.translation.is_some() {
             return self.handle_translation_review(session, &event);
+        }
+        if self.phrase.is_some() {
+            return self.handle_phrase_review(session, &event);
         }
         if self.engine.composition().is_empty()
             && self.engine.prediction_enabled()
             && self.matches_translate_combo(&event)
         {
             self.selection_seq += 1;
-            self.pending_selection = Some(self.selection_seq);
+            self.pending_selection = Some(PendingSelection {
+                request: self.selection_seq,
+                purpose: SelectionPurpose::Translate,
+            });
             tracing::debug!(
                 ?session,
                 request = self.selection_seq,
                 "翻译选中文字：请 DLL 读选区"
+            );
+            return ServerMessage::RequestSelection {
+                session,
+                request: self.selection_seq,
+            };
+        }
+        if self.engine.composition().is_empty() && self.matches_learn_combo(&event) {
+            self.selection_seq += 1;
+            self.pending_selection = Some(PendingSelection {
+                request: self.selection_seq,
+                purpose: SelectionPurpose::LearnPhrase,
+            });
+            tracing::debug!(
+                ?session,
+                request = self.selection_seq,
+                "记词组：请 DLL 读选区"
             );
             return ServerMessage::RequestSelection {
                 session,

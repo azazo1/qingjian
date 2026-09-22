@@ -95,6 +95,10 @@ impl Learner for FrequencyLearner {
         self.user_dictionary.as_ref()
     }
 
+    fn word_pinyin(&self, text: &str) -> Option<String> {
+        self.words.get(text).cloned()
+    }
+
     fn learn_english(&mut self, word: &str) {
         if word.is_empty() {
             return;

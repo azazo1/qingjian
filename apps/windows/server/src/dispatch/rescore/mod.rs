@@ -152,7 +152,10 @@ impl Router {
 
     /// 防抖到点就发请求；在等结果就收一次，收到了重查并重画当前页。
     fn advance_rescoring(&mut self) {
-        if self.engine.composition().is_empty() || self.translation.is_some() {
+        if self.engine.composition().is_empty()
+            || self.translation.is_some()
+            || self.phrase.is_some()
+        {
             self.rescore.stop();
             return;
         }

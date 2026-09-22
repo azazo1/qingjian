@@ -12,6 +12,7 @@ use qingjian_platform::protocol::{
 pub(super) use self::job::Translation;
 use super::Router;
 use super::key::{ESCAPE, RETURN};
+use super::selection::SelectionPurpose;
 
 impl Router {
     /// 修饰键比物理组合（去掉 Caps / 中英模式两个状态位）; 配置里配成 `none` 时这个键不存在, 恒不命中.
@@ -23,8 +24,8 @@ impl Router {
             && event.modifiers.chord() == KeyModifiers::from(combo.modifiers)
     }
 
-    /// DLL 回来的选区：非空且云服务开着就进入评审；否则回空帧让 DLL 清掉本地翻译态。
-    /// 回给 DLL 的帧恒空（候选窗在 Server 自绘）。
+    /// DLL 回来的选区：按请求的用途分流（翻译 / 记词组）。请求号对不上、选区为空的回空帧，
+    /// 让 DLL 清掉本地的评审态。回给 DLL 的帧恒空（候选窗在 Server 自绘）。
     pub(super) fn handle_selection(
         &mut self,
         session: SessionId,
@@ -38,14 +39,41 @@ impl Router {
             commit: None,
             frame: Frame::default(),
         };
-        if self.focused != Some(session) || self.pending_selection != Some(request) {
+        if self.focused != Some(session) {
             return empty;
         }
-        self.pending_selection = None;
-        let text = text.trim();
-        if text.is_empty() || !self.engine.prediction_enabled() {
-            tracing::info!("翻译选中文字：没有可读的选区（或云服务已关）");
+        let Some(pending) = self.pending_selection.take() else {
             return empty;
+        };
+        if pending.request != request {
+            // 不是这次请的选区：留着原来那个请求，等它自己的回包
+            self.pending_selection = Some(pending);
+            return empty;
+        }
+        let text = text.trim();
+        if text.is_empty() {
+            tracing::info!("读选区：没有可读的选区");
+            return empty;
+        }
+        match pending.purpose {
+            SelectionPurpose::Translate => self.begin_translation_review(text, rect),
+            SelectionPurpose::LearnPhrase => self.begin_phrase_review(text, rect),
+        }
+        // 回给 DLL 的帧只带「评审中不在中」这个标志（`current_frame` 会把评审帧裁成空帧）：
+        // 评审期间 DLL 得继续把键送来，而拼音与提示画在 Server 自绘的候选窗里。
+        ServerMessage::KeyResult {
+            session,
+            outcome: KeyOutcome::Consumed,
+            commit: None,
+            frame: self.current_frame(),
+        }
+    }
+
+    /// 选区回来（用途是翻译）：云服务开着才进评审，否则什么都不做，DLL 那边清掉翻译态。
+    fn begin_translation_review(&mut self, text: &str, rect: ScreenRect) {
+        if !self.engine.prediction_enabled() {
+            tracing::info!("翻译选中文字：云服务已关");
+            return;
         }
         self.last_rect = Some(rect);
         self.translation = Some(Translation { result: None });
@@ -53,7 +81,6 @@ impl Router {
         tracing::debug!(chars = text.chars().count(), "翻译选中文字：已发翻译请求");
         let frame = self.self_drawn_frame();
         self.reconcile_candidates(&frame);
-        empty
     }
 
     /// 评审态收到按键：任何键都结束评审。回车 / 空格 / 1 接受（译文没到就只吃键），Esc 放弃，其余放弃并交回应用。
@@ -114,6 +141,7 @@ impl Router {
             aux_code_show: self.config.aux_code_show,
             sentence: None,
             notice: None,
+            reviewing: true,
         }
     }
 }

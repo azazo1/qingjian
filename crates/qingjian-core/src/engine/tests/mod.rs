@@ -11,6 +11,7 @@ mod inline;
 mod learning;
 mod lookup;
 mod pending;
+mod phrase;
 mod privacy;
 mod raw;
 mod shuangpin;
@@ -329,6 +330,14 @@ impl Learner for WordLearner {
 
     fn user_words(&self) -> Option<&Dictionary> {
         self.dictionary.as_ref()
+    }
+
+    fn word_pinyin(&self, text: &str) -> Option<String> {
+        self.words
+            .iter()
+            .rev()
+            .find(|(t, _)| t == text)
+            .map(|(_, syllables)| syllables.join(" "))
     }
 
     fn record_transition(&mut self, context: sentence::Context<'_>, word: &str, times: u32) {

@@ -457,7 +457,11 @@ CC-CEDICT 表（`dict-convert cedict`）保留为备用来源，覆盖面广但�
   （替代那次按键的常规结果），DLL 起一个**异步只读编辑会话**（`com/edit/selection.rs`，`GetSelection` + `GetText` 读选中文本、上限 500 字、`GetTextExt` 量屏幕矩形）
   回 `Selection { text, rect }`；Server 走 Core 的 `request_translation`（`PredictionKind::Translate`，双向，译文走 `sentence`），
   在**自绘候选窗**里以选区矩形为锚显示单条译文（先「翻译中…」，云端回来再换），评审态吃走所有键：回车 / 空格接受、Esc 保留原文、其余键放弃并交回应用。
-  替换选区不另加协议——接受时 Server 把译文当 `commit` 回给 DLL，DLL 无活动组句时 `InsertTextAtSelection` 正好替换当前选区。DLL 用 `Shared::translating` 标志让评审期吃键、轮询定时器照常拉云端译文、失焦收窗。
+  替换选区不另加协议——接受时 Server 把译文当 `commit` 回给 DLL，DLL 无活动组句时 `InsertTextAtSelection` 正好替换当前选区。DLL 用 `Shared::reviewing` 标志让评审期吃键、轮询定时器照常拉云端译文、失焦收窗。
+  **记词组**（`[shortcut] learn_phrase`，缺省不配）复用同一条读选区通路, 只是 `pending_selection` 带上用途 (`SelectionPurpose`), 回包按用途分流:
+  进 `dispatch/phrase/` 的评审态, 由 Core 的 `Engine::pinyin_of` 反查读音预填, 拼音行显示正在编辑的拼音、`notice` 显示提示, 字母与 `'` 追加、退格删末位、回车 `Engine::remember_phrase` 记成用户词、Esc 放弃;
+  选区文本一个字符都不动 (评审帧与 "记下了" 那一帧在 `current_frame` 里裁剪成只带 `Frame::reviewing` 的空帧, 拼音与提示都由 Server 自绘窗显示, 不让 DLL 写进文档), 见 `docs/design/phrase-learning.md`。
+  同一处 `Frame::reviewing` 也是 DLL 判断评审在不在进行的依据 (原来的 `Shared::translating` 泛化成 `Shared::reviewing`), 所以翻译与记词组用的是同一套吃键与收窗逻辑。
   一次要绘制的状态是 `Frame`（preedit 分段 + 候选页 + 可选的整句补全 `sentence` 与删候选提示 `notice`，后两者不参与 `Frame::is_empty`），preedit 用 `PreeditSegment`（Core `MarkedSegment` 的可序列化镜像，
   协议不耦合 Core 内部枚举），候选直接嵌 `qingjian_core::CandidateList`。同词干类型收进子目录：`key/{event,outcome}`、`frame/preedit/{kind,segment}`。
 - **Server 进程**：`apps/windows/server`（package `qingjian-windows-server`，bin `qingjian-server`）。`dispatch::Router` 按 `SessionId` 分派多会话（Windows 一个 Server 服务多个应用进程，

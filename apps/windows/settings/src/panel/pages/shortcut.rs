@@ -1,5 +1,5 @@
-//! 「快捷键」页：翻页键、模式键，译词 / 删候选 / 翻译选中文字的修饰键。
-//! 翻译选中文字只改修饰键，字母键固定用配置里当前的；要换字母直接改 `config.toml`。
+//! 「快捷键」页：翻页键、模式键，译词 / 删候选 / 翻译选中文字 / 记词组的修饰键。
+//! 翻译选中文字与记词组只改修饰键，字母键固定用配置里当前的；要换字母直接改 `config.toml`。
 //! 每一项都能选「不使用」: 写进配置是 `none`, 这项键从此不生效.
 
 use qingjian_platform::{KeyBinding, Modifiers};
@@ -7,6 +7,9 @@ use windows_reactor::*;
 
 use crate::panel::controls::{field, index_of, page};
 use crate::panel::{Message, Settings};
+
+/// 记词组这项没配过、又刚挑了一个修饰键时补上的字母。
+pub(crate) const LEARN_PHRASE_KEY: char = 'p';
 
 /// 翻页键对：界面名 + 配置写法。
 pub(crate) const PAGE_KEYS: [(&str, &str); 3] = [
@@ -107,6 +110,14 @@ pub(crate) fn view(settings: &Settings, context: &mut ViewContext<Settings>) -> 
             modifier_combo(
                 s.translate_selection.map(|combo| combo.modifiers),
                 context.callback(Message::TranslateSelection),
+            ),
+        ),
+        field(
+            "记词组（默认未设置）",
+            "在应用里选中一段文字后按这组键 + 当前字母 (缺省 Ctrl+Alt+P), 候选窗显示它的拼音 (可退格改), 回车把这段文字记成用户词, Esc 取消. 选中的文字不会被改动. 这里只改修饰键, 字母固定用当前的; 选「不使用」就关掉这个键.",
+            modifier_combo(
+                s.learn_phrase.map(|combo| combo.modifiers),
+                context.callback(Message::LearnPhrase),
             ),
         ),
     ];

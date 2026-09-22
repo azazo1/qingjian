@@ -43,6 +43,9 @@ pub struct ShortcutConfig {
     /// 把应用里选中的文字译成学习语言 (需要云服务开着); 写 `none` 就是不用这个快捷键.
     pub translate_selection: KeyBinding<KeyCombo>,
 
+    /// 把应用里选中的文字连同它的拼音记成用户词 (记词组); 缺省 `none`, 要用得自己配一个.
+    pub learn_phrase: KeyBinding<KeyCombo>,
+
     /// 数字键配这些修饰键: 删掉候选 (用户词整个删掉, 词库词清掉对它的学习); 写 `none` 就是不用.
     pub delete_candidate: KeyBinding<Modifiers>,
 }
@@ -66,6 +69,7 @@ impl Default for ShortcutConfig {
             translation: KeyBinding::on(translation),
             translation_second: KeyBinding::on(translation_second),
             translate_selection: KeyBinding::on(KeyCombo::TRANSLATE_DEFAULT),
+            learn_phrase: KeyBinding::Off,
             delete_candidate: KeyBinding::on(Modifiers::SHIFT),
         }
     }
@@ -207,7 +211,8 @@ mod tests {
     fn none_switches_a_shortcut_off() {
         let off: ShortcutConfig = toml::from_str(
             "translation = \"none\"\ntranslation_second = \"none\"\n\
-             delete_candidate = \"none\"\ntranslate_selection = \"none\"\n",
+             delete_candidate = \"none\"\ntranslate_selection = \"none\"\n\
+             learn_phrase = \"none\"\n",
         )
         .unwrap();
         let (first, second) = off.translation_keys();
@@ -215,6 +220,7 @@ mod tests {
         // 关掉的一项不再被当成「撞车」而退回缺省
         assert!(off.delete_keys().is_off());
         assert_eq!(off.translate_selection.key(), None);
+        assert!(off.learn_phrase.is_off());
 
         // 只关一组：另一组照旧跟着缺省
         let default = ShortcutConfig::default();

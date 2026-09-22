@@ -55,6 +55,11 @@ pub struct Frame {
     /// 不参与 [`is_empty`](Self::is_empty)：单有提示不算在组句，否则空组句也会撑开候选窗口。
     #[serde(default)]
     pub notice: Option<String>,
+
+    /// Server 侧正在评审（翻译选中文字、或记词组）：DLL 据此让评审期间的键继续送来，评审结束再收窗。
+    /// 与 [`notice`](Self::notice) 一样不参与 [`is_empty`](Self::is_empty)。
+    #[serde(default)]
+    pub reviewing: bool,
 }
 
 impl Frame {

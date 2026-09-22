@@ -39,6 +39,9 @@ pub struct ShortcutsPage {
 
     /// 翻译选中文字的组合键。
     translate_selection: Retained<KeyRecorder>,
+
+    /// 记词组的组合键（缺省没配）。
+    learn_phrase: Retained<KeyRecorder>,
 }
 
 impl ShortcutsPage {
@@ -145,6 +148,20 @@ impl ShortcutsPage {
             "在应用里选中一段文字再按这个键，译文（学习语言）出现在候选窗口：回车替换选中的文字，Esc 保留原文。需要开着云服务。",
         );
         layout.space(GROUP_GAP);
+        let learn_phrase = row_recorder(
+            layout,
+            mtm,
+            "记词组（默认未设置）",
+            Setting::LearnPhraseKeys,
+            RecorderKind::Combo,
+            target,
+        );
+        note(
+            layout,
+            mtm,
+            "在应用里选中一段文字再按这个键：候选窗口显示它的拼音（可退格改），回车把这段文字记成用户词，下次敲这段拼音就有它；Esc 取消。选中的文字不会被改动。",
+        );
+        layout.space(GROUP_GAP);
         note_full(
             layout,
             mtm,
@@ -170,6 +187,7 @@ impl ShortcutsPage {
             translation_second,
             delete_candidate,
             translate_selection,
+            learn_phrase,
         }
     }
 
@@ -202,6 +220,7 @@ impl ShortcutsPage {
             &self.translate_selection,
             config.shortcut.translate_selection,
         );
+        show_combo(&self.learn_phrase, config.shortcut.learn_phrase);
     }
 }
 

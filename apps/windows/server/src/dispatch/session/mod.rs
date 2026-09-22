@@ -62,7 +62,7 @@ impl Router {
         text
     }
 
-    /// 清掉组句、展示状态、在飞的云联想与翻译评审，收起候选窗口。
+    /// 清掉组句、展示状态、在飞的云联想与两个评审态，收起候选窗口。
     /// 还没交给应用的已选词在这里丢掉：失焦那一路（[`Self::commit_raw_for`]）已经先 `take_raw` 交出去了。
     pub(super) fn reset_composition(&mut self) {
         self.engine.break_chain();
@@ -71,6 +71,8 @@ impl Router {
         self.stop_rescoring();
         self.composed = None;
         self.translation = None;
+        self.phrase = None;
+        self.phrase_notice = None;
         self.pending_selection = None;
         self.sentence = None;
         self.notice = None;

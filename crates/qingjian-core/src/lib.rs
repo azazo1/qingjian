@@ -20,6 +20,7 @@ pub mod sentence;
 pub mod shortcut;
 pub mod shuangpin;
 pub mod storage;
+pub mod transcribe;
 pub mod zhuyin;
 
 pub use custom_phrase::CustomPhrase;
@@ -36,10 +37,11 @@ pub use engine::{
     Engine, EngineSession, FRESH_UNTIL, FilledGloss, Forgotten, GlossFiller, INPUT_LOG_VERSION,
     InputLogEntry, InputLogger, InputSource, Learner, LevelCount, MarkedKind, MarkedSegment,
     ModeKeys, ModelHint, NEURAL_MARGIN, NEURAL_WEIGHT, NoGlossFiller, NoInputLogger, NoLearner,
-    NoPredictor, NoTranslator, NoUsageMeter, NoVocabularyTracker, Prediction, PredictionKind,
-    PredictionPolicy, PredictionRequest, Predictor, QUESTION_PREFIX, Query, RESCORE_CONTEXT_CHARS,
-    RawPreedit, SurroundingText, Timings, Translator, Usage, UsageMeter, UsageSummary,
-    VocabularySummary, VocabularyTracker, book_scale, is_valid_aux_code_key,
+    NoPredictor, NoTranslator, NoUsageMeter, NoVocabularyTracker, PhraseError, Prediction,
+    PredictionKind, PredictionPolicy, PredictionRequest, Predictor, QUESTION_PREFIX, Query,
+    RESCORE_CONTEXT_CHARS, RawPreedit, RememberedPhrase, SurroundingText, Timings, Translator,
+    Usage, UsageMeter, UsageSummary, VocabularySummary, VocabularyTracker, book_scale,
+    is_valid_aux_code_key,
 };
 pub use fuzzy::FuzzyRules;
 pub use history::InputHistory;
@@ -47,3 +49,4 @@ pub use parser::{ParseError, Segmentation};
 pub use punctuation::Punctuation;
 pub use qingjian_dictionary as dictionary;
 pub use shuangpin::Scheme as ShuangpinScheme;
+pub use transcribe::Transcriber;

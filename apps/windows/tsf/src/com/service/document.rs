@@ -28,8 +28,8 @@ impl TextService_Impl {
     /// 失焦 / 停用 / 切模式：让 Server 交出缓冲区，原样落进最近收键的文档并收掉组句。
     /// 组句已被应用终止的（拼音已是普通文本）只清 Server 不再插。
     pub(super) fn commit_pending(&self) {
-        if self.shared.translating() {
-            self.shared.set_translating(false);
+        if self.shared.reviewing() {
+            self.shared.set_reviewing(false);
             self.shared.hide_candidates();
         }
         let stale = self.shared.take_server_stale();

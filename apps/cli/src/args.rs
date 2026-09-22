@@ -161,6 +161,18 @@ pub struct Args {
     #[arg(long)]
     pub eval_save: Option<PathBuf>,
 
+    /// 读音反查：打印这些文本的全拼（音节用 `'` 分隔，查不到读音则标出来），可给多个；查完即退出
+    #[arg(long, value_name = "文本")]
+    pub pinyin_of: Vec<String>,
+
+    /// 记词组：把这个拼音与 `--phrase-text` 的文本记成一条用户词（本机验证 Core 行为用）；给出即退出
+    #[arg(long, value_name = "拼音", requires = "phrase_text")]
+    pub remember_phrase: Option<String>,
+
+    /// 记词组要记下的文本，配合 `--remember-phrase`
+    #[arg(long, value_name = "文本")]
+    pub phrase_text: Option<String>,
+
     /// 直接查询这些拼音后退出；不给则进入交互模式
     pub inputs: Vec<String>,
 }

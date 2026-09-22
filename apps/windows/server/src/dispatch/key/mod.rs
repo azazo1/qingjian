@@ -6,7 +6,7 @@ mod effect;
 mod input;
 mod shortcut;
 
-pub(super) use self::codes::{ESCAPE, RETURN};
+pub(super) use self::codes::{BACK, ESCAPE, RETURN};
 pub(super) use self::effect::Effect;
 
 /// 把先行上屏的文本接到本次结果前面。Windows 放行是同步的、上屏走异步编辑会话，

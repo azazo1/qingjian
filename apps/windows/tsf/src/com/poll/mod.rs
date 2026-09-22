@@ -109,12 +109,12 @@ unsafe extern "system" fn wndproc(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: 
     unsafe { DefWindowProcW(hwnd, msg, wparam, lparam) }
 }
 
-/// 组句中或翻译评审中拉云结果；否则前台时隔几拍问一次切模式（顺路取回按键行为设置）。引擎正被按键处理借用时跳过这一拍；连接坏了断开。
+/// 组句中或评审中拉云结果；否则前台时隔几拍问一次切模式（顺路取回按键行为设置）。引擎正被按键处理借用时跳过这一拍；连接坏了断开。
 fn poll_once(context: &PollContext) {
     let tick = context.ticks.get().wrapping_add(1);
     context.ticks.set(tick);
-    let translating = context.shared.translating();
-    if !context.shared.composing() && !translating {
+    let reviewing = context.shared.reviewing();
+    if !context.shared.composing() && !reviewing {
         if context.shared.foreground() && tick.is_multiple_of(MODE_SYNC_EVERY) {
             sync_mode(context);
         }
@@ -128,10 +128,10 @@ fn poll_once(context: &PollContext) {
     };
     match client.poll() {
         Ok(frame) => {
-            // 翻译评审时回空帧 = 翻译已在 Server 侧结束（云端没给译文）。
-            if translating && frame.is_empty() {
+            // 评审时 Server 不再带 reviewing = 评审已在 Server 侧结束（云端没给译文、用户放弃、已记下）。
+            if reviewing && !frame.reviewing {
                 drop(guard);
-                context.shared.set_translating(false);
+                context.shared.set_reviewing(false);
                 context.shared.hide_candidates();
             }
         }

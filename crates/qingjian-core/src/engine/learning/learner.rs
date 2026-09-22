@@ -47,6 +47,12 @@ pub trait Learner: Send {
         None
     }
 
+    /// 用户词 `text` 记着的拼音（空格分隔的音节）；它不是用户词就返回 `None`。
+    /// 「记词组」用它判断这次是新建还是把同一个文本的旧拼音换掉。
+    fn word_pinyin(&self, _text: &str) -> Option<String> {
+        None
+    }
+
     /// 用户原样上屏了一个像英文词的字母串（中文模式按回车、英文模式空格 / 回车直通），或选了一个英文候选：
     /// 记进个人英文词表，下次它就是英文候选，而且排在随包词表的同形词前面。随包词表里没有的词（`gist`）只能靠这里学。
     fn learn_english(&mut self, _word: &str) {}
