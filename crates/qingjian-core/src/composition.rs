@@ -82,6 +82,12 @@ impl Composition {
         self.typed(self.scope().len())
     }
 
+    /// [`Self::rest`] 的原样形式。
+    pub fn typed_rest(&self) -> String {
+        let scope_len = self.scope().len();
+        self.typed_text()[scope_len..].to_owned()
+    }
+
     /// 前 `len` 字节的原样形式。
     fn typed(&self, len: usize) -> String {
         if !self.has_shifted() {

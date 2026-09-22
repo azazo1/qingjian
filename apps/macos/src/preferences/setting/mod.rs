@@ -101,6 +101,9 @@ pub enum Setting {
     /// `[general] preedit`，弹出菜单。
     Preedit,
 
+    /// `[general] inline_keys`，勾选框：行内拼音显示敲的键（双拼下是双拼码）还是解出的全拼。
+    InlineKeys,
+
     /// `[general] english_candidates`，勾选框。
     EnglishCandidates,
 
@@ -204,6 +207,7 @@ impl Setting {
             Self::ChineseFirst => 42,
             Self::ShiftLetter => 50,
             Self::HorizontalGrid => 51,
+            Self::InlineKeys => 52,
             Self::TranslationKeys => 15,
             Self::TranslationSecondKeys => 16,
             Self::TranslateSelectionKeys => 17,
@@ -265,6 +269,7 @@ impl Setting {
             42 => Self::ChineseFirst,
             50 => Self::ShiftLetter,
             51 => Self::HorizontalGrid,
+            52 => Self::InlineKeys,
             15 => Self::TranslationKeys,
             16 => Self::TranslationSecondKeys,
             17 => Self::TranslateSelectionKeys,
@@ -355,6 +360,7 @@ mod tests {
             Setting::SystemTextReplacements,
             Setting::ShiftLetter,
             Setting::HorizontalGrid,
+            Setting::InlineKeys,
             Setting::ClearInputLog,
             Setting::TestCloud,
             Setting::OpenWebsite,

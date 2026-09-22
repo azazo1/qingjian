@@ -2,6 +2,12 @@
 
 > 输入的不只是文字。
 
+## 本仓库的改动
+
+这是自用 fork, `upstream` 指向 [qingjian-team/qingjian](https://github.com/qingjian-team/qingjian)。相对上游的改动都记在这里, 便于日后 merge upstream 时对照。
+
+- 双拼下行内拼音显示敲的键: 输入框里的拼音行按音节显示双拼码(`kd'fa've`), 候选窗口里仍是解出的全拼(`kai'fa'zhe`)。配置项 `[general] inline_keys` 缺省开, 偏好设置「候选窗口」页可改。
+
 青简（Qingjian）是一个使用 **Rust** 开发的跨平台输入法。
 
 https://github.com/user-attachments/assets/d145fde9-a641-4543-8b15-dd7a2685de3d

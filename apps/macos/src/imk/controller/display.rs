@@ -36,9 +36,16 @@ impl QingjianInputController {
                 .query()
                 .map(|mut query| {
                     h.engine.annotate(&mut query.candidates);
-                    marked = query.marked_text();
-                    cursor = query.marked_cursor();
-                    preedit = Preedit::from_marked(&query.marked_segments(), cursor);
+                    preedit = Preedit::from_marked(&query.marked_segments(), query.marked_cursor());
+                    // 行内那侧显示敲的键（双拼码）还是解出的全拼，见 `[general] inline_keys`；
+                    // 候选窗口那侧不受它影响
+                    if h.inline_keys {
+                        marked = query.inline_text();
+                        cursor = query.inline_cursor();
+                    } else {
+                        marked = query.marked_text();
+                        cursor = query.marked_cursor();
+                    }
                     query.candidates.items
                 })
                 .unwrap_or_default();

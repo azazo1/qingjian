@@ -33,6 +33,7 @@ impl Host {
         self.cloud_slots = config.predict.slots;
         self.page_keys = config.general.page_keys();
         self.preedit_mode = config.general.preedit;
+        self.inline_keys = config.general.inline_keys;
         self.english_candidates = config.general.english_candidates;
         self.apps = config.apps.clone();
         self.window.set_theme(config.general.theme);

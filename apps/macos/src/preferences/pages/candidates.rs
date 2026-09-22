@@ -30,6 +30,9 @@ pub struct CandidatesPage {
 
     /// 拼音显示位置。
     preedit: Retained<NSPopUpButton>,
+
+    /// 行内拼音显示敲的键还是解出的全拼。
+    inline_keys: Retained<NSButton>,
 }
 
 impl CandidatesPage {
@@ -93,6 +96,13 @@ impl CandidatesPage {
             mtm,
             "「只在候选窗口」时正在敲的拼音不显示在应用里，终端或行内拼音显示不正常的应用可以选它。",
         );
+        let inline_keys = checkbox(mtm, "行内显示敲的键", Setting::InlineKeys, target);
+        row_checkbox(layout, &inline_keys);
+        note(
+            layout,
+            mtm,
+            "双拼时行内显示敲的键（kd'fa've），候选窗口里仍是解出的全拼（kai'fa'zhe）；全拼与注音下两处一样。不勾则行内也显示解出的全拼。",
+        );
         Self {
             theme,
             layout_mode,
@@ -100,6 +110,7 @@ impl CandidatesPage {
             renderer,
             font,
             preedit,
+            inline_keys,
         }
     }
 
@@ -127,5 +138,6 @@ impl CandidatesPage {
             &self.preedit,
             PreeditMode::ALL.iter().position(|p| *p == general.preedit),
         );
+        set_checked(&self.inline_keys, general.inline_keys);
     }
 }

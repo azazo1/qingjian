@@ -134,6 +134,9 @@ pub struct Host {
     /// 组句中的拼音显示在行内、候选窗口还是两处。
     pub preedit_mode: PreeditMode,
 
+    /// 行内拼音显示敲的键还是解出的全拼（配置 `[general] inline_keys`，缺省显示敲的键）。
+    pub inline_keys: bool,
+
     /// 候选窗口竖排 / 横排（配置 `[general] layout`）。
     pub layout: LayoutMode,
 

@@ -83,6 +83,8 @@ impl Engine {
             typed_display: None,
             correction: None,
             aux: None,
+            keys_display: None,
+            rest_keys: String::new(),
             timings: Timings {
                 parse,
                 lookup,

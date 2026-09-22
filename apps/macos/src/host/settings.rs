@@ -212,6 +212,9 @@ impl Host {
                     self.settings.set_value("general", "preedit", mode.key());
                 }
             }
+            (Setting::InlineKeys, SettingValue::Bool(on)) => {
+                self.settings.set_bool("general", "inline_keys", on);
+            }
             (Setting::QuestionMark, SettingValue::Bool(on)) => {
                 self.settings.set_bool("shortcut", "question_mark", on);
             }

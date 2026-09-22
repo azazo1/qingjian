@@ -162,6 +162,8 @@ impl Engine {
                     typed_display: decoded.as_ref().map(|d| d.marked()),
                     correction: None,
                     aux: None,
+                    keys_display: decoded.as_ref().and_then(|d| d.keys_display()),
+                    rest_keys: self.composition.typed_rest(),
                     timings: Timings {
                         parse: start.elapsed(),
                         lookup: Duration::ZERO,
@@ -352,6 +354,8 @@ impl Engine {
             typed_display,
             correction,
             aux: self.aux_segment(),
+            keys_display: decoded.as_ref().and_then(|d| d.keys_display()),
+            rest_keys: self.composition.typed_rest(),
             timings: Timings {
                 parse,
                 lookup,
@@ -385,6 +389,8 @@ impl Engine {
             typed_display: None,
             correction: None,
             aux: None,
+            keys_display: None,
+            rest_keys: String::new(),
             timings: Timings {
                 parse: Duration::ZERO,
                 lookup: Duration::ZERO,
@@ -414,6 +420,8 @@ impl Engine {
             typed_display: None,
             correction: None,
             aux: None,
+            keys_display: None,
+            rest_keys: String::new(),
             timings: Timings {
                 parse: Duration::ZERO,
                 lookup: Duration::ZERO,
@@ -454,6 +462,8 @@ impl Engine {
             typed_display: None,
             correction: None,
             aux: None,
+            keys_display: None,
+            rest_keys: String::new(),
             timings: Timings {
                 parse: Duration::ZERO,
                 lookup: Duration::ZERO,
@@ -497,6 +507,8 @@ impl Engine {
             typed_display: None,
             correction: None,
             aux: None,
+            keys_display: None,
+            rest_keys: String::new(),
             timings: Timings {
                 parse: start.elapsed(),
                 lookup: Duration::ZERO,
