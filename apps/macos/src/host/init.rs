@@ -116,6 +116,7 @@ pub fn init(mtm: MainThreadMarker, info: &BundleInfo) -> Result<(), HostError> {
     }
     let window = CandidateWindow::new(mtm);
     let indicator = ModeIndicator::new(mtm);
+    let badge = ModeBadge::new(mtm);
     let menu = InputMenu::new(mtm, version);
     indicator.set_menu(&menu.ns_menu());
     let preferences = PreferencesWindow::new(mtm, &languages, version, &info.build);
@@ -126,6 +127,7 @@ pub fn init(mtm: MainThreadMarker, info: &BundleInfo) -> Result<(), HostError> {
             engine,
             window,
             indicator,
+            badge,
             menu,
             preferences,
             settings,
@@ -154,6 +156,7 @@ pub fn init(mtm: MainThreadMarker, info: &BundleInfo) -> Result<(), HostError> {
             horizontal_grid: false,
             english_candidates: true,
             english_mode: true,
+            mode_badge: true,
             mac_switch: MacSwitchPlan::default(),
             mac_caps_lock_switch: true,
             mode: ModeState::default(),

@@ -55,6 +55,9 @@ pub struct GeneralPage {
     mac_switch_english: Retained<KeyRecorder>,
     mac_switch_chinese: Retained<KeyRecorder>,
     mac_caps_lock: Retained<NSButton>,
+
+    /// 切模式时光标旁闪不闪「中 / 英」徽标。
+    mode_badge: Retained<NSButton>,
 }
 
 impl GeneralPage {
@@ -227,6 +230,18 @@ impl GeneralPage {
             mtm,
             "不勾时 Caps Lock 只当大小写锁：亮着敲字母直接上屏大写，中英切换交给上面的开关（都没开就只能切到别的输入法了）。",
         );
+        let mode_badge = checkbox(
+            mtm,
+            "切换模式时光标旁闪一下「中」/「英」",
+            Setting::ModeBadge,
+            target,
+        );
+        row_checkbox(layout, &mode_badge);
+        note(
+            layout,
+            mtm,
+            "切换的那一刻在光标行旁边显示当前模式，一秒后自己消失（与菜单栏的「中 / 英」是同一件事的两种显示）。",
+        );
         Self {
             learning_language,
             page_size,
@@ -245,6 +260,7 @@ impl GeneralPage {
             mac_switch_english,
             mac_switch_chinese,
             mac_caps_lock,
+            mode_badge,
         }
     }
 
@@ -303,5 +319,6 @@ impl GeneralPage {
         self.mac_switch_english.setEnabled(dual);
         self.mac_switch_chinese.setEnabled(dual);
         set_checked(&self.mac_caps_lock, config.shortcut.mac_caps_lock_switch);
+        set_checked(&self.mode_badge, general.mode_badge);
     }
 }

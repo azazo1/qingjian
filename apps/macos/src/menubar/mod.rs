@@ -10,6 +10,7 @@
 //! 动作本身编码在菜单项的 tag 里，所以两边只需要一个 `menuAction:` 选择器。
 
 mod action;
+mod badge;
 mod indicator;
 mod menu;
 mod target;
@@ -20,6 +21,7 @@ use objc2_foundation::NSDictionary;
 use objc2_input_method_kit::kIMKCommandMenuItemName;
 
 pub use action::MenuAction;
+pub use badge::ModeBadge;
 pub use indicator::ModeIndicator;
 pub use menu::InputMenu;
 

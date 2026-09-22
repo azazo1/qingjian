@@ -247,6 +247,8 @@ shift_letter = "passthrough"
 # 内置英文模式：开着时单击切换键（[shortcut] switch_mode，macOS 见 mac_switch 一组）或 Caps Lock 亮着进英文模式
 # 关掉后青简保持中文模式，切换键与语言栏按钮都不再切过去；要打英文请用系统快捷键（Win+Space / ⌃Space）切到别的输入法
 english_mode = true
+# 切换中 / 英时光标旁闪一下当前模式（「中」/「英」），一秒后自己收。只有 macOS 用
+mode_badge = true
 # 中文模式下（没在组句时）敲的标点转全角：, . ? ! : ; ( ) 等，数字后面的 . 保持半角。Windows 上悬浮状态条的「，。」格可以点着切；macOS 在偏好设置中选择默认中文标点模式
 full_width_punctuation = true
 # 英文模式下的同一件事，中英各记一份，状态条切的是当前模式那份；只有 Windows 用

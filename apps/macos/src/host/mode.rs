@@ -3,6 +3,7 @@
 //! 以前 macOS 的模式是"每次按键现读 Caps Lock"，没有状态可存；现在 Caps Lock 可以不当切换键，
 //! 配置里还能有单键 / 双键切换，所以模式是一份显式状态：Caps Lock 的物理跳变、配置的切换键单击，都改它。
 
+use objc2_foundation::NSRect;
 use qingjian_platform::{MacModifier, MacSwitchAction, MacSwitchPlan};
 
 use super::Host;
@@ -30,6 +31,17 @@ impl Host {
     /// 读一次物理 Caps Lock 刷新模式，返回当前是否英文模式。文本、标点、菜单栏都走这一条，看到的才是同一个值。
     pub fn refresh_mode(&mut self) -> bool {
         self.sync_mode(modifiers::caps_lock_on())
+    }
+
+    /// 模式变了就在光标旁闪一下「中」/「英」（配置 `[general] mode_badge`）。
+    /// `anchor` 是此刻的光标行矩形；手上没有（比如菜单栏那 0.25 s 的轮询）就用上次记下的位置。
+    pub fn flash_mode_badge(&mut self, anchor: Option<NSRect>) {
+        if !self.mode_badge {
+            return;
+        }
+        let anchor = anchor.unwrap_or(self.anchor);
+        let text = if self.mode.english() { "英" } else { "中" };
+        self.badge.show(text, anchor);
     }
 }
 

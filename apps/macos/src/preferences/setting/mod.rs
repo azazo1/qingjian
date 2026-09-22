@@ -192,6 +192,9 @@ pub enum Setting {
     /// `[shortcut] mac_caps_lock_switch`，勾选框：Caps Lock 是否也切中 / 英。
     MacCapsLockSwitch,
 
+    /// `[general] mode_badge`，勾选框：切模式时光标旁闪不闪「中 / 英」徽标。
+    ModeBadge,
+
     /// `[shortcut] delete_candidate`，快捷键录制按钮（只记修饰键）。
     DeleteCandidateKeys,
 
@@ -256,6 +259,7 @@ impl Setting {
             Self::MacSwitchChinese => 63,
             Self::MacCapsLockSwitch => 64,
             Self::MacSwitchDual => 65,
+            Self::ModeBadge => 66,
             Self::InputLog => 27,
             Self::Learning => 45,
             Self::ClearInputLog => 28,
@@ -329,6 +333,7 @@ impl Setting {
             63 => Self::MacSwitchChinese,
             64 => Self::MacCapsLockSwitch,
             65 => Self::MacSwitchDual,
+            66 => Self::ModeBadge,
             27 => Self::InputLog,
             45 => Self::Learning,
             28 => Self::ClearInputLog,
@@ -414,6 +419,7 @@ mod tests {
             Setting::MacSwitchEnglish,
             Setting::MacSwitchChinese,
             Setting::MacCapsLockSwitch,
+            Setting::ModeBadge,
             Setting::InputLog,
             Setting::SystemTextReplacements,
             Setting::ShiftLetter,

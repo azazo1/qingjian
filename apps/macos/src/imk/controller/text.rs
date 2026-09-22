@@ -9,7 +9,17 @@ impl QingjianInputController {
         let mut composing = host::with(|h| !h.engine.composition().is_empty()).unwrap_or(false);
         // 模式是显式状态：Caps Lock 的物理跳变（它参与切换时）与配置的切换键都改它
         let caps = modifiers::caps_lock_on();
-        let english = host::with(|h| h.sync_mode(caps)).unwrap_or(false);
+        let (english, flipped) = host::with(|h| {
+            let before = h.mode.english();
+            let english = h.sync_mode(caps);
+            (english, english != before)
+        })
+        .unwrap_or((false, false));
+        // 这一键顺手把 Caps Lock 拨了：光标旁闪一下新模式
+        if flipped {
+            let anchor = client.caret_rect();
+            host::with(|h| h.flash_mode_badge(Some(anchor)));
+        }
         // Caps Lock 不参与切换（关掉 `mac_caps_lock_switch`，或关掉整个内置英文模式）时它只锁大小写
         let caps_locks_case = caps && !host::with(|h| h.caps_lock_switches_mode()).unwrap_or(false);
         // 终端、编辑器这类应用（`[apps] english_candidates_off`）里英文模式是纯直通

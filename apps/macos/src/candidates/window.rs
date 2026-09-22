@@ -4,7 +4,7 @@ use objc2::MainThreadMarker;
 use objc2::rc::Retained;
 use objc2_app_kit::{
     NSAppearance, NSAppearanceCustomization, NSAppearanceNameAqua, NSAppearanceNameDarkAqua,
-    NSBackingStoreType, NSColor, NSEvent, NSPanel, NSScreen, NSWindowCollectionBehavior,
+    NSBackingStoreType, NSColor, NSEvent, NSPanel, NSScreen, NSView, NSWindowCollectionBehavior,
     NSWindowLevel, NSWindowStyleMask,
 };
 use objc2_foundation::{NSPoint, NSRect, NSSize};
@@ -40,7 +40,7 @@ pub struct CandidateWindow {
 impl CandidateWindow {
     pub fn new(mtm: MainThreadMarker) -> Self {
         let view = CandidateView::new(mtm, Theme::system_default());
-        let panel = build_panel(mtm, &view);
+        let panel = build_float_panel(mtm, &view);
         Self {
             panel,
             view,
@@ -88,7 +88,7 @@ impl CandidateWindow {
         }
         let frame = self.panel.frame();
         self.panel.orderOut(None);
-        let panel = build_panel(self.mtm, &self.view);
+        let panel = build_float_panel(self.mtm, &self.view);
         panel.setAppearance(self.appearance.as_deref());
         panel.setFrame_display(frame, true);
         panel.orderFrontRegardless();
@@ -136,42 +136,49 @@ impl CandidateWindow {
     /// 窗口左下角坐标：贴在光标行下方；下方放不下放上方；不出光标所在的那块屏幕。
     /// 光标矩形是零或落在所有屏幕之外（应用不支持、或给的是胡话）时以鼠标位置为准，至少落在用户看着的屏幕上。
     fn place(&self, size: NSSize, anchor: NSRect) -> NSPoint {
-        let (anchor, screen) = match screen_containing(self.mtm, anchor.origin) {
-            Some(screen) if !(anchor.size.height == 0.0 && anchor.origin == NSPoint::ZERO) => {
-                (anchor, screen)
-            }
-            _ => {
-                let mouse = NSEvent::mouseLocation();
-                let anchor = NSRect::new(mouse, NSSize::new(0.0, FALLBACK_LINE_HEIGHT));
-                (
-                    anchor,
-                    screen_containing(self.mtm, mouse)
-                        .unwrap_or_else(|| main_screen_or_anywhere(self.mtm)),
-                )
-            }
-        };
-        let min_x = screen.origin.x;
-        let max_x = (screen.origin.x + screen.size.width - size.width).max(min_x);
-        let x = anchor.origin.x.clamp(min_x, max_x);
-        let below = anchor.origin.y - CARET_GAP - size.height;
-        let above = anchor.origin.y + anchor.size.height + CARET_GAP;
-        let top = screen.origin.y + screen.size.height;
-        let y = if below >= screen.origin.y {
-            below
-        } else if above + size.height <= top {
-            above
-        } else {
-            // 上下都放不下（屏幕很矮或窗口很高）：贴屏幕底边，宁可盖住光标也别出屏
-            screen.origin.y
-        };
-        // 无论怎么算，最后都要落在这块屏幕里：出屏等于不显示
-        let max_y = (top - size.height).max(screen.origin.y);
-        NSPoint::new(x, y.clamp(screen.origin.y, max_y))
+        place_at_caret(self.mtm, size, anchor)
     }
 }
 
-/// 建一块面板并把内容视图装进去：无边框、不抢焦点、透明背景带阴影、不吃鼠标。
-fn build_panel(mtm: MainThreadMarker, view: &CandidateView) -> Retained<NSPanel> {
+/// 把一块浮动面板摆在光标行旁边：优先下方，下方放不下放上方，都不行贴屏幕底边。
+/// 光标矩形是零或落在所有屏幕之外（应用不支持、或给的是胡话）时以鼠标位置为准，至少落在用户看着的屏幕上。
+/// 候选窗口与「中 / 英」徽标共用这一套，两个面板不会各摆各的。
+pub(crate) fn place_at_caret(mtm: MainThreadMarker, size: NSSize, anchor: NSRect) -> NSPoint {
+    let (anchor, screen) = match screen_containing(mtm, anchor.origin) {
+        Some(screen) if !(anchor.size.height == 0.0 && anchor.origin == NSPoint::ZERO) => {
+            (anchor, screen)
+        }
+        _ => {
+            let mouse = NSEvent::mouseLocation();
+            let anchor = NSRect::new(mouse, NSSize::new(0.0, FALLBACK_LINE_HEIGHT));
+            (
+                anchor,
+                screen_containing(mtm, mouse).unwrap_or_else(|| main_screen_or_anywhere(mtm)),
+            )
+        }
+    };
+    let min_x = screen.origin.x;
+    let max_x = (screen.origin.x + screen.size.width - size.width).max(min_x);
+    let x = anchor.origin.x.clamp(min_x, max_x);
+    let below = anchor.origin.y - CARET_GAP - size.height;
+    let above = anchor.origin.y + anchor.size.height + CARET_GAP;
+    let top = screen.origin.y + screen.size.height;
+    let y = if below >= screen.origin.y {
+        below
+    } else if above + size.height <= top {
+        above
+    } else {
+        // 上下都放不下（屏幕很矮或窗口很高）：贴屏幕底边，宁可盖住光标也别出屏
+        screen.origin.y
+    };
+    // 无论怎么算，最后都要落在这块屏幕里：出屏等于不显示
+    let max_y = (top - size.height).max(screen.origin.y);
+    NSPoint::new(x, y.clamp(screen.origin.y, max_y))
+}
+
+/// 建一块浮动面板并把内容视图装进去：无边框、不抢焦点、透明背景带阴影、不吃鼠标。
+/// 候选窗口与「中 / 英」徽标共用，两者除了内容视图没有区别。
+pub(crate) fn build_float_panel(mtm: MainThreadMarker, view: &NSView) -> Retained<NSPanel> {
     let panel = NSPanel::initWithContentRect_styleMask_backing_defer(
         mtm.alloc::<NSPanel>(),
         NSRect::new(NSPoint::ZERO, NSSize::new(200.0, 100.0)),

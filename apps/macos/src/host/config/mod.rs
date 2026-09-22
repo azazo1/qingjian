@@ -36,10 +36,12 @@ impl Host {
         self.inline_keys = config.general.inline_keys;
         self.english_candidates = config.general.english_candidates;
         self.english_mode = config.general.english_mode;
+        self.mode_badge = config.general.mode_badge;
         self.mac_switch = config.shortcut.mac_switch_plan();
         self.mac_caps_lock_switch = config.shortcut.mac_caps_lock_switch;
         self.apps = config.apps.clone();
         self.window.set_theme(config.general.theme);
+        self.badge.set_theme(config.general.theme);
         self.window.set_layout(config.general.layout);
         if self.layout != config.general.layout
             || self.horizontal_grid != config.general.horizontal_grid

@@ -69,6 +69,9 @@ pub struct GeneralConfig {
     /// 关掉后青简保持中文模式，切换键与语言栏按钮都不再切过去；要打英文请用系统快捷键切到别的输入法。
     pub english_mode: bool,
 
+    /// 切换中 / 英时在光标旁闪一下当前模式（「中」/「英」），一秒后自己收。只有 macOS 用（缺省开）。
+    pub mode_badge: bool,
+
     /// 中文模式下不在组句时敲的标点转成全角（`，。？！` 等，数字后的 `.` 保持半角）。
     /// Windows 悬浮状态条上可点切换；macOS 在偏好设置中选择默认模式。
     pub full_width_punctuation: bool,
@@ -134,6 +137,7 @@ impl Default for GeneralConfig {
             chinese_first: false,
             shift_letter: ShiftLetter::default(),
             english_mode: true,
+            mode_badge: true,
             full_width_punctuation: true,
             english_full_width_punctuation: false,
             aux_code_key: qingjian_core::DEFAULT_AUX_CODE_KEY.to_string(),

@@ -306,6 +306,9 @@ impl Host {
             (Setting::MacCapsLockSwitch, SettingValue::Bool(on)) => {
                 self.settings.set_bool("shortcut", "mac_caps_lock_switch", on);
             }
+            (Setting::ModeBadge, SettingValue::Bool(on)) => {
+                self.settings.set_bool("general", "mode_badge", on);
+            }
             (Setting::ResetShortcuts, _) => {
                 let defaults = ShortcutConfig::default();
                 self.settings

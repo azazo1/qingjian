@@ -45,7 +45,7 @@ use crate::app::BundleInfo;
 use crate::app::{Settings, logging, paths};
 use crate::candidates::{CandidateWindow, Frame, Preedit, Row};
 use crate::error::HostError;
-use crate::menubar::{InputMenu, MenuAction, ModeIndicator};
+use crate::menubar::{InputMenu, MenuAction, ModeBadge, ModeIndicator};
 use crate::preferences::{PreferencesWindow, Setting, SettingValue};
 
 use cloud::{CloudTestMonitor, PredictMonitor};
@@ -67,6 +67,9 @@ pub struct Host {
 
     /// 菜单栏的中 / 英状态项。
     pub indicator: ModeIndicator,
+
+    /// 光标旁的「中」/「英」徽标：切模式时闪一下，一秒后自己收。
+    pub badge: ModeBadge,
 
     /// 输入法菜单，挂在状态项和系统输入源菜单上。
     pub menu: InputMenu,
@@ -152,6 +155,9 @@ pub struct Host {
     /// 内置英文模式总开关（配置 `[general] english_mode`）：关掉后固定中文模式，
     /// Caps Lock 与配置的切换键都不再切到英文。以前只有 Windows 认这一项，现在 macOS 也认。
     pub english_mode: bool,
+
+    /// 切模式时光标旁闪不闪「中 / 英」徽标（配置 `[general] mode_badge`，缺省开）。
+    pub mode_badge: bool,
 
     /// macOS 的切换键方案（配置 `[shortcut] mac_switch` 一组）。
     pub mac_switch: MacSwitchPlan,

@@ -33,9 +33,11 @@ impl QingjianInputController {
             && host::with(|h| h.english_candidates_in(client.bundle_identifier().as_deref()))
                 .unwrap_or(false);
         tracing::debug!(english, english_candidates, "切换中 / 英模式");
+        let anchor = client.caret_rect();
         host::with(|h| {
             h.engine.set_english_mode(english_candidates);
             h.indicator.update(english);
+            h.flash_mode_badge(Some(anchor));
         });
     }
 }

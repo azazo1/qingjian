@@ -160,9 +160,14 @@ define_class!(
     impl ModeMonitor {
         #[unsafe(method(tick:))]
         fn tick(&self, _timer: Option<&AnyObject>) {
-            // 一轮询一拍：先按物理 Caps Lock 刷模式，再把结果画到标题上
+            // 一轮询一拍：先按物理 Caps Lock 刷模式，变了就在光标旁闪一下，再把结果画到标题上
             crate::host::with(|h| {
+                let before = h.mode.english();
                 let english = h.refresh_mode();
+                if english != before {
+                    // 这条路上没有输入会话，用上次记下的光标位置
+                    h.flash_mode_badge(None);
+                }
                 h.indicator.update(english);
             });
         }
