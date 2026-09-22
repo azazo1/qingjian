@@ -290,7 +290,7 @@ impl Engine {
         self.scorer_scale = scorer.as_ref().and_then(|scorer| scorer.relative_scale());
         self.rescorer = scorer.map(super::rescoring::RescoreWorker::spawn);
         *self.neural_cache.borrow_mut() = super::rescoring::NeuralCache::default();
-        self.model_confidence.borrow_mut().clear();
+        self.model_hints.borrow_mut().clear();
         self.forget_span_cache();
     }
 

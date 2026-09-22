@@ -118,7 +118,8 @@ Engine 侧在 `engine/rescoring/`: 接了打分器就取 Viterbi 前 `RESCORE_PA
 `DecisionScorer`, Core `sentence::SentenceScorer` 的另一个实现: 把 jev / laya 这类 typed decision 模型接成整句重排的第二来源
 (配置 `[decision]`, `DecisionConfig`). 一次 `score` 把这一批候选放进同一个 `choice` 题 (问句与 id 定在 `scorer.rs`),
 拿各候选的概率乘 `[decision] span` (缺省 4.0 nat) 作为决策分; 给的是同一批之间的相对优劣, 所以 `form()` 是 `ScoreForm::Relative`,
-`relative_scale()` 报 span, Core 据此把 `分 / span` 记成候选的置信度给壳画模型徽标 (`AI 87%`).
+`relative_scale()` 报 span, Core 把 `分 / span` 记成置信度, 把重排前后的名次变化记成位移 (`ModelHint`), 壳据此在候选旁标 `AI 76% ↑2`
+(字级模型没有置信度, 只标 `AI ↑2`).
 只走 HTTP: `LayaBackend` 打本地服务 `POST /api/predict` (`{"state", "questions": [...]}`, `criteria` 是选项数组),
 `JevBackend` 打 `https://api.typesafe.ai/v1/systemone` (`questions` 按 id 索引, `criteria` 是 "选项名 -> 说明" 对象, Bearer 鉴权),
 两者响应形状一致, 解析共用 `backend/response.rs`. 请求在 `backend/http.rs` 的一个 current_thread 运行时里 `block_on`:

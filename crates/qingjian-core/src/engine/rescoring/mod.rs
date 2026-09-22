@@ -8,6 +8,7 @@
 //! 按键回调永远不等模型：先按词级模型出候选，模型的意见晚几十毫秒到。
 
 mod cache;
+mod hint;
 mod worker;
 
 #[cfg(test)]
@@ -16,6 +17,7 @@ mod tests;
 use super::*;
 
 pub(crate) use cache::NeuralCache;
+pub use hint::ModelHint;
 pub(crate) use worker::RescoreWorker;
 
 impl Engine {
@@ -96,6 +98,8 @@ impl Engine {
                 sum / paths.len() as f64
             }
         };
+        // 重排前的名次: 重排之后拿来算每条被抬 / 压了几名
+        let before: Vec<String> = paths.iter().map(|path| path.text.clone()).collect();
         for path in paths.iter_mut() {
             let neural = cache.get(&path.text).expect("filled above");
             path.score += match self.scorer_form {
@@ -108,25 +112,31 @@ impl Engine {
                 .partial_cmp(&a.score)
                 .unwrap_or(std::cmp::Ordering::Equal)
         });
-        // 相对分带满量程时, 顺手把每条候选的置信度 (分 / 满量程) 记下来给壳显示模型徽标
-        if self.scorer_form == ScoreForm::Relative
-            && let Some(scale) = self.scorer_scale.filter(|scale| *scale > 0.0)
-        {
-            let mut confidences = self.model_confidence.borrow_mut();
-            confidences.clear();
-            for path in paths.iter() {
-                if let Some(score) = cache.get(&path.text) {
-                    confidences.insert(path.text.clone(), (score / scale).clamp(0.0, 1.0) as f32);
-                }
-            }
+        // 记下每条候选的名次变化给壳标 ↑N / ↓N; 相对分带满量程时再顺手算置信度 (分 / 满量程)
+        let scale = self.scorer_scale.filter(|scale| *scale > 0.0);
+        let mut hints = self.model_hints.borrow_mut();
+        hints.clear();
+        for (after, path) in paths.iter().enumerate() {
+            let shift = before
+                .iter()
+                .position(|text| *text == path.text)
+                .map_or(0, |before| before as i16 - after as i16);
+            let confidence = match (self.scorer_form, scale) {
+                (ScoreForm::Relative, Some(scale)) => cache
+                    .get(&path.text)
+                    .map(|score| (score / scale).clamp(0.0, 1.0) as f32),
+                _ => None,
+            };
+            hints.insert(path.text.clone(), ModelHint { shift, confidence });
         }
+        drop(hints);
         self.last_rescored.set(true);
     }
 
-    /// 某条文本最近一次重排的模型置信度 (0 到 1); 没接带置信度的打分器或这条没被重排过时为 `None`.
-    /// 壳拿它在候选旁显示模型徽标 (相对分才算得出置信度, 字级模型的 log 概率不算).
-    pub fn model_confidence(&self, text: &str) -> Option<f32> {
-        self.model_confidence.borrow().get(text).copied()
+    /// 某条文本最近一次重排的模型标注 (名次变化 + 置信度); 没接打分器或这条没参与重排时为 `None`.
+    /// 壳拿它在候选旁标 `AI 76% ↑2` (字级模型没有置信度, 只标 `AI ↑2`).
+    pub fn model_hint(&self, text: &str) -> Option<ModelHint> {
+        self.model_hints.borrow().get(text).copied()
     }
 
     /// 最近一次查询里有整句路径还没拿到神经分：壳该在用户停顿后调 [`Self::request_rescoring`]。

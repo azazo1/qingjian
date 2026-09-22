@@ -117,18 +117,23 @@ impl Host {
                 row
             })
             .collect();
-        // 模型重排过的候选: 在译文之前加一个 "AI 87%" 的小标, 说明这次排序是模型定的
-        // (置信度只有相对分的打分器才算得出, 见 `Engine::model_confidence`)
+        // 模型重排过的候选: 在译文之前加一个小标, 说明这次排序是模型定的
+        // (决策模型带置信度 `AI 76% ↑2`; 字级模型没有概率语义, 只标 `AI ↑2`, 见 `Engine::model_hint`)
         for row in rows.iter_mut() {
-            if let Some(confidence) = self.engine.model_confidence(&row.text) {
-                row.annotation.insert(
-                    0,
-                    (
-                        format!("AI {:.0}%", confidence * 100.0),
-                        crate::candidates::Tone::Model,
-                    ),
-                );
+            let Some(hint) = self.engine.model_hint(&row.text) else {
+                continue;
+            };
+            let mut label = match hint.confidence {
+                Some(confidence) => format!("AI {:.0}%", confidence * 100.0),
+                None => "AI".to_owned(),
+            };
+            match hint.shift {
+                0 => {}
+                shift if shift > 0 => label.push_str(&format!(" ↑{shift}")),
+                shift => label.push_str(&format!(" ↓{}", shift.unsigned_abs())),
             }
+            row.annotation
+                .insert(0, (label, crate::candidates::Tone::Model));
         }
         // 页上的译词告诉 Engine：用户上屏那一刻它们在屏幕上，算「见过」（词汇记录）；窗口收起时传空
         self.engine

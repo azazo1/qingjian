@@ -50,6 +50,7 @@ pub use prediction::{
     CloudWord, NoPredictor, Prediction, PredictionKind, PredictionPolicy, PredictionRequest,
     Predictor, SurroundingText,
 };
+pub use rescoring::ModelHint;
 
 pub use query::Query;
 pub use raw::RawPreedit;
@@ -145,8 +146,8 @@ pub struct Engine {
     /// 当前打分器相对分的满量程 ([`SentenceScorer::relative_scale`]): 有它才把候选的分还原成 0 到 1 的置信度.
     scorer_scale: Option<f64>,
 
-    /// 最近一次重排里各条文本的置信度 (0 到 1), 壳拿去在候选旁显示模型徽标; 每次重排重建.
-    model_confidence: std::cell::RefCell<HashMap<String, f32>>,
+    /// 最近一次重排里各条文本的模型标注 (名次变化 + 置信度), 壳拿去在候选旁标 `AI 76% ↑2`; 每次重排重建.
+    model_hints: std::cell::RefCell<HashMap<String, rescoring::ModelHint>>,
 
     /// 异步重打分：后台线程里的打分器，壳在停顿后送任务、轮询结果（见 [`rescoring`]）。
     rescorer: Option<rescoring::RescoreWorker>,
@@ -399,7 +400,7 @@ impl Engine {
             scorer_form: ScoreForm::Absolute,
             scorer_remote: false,
             scorer_scale: None,
-            model_confidence: std::cell::RefCell::new(HashMap::new()),
+            model_hints: std::cell::RefCell::new(HashMap::new()),
             rescorer: None,
             neural_cache: std::cell::RefCell::new(rescoring::NeuralCache::default()),
             rescoring_before: None,
