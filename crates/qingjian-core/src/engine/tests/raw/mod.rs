@@ -43,7 +43,9 @@ fn assert_raw(engine: &mut Engine, text: &str, cursor_bytes: usize) {
         assert!(logged.lock().unwrap().is_empty());
         assert!(metered.lock().unwrap().is_empty());
     }
-    assert_eq!(engine.take_raw(), text);
+    // 延迟上屏的已选词排在原样的字母前面一起交出来（`raw_preedit` 本身只算还没确认的那部分）
+    let pending = engine.pending_text();
+    assert_eq!(engine.take_raw(), format!("{pending}{text}"));
     assert!(engine.composition().is_empty());
     assert_eq!(
         logged

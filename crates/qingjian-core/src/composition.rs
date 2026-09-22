@@ -203,8 +203,7 @@ impl Composition {
         }
         self.buffer.insert_str(0, prefix);
         let added = prefix.chars().count();
-        self.shifted
-            .splice(0..0, std::iter::repeat(false).take(added));
+        self.shifted.splice(0..0, std::iter::repeat_n(false, added));
         self.cursor += prefix.len();
     }
 }

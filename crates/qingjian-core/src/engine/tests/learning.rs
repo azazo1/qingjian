@@ -512,10 +512,9 @@ fn committing_the_translation_learns_the_word_and_returns_the_gloss() {
         .find(|c| c.text == "开发")
         .cloned()
         .unwrap();
-    assert_eq!(
-        engine.commit_translation(&kaifa, 0).as_deref(),
-        Some("開発する")
-    );
+    // 这段拼音还没选完：这次上屏是延迟的，交给应用的是空串，译词先留在 Engine 里
+    assert_eq!(engine.commit_translation(&kaifa, 0).as_deref(), Some(""));
+    assert_eq!(engine.pending_text(), "開発する");
     // 拼音按候选消耗，剩下的接着组句；这个词记了学习
     assert_eq!(engine.composition().text(), "zhe");
     assert_eq!(engine.learner().weight("开发"), 1);

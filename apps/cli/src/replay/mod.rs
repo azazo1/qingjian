@@ -184,12 +184,15 @@ fn replay_commit(
         ));
     }
     // 照着当时的选择上屏，让上下文往前走；不在候选里就原样清掉
+    // （`commit` 与 `clear` 的返回值是「该交给应用的文本」，回放里没有应用，丢掉即可）
     match position.map(|i| query.candidates.items[i].clone()) {
         Some(candidate) => {
             engine.commit(&candidate);
             engine.clear();
         }
-        None => engine.clear(),
+        None => {
+            engine.clear();
+        }
     }
     // 辅码选词的闭环：学习记完之后，同样的拼音改成纯拼音输入，这个词该排到首选
     if let Some(pinyin) = pinyin {

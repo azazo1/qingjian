@@ -166,6 +166,8 @@ impl Engine {
                     aux: None,
                     keys_display: decoded.as_ref().and_then(|d| d.keys_display()),
                     rest_keys: self.composition.typed_rest(),
+                    // 延迟上屏的已选词由 `Engine::query` 统一填，这里先空着
+                    pending: String::new(),
                     timings: Timings {
                         parse: start.elapsed(),
                         lookup: Duration::ZERO,
@@ -358,6 +360,8 @@ impl Engine {
             aux: self.aux_segment(),
             keys_display: decoded.as_ref().and_then(|d| d.keys_display()),
             rest_keys: self.composition.typed_rest(),
+            // 延迟上屏的已选词由 `Engine::query` 统一填，这里先空着
+            pending: String::new(),
             timings: Timings {
                 parse,
                 lookup,
@@ -393,6 +397,8 @@ impl Engine {
             aux: None,
             keys_display: None,
             rest_keys: String::new(),
+            // 延迟上屏的已选词由 `Engine::query` 统一填，这里先空着
+            pending: String::new(),
             timings: Timings {
                 parse: Duration::ZERO,
                 lookup: Duration::ZERO,
@@ -424,6 +430,8 @@ impl Engine {
             aux: None,
             keys_display: None,
             rest_keys: String::new(),
+            // 延迟上屏的已选词由 `Engine::query` 统一填，这里先空着
+            pending: String::new(),
             timings: Timings {
                 parse: Duration::ZERO,
                 lookup: Duration::ZERO,
@@ -466,6 +474,8 @@ impl Engine {
             aux: None,
             keys_display: None,
             rest_keys: String::new(),
+            // 延迟上屏的已选词由 `Engine::query` 统一填，这里先空着
+            pending: String::new(),
             timings: Timings {
                 parse: Duration::ZERO,
                 lookup: Duration::ZERO,
@@ -511,6 +521,8 @@ impl Engine {
             aux: None,
             keys_display: None,
             rest_keys: String::new(),
+            // 延迟上屏的已选词由 `Engine::query` 统一填，这里先空着
+            pending: String::new(),
             timings: Timings {
                 parse: start.elapsed(),
                 lookup: Duration::ZERO,

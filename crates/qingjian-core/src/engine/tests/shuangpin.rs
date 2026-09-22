@@ -39,7 +39,8 @@ fn shuangpin_commit_consumes_keys_per_syllable() {
         .unwrap();
     engine.commit(&kaifa);
     assert_eq!(engine.composition().text(), "ve");
-    assert_eq!(engine.query().unwrap().marked_text(), "zhe");
+    // 选中的 开发 延迟上屏，preedit 里排在还没确认的拼音前面
+    assert_eq!(engine.query().unwrap().marked_text(), "开发zhe");
     // 未打完的最后一个键也被候选吃掉
     engine.set_input("kdf");
     let kaifang = engine.query().unwrap().candidates.items[0].clone();
