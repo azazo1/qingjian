@@ -1,11 +1,9 @@
 //! 呈现：删候选、按应用关英文候选、翻译选区的起止、提示气泡、会话重置与候选窗口绘制。
 
 mod notice;
-mod phrase_job;
 mod translation_job;
 
 pub(super) use notice::Notice;
-pub use phrase_job::PhraseJob;
 pub use translation_job::TranslationJob;
 
 use super::cloud::cloud_candidate;
@@ -41,35 +39,6 @@ impl Host {
         self.reset_session(None, vec![cloud_candidate("翻译中…".to_owned())]);
         self.await_prediction();
         self.render();
-    }
-
-    /// 开始一次记词组：选中的文本与预填拼音交给评审态，窗口只显示拼音行与提示。
-    /// 应用里的选区一个字符都不动，也不放 marked text：用户改拼音改的是这里这份字符串。
-    pub fn begin_phrase(&mut self, text: String, pinyin: String) {
-        self.phrase = Some(PhraseJob { text, pinyin });
-        self.refresh_phrase();
-    }
-
-    /// 评审态下拼音变了：重画候选窗口的拼音行与提示。
-    pub fn refresh_phrase(&mut self) {
-        let Some(job) = self.phrase.as_ref() else {
-            return;
-        };
-        let display = job.display_pinyin().to_owned();
-        let cursor = job.pinyin.chars().count();
-        self.cancel_prediction();
-        self.reset_session(Preedit::plain(&display, cursor), Vec::new());
-        self.status = Some("回车记词组 · Esc 取消".to_owned());
-        self.render();
-    }
-
-    /// 结束记词组（提交完、放弃、失焦、停用）：清掉评审态并收窗。
-    pub fn end_phrase(&mut self) {
-        if self.phrase.take().is_some() {
-            self.cancel_prediction();
-            self.reset_session(None, Vec::new());
-            self.window.hide();
-        }
     }
 
     /// 在候选窗口里显示一行提示，几秒后自动收起（敲键也收）。

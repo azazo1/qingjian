@@ -30,7 +30,6 @@ impl Host {
         self.translation_keys = (translation.key(), translation_second.key());
         self.delete_keys = config.shortcut.delete_keys().key();
         self.translate_keys = config.shortcut.translate_selection.key();
-        self.learn_keys = config.shortcut.learn_phrase.key();
         self.page_size = config.general.page_size();
         self.cloud_slots = config.predict.slots;
         self.page_keys = config.general.page_keys();

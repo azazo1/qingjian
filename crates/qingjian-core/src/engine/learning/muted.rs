@@ -39,11 +39,6 @@ impl MutedLearner {
         self.private || self.disabled
     }
 
-    /// 现在是不是「写了也不落账」（私密输入中，或用户关掉了学习）。
-    pub(in crate::engine) fn is_muted(&self) -> bool {
-        self.muted()
-    }
-
     pub(in crate::engine) fn replace(&mut self, inner: Box<dyn Learner>) {
         self.inner = inner;
     }
@@ -115,10 +110,6 @@ impl Learner for MutedLearner {
 
     fn user_words(&self) -> Option<&Dictionary> {
         self.inner.user_words()
-    }
-
-    fn word_pinyin(&self, text: &str) -> Option<String> {
-        self.inner.word_pinyin(text)
     }
 
     fn learn_english(&mut self, word: &str) {

@@ -1,7 +1,6 @@
 //! 协议分派：把 DLL 发来的 [`ClientMessage`] 交给 Engine，产出回给 DLL 的 [`ServerMessage`]。
 //! 消息分派在 [`message`]，会话在 [`session`]，组句展示状态在 [`composed`]，按键在 [`key`]，
-//! 候选窗口输出在 [`candidates`]，状态条在 [`status`]，翻译选中文字在 [`translate`]，
-//! 记词组在 [`phrase`]，等选区回包的请求在 [`selection`]，配置热加载在 [`reload`]，
+//! 候选窗口输出在 [`candidates`]，状态条在 [`status`]，翻译选中文字在 [`translate`]，配置热加载在 [`reload`]，
 //! 本地整句模型在 [`rescore`]，形码码表在 [`code`]。
 
 mod candidates;
@@ -10,10 +9,8 @@ mod composed;
 mod config;
 mod key;
 mod message;
-mod phrase;
 mod reload;
 mod rescore;
-mod selection;
 mod session;
 mod status;
 mod translate;
@@ -32,12 +29,10 @@ pub use self::candidates::{CandidateSink, NoopSink, RenderSettings};
 pub use self::code::find_code_table;
 use self::composed::Composed;
 pub use self::config::RouterConfig;
-use self::phrase::Phrase;
 use self::reload::ConfigReload;
 pub use self::reload::{DataDirs, attach_cloud};
 pub use self::rescore::find_model;
 use self::rescore::{ModelLoader, RescoreState};
-use self::selection::{PendingSelection, SelectionPurpose};
 use self::session::SessionInfo;
 pub use self::status::{NoopStatusSink, StatusEvent, StatusSink, StatusView};
 use self::translate::Translation;
@@ -65,13 +60,10 @@ pub struct Router {
     /// 「翻译选中文字」进行态；与 `composed` 互斥。
     translation: Option<Translation>,
 
-    /// 「记词组」进行态；与 `composed`、`translation` 互斥。
-    phrase: Option<Phrase>,
+    /// 已发出、等 DLL 回选区的请求号；对不上的 `Selection` 丢弃。
+    pending_selection: Option<u64>,
 
-    /// 已发出、等 DLL 回选区的请求；对不上的 `Selection` 丢弃。
-    pending_selection: Option<PendingSelection>,
-
-    /// 读选区的请求号计数器（翻译与记词组共用）。
+    /// 「翻译选中文字」请求号计数器。
     selection_seq: u64,
 
     /// 整句补全（preedit 右侧、Tab 上屏）；缓冲变化时清空。
@@ -79,9 +71,6 @@ pub struct Router {
 
     /// 删候选后的屏幕提示，随下一帧下发、下一次按键清。
     notice: Option<String>,
-
-    /// 记词组提交成功后的一句话，随下一帧下发、下一次按键清。
-    phrase_notice: Option<String>,
 
     /// 当前高亮候选在布局里的下标（跨页）。
     highlight: usize,
@@ -142,12 +131,10 @@ impl Router {
             focused: None,
             composed: None,
             translation: None,
-            phrase: None,
             pending_selection: None,
             selection_seq: 0,
             sentence: None,
             notice: None,
-            phrase_notice: None,
             highlight: 0,
             navigated: false,
             last_flush: Instant::now(),

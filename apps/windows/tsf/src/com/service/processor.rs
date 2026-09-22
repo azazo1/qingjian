@@ -24,14 +24,8 @@ impl ITfTextInputProcessor_Impl for TextService_Impl {
         let keystroke: ITfKeystrokeMgr = thread_mgr.cast()?;
         let sink: ITfKeyEventSink = self.to_interface();
         unsafe { keystroke.AdviseKeyEventSink(tid, &sink, true)? };
-        match preserved::load_translate_combo() {
-            Some(combo) => match preserved::register(
-                &keystroke,
-                tid,
-                &preserved::GUID_TRANSLATE,
-                combo,
-                "翻译选中文字",
-            ) {
+        match preserved::load_combo() {
+            Some(combo) => match preserved::register(&keystroke, tid, combo) {
                 Ok(()) => {
                     self.translate_combo.set(Some(combo));
                     log(&format!("翻译选中文字快捷键已登记为保留键: {combo}"));
@@ -39,22 +33,6 @@ impl ITfTextInputProcessor_Impl for TextService_Impl {
                 Err(error) => log(&format!("登记翻译快捷键失败: {error}")),
             },
             None => log("翻译快捷键配成了 none, 不登记保留键"),
-        }
-        match preserved::load_learn_combo() {
-            Some(combo) => match preserved::register(
-                &keystroke,
-                tid,
-                &preserved::GUID_LEARN_PHRASE,
-                combo,
-                "记词组",
-            ) {
-                Ok(()) => {
-                    self.learn_combo.set(Some(combo));
-                    log(&format!("记词组快捷键已登记为保留键: {combo}"));
-                }
-                Err(error) => log(&format!("登记记词组快捷键失败: {error}")),
-            },
-            None => log("记词组快捷键没配（缺省不配），不登记保留键"),
         }
 
         self.client_id.set(tid);
@@ -115,10 +93,7 @@ impl ITfTextInputProcessor_Impl for TextService_Impl {
         {
             self.drop_switch_preserved_key(&keystroke);
             if let Some(combo) = self.translate_combo.take() {
-                preserved::unregister(&keystroke, &preserved::GUID_TRANSLATE, combo);
-            }
-            if let Some(combo) = self.learn_combo.take() {
-                preserved::unregister(&keystroke, &preserved::GUID_LEARN_PHRASE, combo);
+                preserved::unregister(&keystroke, combo);
             }
             let _ = unsafe { keystroke.UnadviseKeyEventSink(self.client_id.get()) };
         }

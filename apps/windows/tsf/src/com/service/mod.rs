@@ -76,9 +76,6 @@ pub struct TextService {
     /// 登记成保留键的「翻译选中文字」组合；停用时撤掉（见 [`preserved`](crate::com::key::preserved)）。
     translate_combo: Cell<Option<KeyCombo>>,
 
-    /// 登记成保留键的「记词组」组合；缺省没配，停用时撤掉。
-    learn_combo: Cell<Option<KeyCombo>>,
-
     /// Ctrl+Space 切换键当前是否已登记为保留键（`[shortcut] switch_mode = "ctrl+space"` 时才有）。
     switch_preserved: Cell<bool>,
 
@@ -144,7 +141,6 @@ impl TextService {
             key_tap: KeyTap::default(),
             profile_cookie: Cell::new(None),
             translate_combo: Cell::new(None),
-            learn_combo: Cell::new(None),
             switch_preserved: Cell::new(false),
             input_settings: Cell::new(None),
             conversion_guard_until: Cell::new(None),

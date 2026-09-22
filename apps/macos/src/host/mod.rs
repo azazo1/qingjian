@@ -55,7 +55,7 @@ pub use init::init;
 pub use mode::{ModeState, SwitchMatcher};
 use model::RescoreMonitor;
 use presenting::Notice;
-pub use presenting::{PhraseJob, TranslationJob};
+pub use presenting::TranslationJob;
 pub use session::Session;
 
 pub struct Host {
@@ -132,14 +132,8 @@ pub struct Host {
     /// 翻译选中文字的快捷键（配置 `[shortcut] translate_selection`）; `None` 是关掉了.
     pub translate_keys: Option<KeyCombo>,
 
-    /// 记词组的快捷键（配置 `[shortcut] learn_phrase`）; `None` 是关掉了（缺省就是关着）.
-    pub learn_keys: Option<KeyCombo>,
-
     /// 进行中的「翻译选中文字」；有它时候选窗口显示的是译文（或「翻译中…」），按键先归它处理。
     pub translation: Option<TranslationJob>,
-
-    /// 进行中的「记词组」；有它时候选窗口显示正在编辑的拼音与提示，按键先归它处理。
-    pub phrase: Option<PhraseJob>,
 
     /// 正在显示的提示（候选窗口里一行字，几秒后自动收）。
     pub notice: Option<Notice>,

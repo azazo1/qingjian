@@ -71,11 +71,6 @@ Windows / Linux 的 `settle_pending` (同上两种情形) 与 `Effect::Passthrou
 
 `Engine::discard_input` / `EngineSession::discard_input` 用于隐私能力变化时无痕清理输入，包括透传缓冲、学习链和暂存词汇曝光；`set_private` 只切换写入开关，保留已输入的组句。
 
-记词组 (`engine/phrase/`, 见 [design/phrase-learning.md](../design/phrase-learning.md)): `Engine::pinyin_of` 从词库反查读音, 惰性建 `qingjian_core::transcribe::Transcriber` 并缓存在 `Engine.readings`,
-建表遍历全部词库 (几十万条, 几十毫秒级, 只付一次), `set_extra_dictionaries` 时作废; 整词优先、词库没有的词退逐字、多音字取词频高的读音, 这张表原先在 `apps/cli/src/eval/transcribe.rs` (整句评测把原文转拼音), 现在两边共用.
-`Engine::remember_phrase(pinyin, text)` 把 "拼音 -> 文本" 记成用户词: `parser::segment` 切音节 (分隔符 `'` 或空白, 每个音节都要求完整) -> `Learner::learn_word` + `record_choice` (去掉分隔符的字母串) + `record`,
-与 `finish_buffer` 的自动造词是同一笔账; `Learner::word_pinyin` 是配套的只读接口 (用户词记着的拼音, 壳用来提示 "已更新" 还是 "已记住"). 私密输入与 `[general] learning = false` 时返回 `PhraseError`, 什么都不记.
-
 ## crates/qingjian-translate
 
 `Glossary`，本地 TSV 释义表（词性 + 译文）；`LevelTable`，词汇等级表（`assets/levels/levels-{en,ja}.tsv`，CEFR A1–C2 / JLPT N5–N1，
@@ -205,7 +200,7 @@ macOS 另有 `[shortcut] mac_switch_single` / `mac_switch_dual` 两个开关（`
   配的触发键进辅码态、之后的字母进码段，候选行会带上命中的码。
 - `--tune 名=值`（逗号分隔）覆盖个人 n-gram 插值与敲错代价的常数扫网格（名字见 `apps/cli/src/tuning.rs`，Core 侧是 `Engine::set_interpolation` / `set_typo_costs`，壳只用缺省值）。
 - `--eval-text <文本>...` 装了码表（`--aux-table`）时多打一行码表覆盖率：词频前 10,000 与全库两段命中比例（与导入统计同源）。
-- `--eval-text <文本>...` 整句评测：把用户自己写的中文文本按标点切句、按词库读音转成全拼（读音反查在 `qingjian_core::transcribe::Transcriber`，与记词组共用一张表），冷启动喂给引擎看整句能不能还原原句
+- `--eval-text <文本>...` 整句评测：把用户自己写的中文文本按标点切句、按词库读音转成全拼，冷启动喂给引擎看整句能不能还原原句
   （首选命中率 / 字准确率 / 查询耗时；不依赖日志里当时选了什么，给整句排序与语言模型的改动当尺子），`--eval-save` 冻结成 `句子\t拼音\t上文` 三列文件，
   之后直接 `--eval-text` 它保证比的是同一份句子（本机的在 `data/eval/sentences.tsv`）。排序、整句、纠错的改动先跑它们再合。
 
@@ -223,8 +218,8 @@ IMK 输入法，源码按 `app / host / imk / candidates / menubar / preferences
 - 配置项：云联想 `[predict]`（偏好设置「云服务」页有「测试连接」按钮：`qingjian_predict::ConnectionTest` 起线程发一条最小请求，`Host` 用独立定时器 `CloudTestMonitor` 轮询结果显示到窗口底部；
   `reasoning_effort` 缺省 `none`，DeepSeek V4 默认思考，不关正文为空, 偏好设置「云服务」页有文本框可直接改 (留空即请求里不带这个参数, 给不认它的接口)；`max_tokens` 缺省 200, 写 0 即不带这个参数 (释义兜底取配置值与 600 里大的那个, 写 0 时也不带)；模糊音 `[fuzzy]` 默认都关；`[general]` 学习语言（`off` 不显示译文）/ 每页候选数 / 翻页键 / 外观 / 竖排横排 / 拼音显示位置 /
   英文模式候选开关 / 中文优先 `chinese_first` / 双拼方案 `shuangpin`（小鹤 / 自然码 / 微软 / 搜狗 / 智能ABC / 小浪 / 首道，空为全拼）/ 日志级别 `log_level`（缺省 info 不含敲的内容，debug 逐键记，热切换）/ 输入日志 `input_log`；
-  `[shortcut]` 模式键 v / u、`question_mark`（缺省关，开了空缓冲区敲 `?` 进问字）、上屏第一 / 第二个译词的修饰键 `translation` / `translation_second`、删候选 `delete_candidate`（缺省 shift，用户词整删、词库词清学习）、翻译选中文字 `translate_selection`、记词组 `learn_phrase`（缺省不配）、
-  这五项都是 `KeyBinding`（`config/key_binding.rs`）：配着键或写 `none` 关掉，关掉的那项在壳里是 `None`，不命中也不占着那个组合（macOS 录制按钮按 ⌫ 清空、Windows 设置页有「不使用」一项）、
+  `[shortcut]` 模式键 v / u、`question_mark`（缺省关，开了空缓冲区敲 `?` 进问字）、上屏第一 / 第二个译词的修饰键 `translation` / `translation_second`、删候选 `delete_candidate`（缺省 shift，用户词整删、词库词清学习）、翻译选中文字 `translate_selection`、
+  这四项都是 `KeyBinding`（`config/key_binding.rs`）：配着键或写 `none` 关掉，关掉的那项在壳里是 `None`，不命中也不占着那个组合（macOS 录制按钮按 ⌫ 清空、Windows 设置页有「不使用」一项）、
   中英切换 `switch_mode`（Windows 用）与 `mac_switch_single` / `mac_switch_dual` 两个开关加三个键位（macOS，两个开关可同时开；`mac_caps_lock_switch` 决定 Caps Lock 是否也切，偏好设置「通用」页可录制成带左右的修饰键或组合键）；
   `[apps] english_candidates_off` 按 bundle identifier 列出英文模式不给候选的应用（缺省终端 / 编辑器 / IDE，`*` 前缀匹配）；
   `[dictionaries] domains` 打开随包的领域词库（`Resources/dicts/` 11 本，缺省只开 `idioms`），`disabled` 关掉用户目录 `dicts/` 里的某本导入词库；
@@ -249,9 +244,6 @@ IMK 输入法，源码按 `app / host / imk / candidates / menubar / preferences
   `DecisionScorer` 只在主线程构造 (建 HTTP 客户端与运行时), 接上与本地模型同一条重排链路; 壳等结果的上限 (`RescoreMonitor::set_max_wait`) 跟着 `[decision] timeout_ms` 放宽 (多留一秒),
   本地模型仍用两秒缺省; "云服务" 页有开关, 后端, 接口地址与密钥框.
 - 端到端验证可用 `osascript` 的 System Events 往 TextEdit 发按键再读回文本（终端需要辅助功能权限；输入法得在中文模式）。
-- 记词组（`[shortcut] learn_phrase`，缺省不配，偏好设置「快捷键」页录制）: `imk/controller/phrase.rs` 读选区（同翻译的 `selected_text`，上限 500 字）-> `Engine::pinyin_of` 预填 ->
-  评审态（`host/presenting/phrase_job.rs` 的 `PhraseJob`，候选窗只画拼音行与提示，不放 marked text，不动应用内容），字母与 `'` 追加、退格删末位、回车记下（记完立刻 `flush_learning`）、Esc 放弃；
-  失焦 / 停用 / `commitComposition` 都结束评审。查不到读音时预填空串并在提示里说明，由用户手敲。
 
 ## apps/windows
 
@@ -281,13 +273,6 @@ TSF 原有数字 / OEM 标点 / 空格键码按当前布局用 `ToUnicodeEx` 解
 连不上 Server 时 DLL 自己拉起它（`tsf/src/com/service/launch.rs`）：`ShellExecuteW` 起与 DLL 同目录的 `qingjian-server.exe`
 （`uiAccess=true` 的 exe 用 `CreateProcess` 报 740），进程内 5 秒冷却 + 跨进程命名互斥体防止砸出一串 Server；
 起完清掉重连退避，下一键就试。Server 只在登录时由「启动」文件夹拉起，中途挂了以前只能等下次登录。
-
-记词组（`[shortcut] learn_phrase`，缺省不配，设置「快捷键」页那一行只改修饰键、字母缺省 `p`）：与翻译选中文字共用读选区协议，
-`pending_selection` 带上用途（`dispatch/selection/` 的 `PendingSelection` / `SelectionPurpose`），回包在 `dispatch/translate/mod.rs::handle_selection` 按用途分流到翻译或 `dispatch/phrase/`。
-评审态在 `dispatch/phrase/`：`Phrase { text, pinyin }`，帧的拼音行放正在编辑的拼音、`notice` 放提示；`raw_frame` 里排在翻译之前，`current_frame` 把评审帧与 "记下了" 那一帧裁剪成只带 `reviewing` 的空帧
-（拼音行不能让 DLL 写进应用文档，提示候选由 Server 自绘窗显示，见 `ui/` 那条 `self_drawn_frame` 通路）。
-`Frame.reviewing`（新增字段）同时是 DLL 的评审依据：`Shared::translating` 因此泛化成 `Shared::reviewing`，按键结果回来时按帧更新、轮询发现 Server 不再带它就收窗；
-DLL 侧多一个保留键 `GUID_LEARN_PHRASE`（`com/key/preserved.rs`，组合从配置读，缺省不登记），命中就当作按下那个组合转发给 Server。
 
 词库导入（设置「词库」页）走 `qingjian-dictionary::import` 转成 `.qj`（空词库拒绝），多选批量、成功的从 `[dictionaries] disabled` 摘掉、页面显示每个文件的结果；
 Server 每次轮询比对用户 `dicts` 的路径 / mtime / 长度快照，配置没变也重载新增、同名更新与移除；配置解析失败时词库沿用上次有效的开关（#36）。

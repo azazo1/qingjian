@@ -10,17 +10,18 @@ pub mod coverage;
 mod extract;
 mod pair;
 mod report;
+mod transcribe;
 
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 use std::time::Instant;
 
 use qingjian_core::Engine;
-use qingjian_core::Transcriber;
 
 pub use report::Report;
 
 use pair::Pair;
+use transcribe::Transcriber;
 
 /// 跑一遍评测集，返回报告；`save` 给了就把用到的句子集写成三列文件。
 pub fn run(
@@ -89,10 +90,7 @@ fn collect(
                 continue;
             }
             report.extracted += 1;
-            match transcriber
-                .syllables(&extracted.text, engine.language_model())
-                .map(|syllables| syllables.join(""))
-            {
+            match transcriber.transcribe(&extracted.text, engine.language_model()) {
                 Some(pinyin) => pairs.push(Pair {
                     text: extracted.text,
                     pinyin,

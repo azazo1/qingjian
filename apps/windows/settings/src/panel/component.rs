@@ -200,23 +200,6 @@ impl Component for Settings {
                 };
                 self.save("shortcut", "translate_selection", value);
             }
-            Message::LearnPhrase(Some(i)) if i < shortcut::MODIFIERS.len() => {
-                let value = match shortcut::MODIFIERS[i].1 {
-                    // 「不使用」直接写 none
-                    "none" => "none".to_owned(),
-                    modifiers => {
-                        // 没配过的时候再挑修饰键, 就用缺省字母把这个键打开
-                        let key = self
-                            .config
-                            .shortcut
-                            .learn_phrase
-                            .key()
-                            .map_or(shortcut::LEARN_PHRASE_KEY, |combo| combo.key);
-                        format!("{modifiers}+{key}")
-                    }
-                };
-                self.save("shortcut", "learn_phrase", value);
-            }
 
             // 模糊音页
             Message::Fuzzy(key, on) => self.save("fuzzy", key, on),

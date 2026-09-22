@@ -17,7 +17,6 @@ mod learning;
 mod marked;
 mod mode_keys;
 mod pending;
-mod phrase;
 mod prediction;
 mod privacy;
 mod query;
@@ -48,7 +47,6 @@ pub use input_log::{
 pub use learning::{Forgotten, Learner, NoLearner};
 pub use marked::{AuxSegment, MarkedKind, MarkedSegment};
 pub use mode_keys::{ModeKeys, QUESTION_PREFIX};
-pub use phrase::{PhraseError, RememberedPhrase};
 pub use prediction::{
     CloudWord, NoPredictor, Prediction, PredictionKind, PredictionPolicy, PredictionRequest,
     Predictor, SurroundingText,
@@ -97,9 +95,6 @@ pub struct Engine {
     /// 附加词库（领域词库、用户导入的），与主词库一起查词、一起进整句词图；不参与语言模型（它们没有 bigram，
     /// 走词频兜底）。壳按用户目录 `dicts/` 与配置 `[dictionaries]` 装配。
     extra_dictionaries: Vec<Dictionary>,
-
-    /// 汉字到读音的反查表（[`Engine::pinyin_of`] 用）；第一次要用时才建，附加词库换了就作废。
-    readings: Option<crate::Transcriber>,
 
     /// 英文候选的释义（英→中），缺省为 [`NoTranslator`]。英文候选的辅助语言是主语言中文，
     /// 与中文候选查学习语言的表分开，仍是「一个候选只显示一种辅助语言」。
@@ -391,7 +386,6 @@ impl Engine {
         Self {
             dictionary,
             extra_dictionaries: Vec::new(),
-            readings: None,
             translator: Box::new(NoTranslator),
             english_translator: Box::new(NoTranslator),
             modes: ModeKeys::default(),

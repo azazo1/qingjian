@@ -69,9 +69,6 @@ pub struct RouterConfig {
     /// 「翻译选中文字」快捷键（`[shortcut] translate_selection`）; `None` 是关掉了.
     pub translate_selection: Option<KeyCombo>,
 
-    /// 「记词组」快捷键（`[shortcut] learn_phrase`）; `None` 是关掉了（缺省就是关着）.
-    pub learn_phrase: Option<KeyCombo>,
-
     /// 悬浮状态条开关（`[status_bar] enabled`）。
     pub status_enabled: bool,
 
@@ -134,7 +131,6 @@ impl From<&Config> for RouterConfig {
             },
             delete_keys: config.shortcut.delete_keys().key().map(KeyModifiers::from),
             translate_selection: config.shortcut.translate_selection.key(),
-            learn_phrase: config.shortcut.learn_phrase.key(),
             status_enabled: config.status_bar.enabled,
             status_pos: config.status_bar.x.zip(config.status_bar.y),
             scheme: config.general.scheme(),

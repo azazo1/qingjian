@@ -475,10 +475,9 @@ impl Engine {
         &self.dictionary
     }
 
-    /// 换掉全部附加词库（导入、移除、开关之后）。格子缓存与读音反查表随之作废。
+    /// 换掉全部附加词库（导入、移除、开关之后）。格子缓存随之作废。
     pub fn set_extra_dictionaries(&mut self, dictionaries: Vec<Dictionary>) {
         self.extra_dictionaries = dictionaries;
-        self.readings = None;
         self.forget_span_cache();
     }
 

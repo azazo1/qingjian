@@ -144,9 +144,6 @@ pub enum Setting {
     /// `[shortcut] translate_selection`，快捷键录制按钮（修饰键 + 字母）。
     TranslateSelectionKeys,
 
-    /// `[shortcut] learn_phrase`，快捷键录制按钮（修饰键 + 字母；缺省没配）。
-    LearnPhraseKeys,
-
     /// 「恢复默认快捷键」按钮：翻页键、模式键、三组译词 / 翻译快捷键全部回缺省。
     ResetShortcuts,
 
@@ -272,7 +269,6 @@ impl Setting {
             Self::MacCapsLockSwitch => 64,
             Self::MacSwitchDual => 65,
             Self::ModeBadge => 66,
-            Self::LearnPhraseKeys => 53,
             Self::InputLog => 27,
             Self::Learning => 45,
             Self::ClearInputLog => 28,
@@ -349,7 +345,6 @@ impl Setting {
             64 => Self::MacCapsLockSwitch,
             65 => Self::MacSwitchDual,
             66 => Self::ModeBadge,
-            53 => Self::LearnPhraseKeys,
             27 => Self::InputLog,
             45 => Self::Learning,
             28 => Self::ClearInputLog,
@@ -419,7 +414,6 @@ mod tests {
             Setting::TranslationKeys,
             Setting::TranslationSecondKeys,
             Setting::TranslateSelectionKeys,
-            Setting::LearnPhraseKeys,
             Setting::ResetShortcuts,
             Setting::ImportDictionary,
             Setting::Scheme,

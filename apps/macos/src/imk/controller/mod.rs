@@ -20,7 +20,6 @@ use crate::menubar;
 mod command;
 mod commit;
 mod display;
-mod phrase;
 mod switch;
 mod text;
 mod translate;
@@ -90,7 +89,6 @@ define_class!(
                 }
                 host::with(|h| {
                     h.cancel_prediction();
-                    h.end_phrase();
                     h.window.hide();
                 });
             });
@@ -147,7 +145,6 @@ define_class!(
                 // 切换输入源时无论如何都收掉候选框，不能留一个孤儿窗口在屏幕上
                 host::with(|h| {
                     h.cancel_prediction();
-                    h.end_phrase();
                     h.window.hide();
                     h.indicator.deactivate();
                     h.watch.stop();
@@ -272,10 +269,6 @@ impl QingjianInputController {
         if host::with(|h| h.translation.is_some()).unwrap_or(false) {
             return self.handle_translation_review(key, client);
         }
-        // 记词组进行中：字母 / 退格改拼音，回车记下，Esc 放弃，别的键吞掉
-        if host::with(|h| h.phrase.is_some()).unwrap_or(false) {
-            return self.handle_phrase_review(event, client);
-        }
         // 翻译快捷键（不在组句中）：读应用里的选区，交给云端；配成 none 时就没有这个键
         let combo = host::with(|h| h.translate_keys).flatten();
         if let Some(combo) = combo
@@ -284,15 +277,6 @@ impl QingjianInputController {
             && !host::with(|h| !h.engine.composition().is_empty()).unwrap_or(false)
         {
             return self.translate_selection(client);
-        }
-        // 记词组快捷键（不在组句中）：读选区、反查读音、进评审态；缺省没配这个键
-        let combo = host::with(|h| h.learn_keys).flatten();
-        if let Some(combo) = combo
-            && pressed == combo.modifiers
-            && typed.as_deref().and_then(|t| t.chars().next()) == Some(combo.key)
-            && !host::with(|h| !h.engine.composition().is_empty()).unwrap_or(false)
-        {
-            return self.learn_phrase(client);
         }
         // 修饰键 + 数字：按配置的两组组合上屏第一 / 第二个译词（缺省 ⌥ 与 ⇧⌥）、删候选（缺省 ⇧）。
         // 只在组句中认：不在组句时 ⇧4 就是 `$`，得走下面的标点转换（中文模式出 ￥、⇧6 出 ……、⇧1 出 ！），

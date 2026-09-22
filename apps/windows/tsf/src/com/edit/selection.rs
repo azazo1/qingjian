@@ -1,5 +1,5 @@
-//! 「翻译选中文字」与「记词组」的读选区会话：Server 收到快捷键后请 DLL 读当前选区，这里在异步只读会话里取文本与屏幕矩形回给 Server。
-//! 读到什么回什么；进不进评审由 Server 回的帧里那个 `reviewing` 说了算。
+//! 「翻译选中文字」的读选区会话：Server 收到快捷键后请 DLL 读当前选区，这里在异步只读会话里取文本与屏幕矩形回给 Server。
+//! 读到非空选区才置 [`Shared::set_translating`]。
 
 use std::rc::Rc;
 
@@ -26,7 +26,7 @@ pub(crate) struct SelectionSession {
     /// 引擎层：把选区文本发给 Server。
     engine: SharedClient,
 
-    /// 与 Server 共用的评审标志：Server 回了 `reviewing` 的帧才算进了评审。
+    /// 读到非空选区就置「翻译评审进行中」。
     shared: Rc<Shared>,
 
     /// 请求标识，回给 Server 对上是哪一次 `RequestSelection`。
@@ -36,13 +36,14 @@ pub(crate) struct SelectionSession {
 impl ITfEditSession_Impl for SelectionSession_Impl {
     fn DoEditSession(&self, ec: u32) -> Result<()> {
         let (text, rect) = read_selection(&self.context, ec);
+        let has_text = !text.trim().is_empty();
         // 发成功再置本地评审态，免得卡在无窗口的评审里。
         if let Ok(mut guard) = self.engine.try_borrow_mut()
             && let Some(client) = guard.as_mut()
         {
             match client.selection(self.request, text, rect) {
-                // 进不进评审由 Server 的帧说了算：选区为空、云服务关了、这一键已不是那次请求，都不进
-                Ok(response) => self.shared.set_reviewing(response.frame.reviewing),
+                Ok(_) if has_text => self.shared.set_translating(true),
+                Ok(_) => {}
                 Err(error) => log(&format!("回选区给 Server 失败: {error}")),
             }
         }

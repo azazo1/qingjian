@@ -80,35 +80,6 @@ fn run() -> Result<(), CliError> {
         print!("{report}");
         return Ok(());
     }
-    // 读音反查：看词库能不能给这些文本读出全拼（记词组预填拼音走的同一条路）
-    if !args.pinyin_of.is_empty() {
-        for text in &args.pinyin_of {
-            match engine.pinyin_of(text) {
-                Some(pinyin) => println!("{text}\t{pinyin}"),
-                None => println!("{text}\t（查不到读音）"),
-            }
-        }
-        return Ok(());
-    }
-    // 记词组：把「拼音 -> 文本」记成一条用户词，只打印结果，不写用户词文件（除非给了 --user-dict）
-    if let Some(pinyin) = &args.remember_phrase {
-        let text = args.phrase_text.clone().unwrap_or_default();
-        match engine.remember_phrase(pinyin, &text) {
-            Ok(remembered) => {
-                println!(
-                    "已记下\t{}\t{}",
-                    remembered.text,
-                    remembered.syllables.join(" ")
-                );
-                if let Some(replaced) = remembered.replaced {
-                    println!("原来的拼音\t{replaced}");
-                }
-                engine.learner_mut().flush();
-            }
-            Err(error) => println!("没记成\t{error}"),
-        }
-        return Ok(());
-    }
     if args.inputs.is_empty() {
         repl::run(&mut engine, args.limit)?;
     } else {
