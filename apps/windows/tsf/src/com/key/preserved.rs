@@ -1,7 +1,8 @@
 //! 「翻译选中文字」与「Ctrl+Space 切换中英」两个快捷键登记成 TSF **保留键**（preserved key）。
 //! 带 Alt / Ctrl+Space 的组合是系统键，不经击键 sink（真机：Ctrl+Alt+T 在 `OnTestKeyDown` 里从没出现过）；
 //! 保留键由 TSF 在应用之前匹配、回调 `OnPreservedKey`，UWP 里也一样。翻译组合来自
-//! `[shortcut] translate_selection`，激活时读一次配置（AppContainer 读不到用户目录时用缺省 Ctrl+Alt+T）；
+//! `[shortcut] translate_selection`，激活时读一次配置（AppContainer 读不到用户目录时用缺省 Ctrl+Alt+T；
+//! 写成 `none` 就不登记）；
 //! 切换键来自 `[shortcut] switch_mode`，那个值由 Server 经协议下发（DLL 不读配置文件），变了就地重登记。
 
 use windows::Win32::UI::Input::KeyboardAndMouse::VK_SPACE;
@@ -24,16 +25,17 @@ pub(crate) const GUID_SWITCH_MODE: GUID = GUID::from_u128(0x2f6b8c51_9a34_4e7d_b
 /// msctf.h 的 `TF_MOD_LWIN`（windows crate 没导出）。
 const TF_MOD_LWIN: u32 = 0x08;
 
-/// 读 `%APPDATA%\Qingjian\config.toml` 里的组合；读不到 / 解析失败用缺省。
-pub(crate) fn load_combo() -> KeyCombo {
+/// 读 `%APPDATA%\Qingjian\config.toml` 里的组合; `None` 是配置里写成了 `none` (不登记保留键).
+/// 路径取不到 / 解析失败时用缺省, 免得一次读失败就把这个快捷键丢掉.
+pub(crate) fn load_combo() -> Option<KeyCombo> {
     let Some(path) = qingjian_platform::dirs::config_path() else {
-        return KeyCombo::TRANSLATE_DEFAULT;
+        return Some(KeyCombo::TRANSLATE_DEFAULT);
     };
     match Config::load(&path) {
-        Ok(config) => config.shortcut.translate_selection,
+        Ok(config) => config.shortcut.translate_selection.key(),
         Err(error) => {
             log(&format!("读配置取翻译快捷键失败，用缺省: {error}"));
-            KeyCombo::TRANSLATE_DEFAULT
+            Some(KeyCombo::TRANSLATE_DEFAULT)
         }
     }
 }

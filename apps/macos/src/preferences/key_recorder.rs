@@ -15,6 +15,15 @@ const RECORDING_TITLE: &str = "按下新的快捷键…";
 /// Esc 的键码：取消录制。
 const ESCAPE_KEY: u16 = 53;
 
+/// 清空这一项用的键码: Delete(⌫, 51) 与 forward delete(⌦, 117).
+const CLEAR_KEYS: [u16; 2] = [51, 117];
+
+/// 清空时写进配置的值, 与配置里的 `none` 一致.
+pub const OFF_KEY: &str = "none";
+
+/// 清空后按钮上的标题.
+pub const OFF_LABEL: &str = "未设置";
+
 /// 录什么。
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum RecorderKind {
@@ -82,6 +91,13 @@ define_class!(
             }
             if event.keyCode() == ESCAPE_KEY {
                 self.cancel();
+                return;
+            }
+            // ⌫ / ⌦: 这一项不用了. 中 / 英切换键由开关管着, 不在这里清
+            if CLEAR_KEYS.contains(&event.keyCode())
+                && self.ivars().kind != RecorderKind::SingleOrCombo
+            {
+                self.finish(OFF_KEY, OFF_LABEL);
                 return;
             }
             // 敲了普通键：单击判定作废（与运行时一致），这一键也不当切换键

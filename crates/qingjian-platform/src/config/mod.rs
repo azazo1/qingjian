@@ -3,6 +3,7 @@ mod aux_code;
 mod candidate_renderer;
 mod dictionaries;
 mod general;
+mod key_binding;
 mod key_combo;
 mod layout_mode;
 mod log_level;
@@ -36,6 +37,7 @@ pub use dictionaries::{DEFAULT_DOMAINS, DictionariesConfig};
 pub use general::{
     DEFAULT_PAGE_KEYS, GeneralConfig, LEARNING_LANGUAGE_OFF, MAX_PAGE_SIZE, PAGE_KEY_OPTIONS,
 };
+pub use key_binding::KeyBinding;
 pub use key_combo::KeyCombo;
 pub use layout_mode::LayoutMode;
 pub use log_level::LogLevel;
@@ -182,6 +184,7 @@ translation_second = "shift+option"
 translate_selection = "control+option+t"
 # 数字键配这些修饰键删掉候选：用户词（云端选过的、自动造的）整个删掉，词库里的词清掉对它的学习记录。组句中要打感叹号先把词上屏
 delete_candidate = "shift"
+# 上面四项都能写 none: 写 none 的那一项就是不用 (比如 delete_candidate = "none" 时这组键不再删候选, 也不再占着它)
 "#
     };
 }
@@ -202,6 +205,7 @@ translation_second = "shift+ctrl"
 translate_selection = "ctrl+alt+t"
 # 数字键配这些修饰键删掉候选：用户词（云端选过的、自动造的）整个删掉，词库里的词清掉对它的学习记录。组句中要打感叹号先把词上屏
 delete_candidate = "shift"
+# 上面四项都能写 none: 写 none 的那一项就是不用 (比如 delete_candidate = "none" 时这组键不再删候选, 也不再占着它)
 "#
     };
 }

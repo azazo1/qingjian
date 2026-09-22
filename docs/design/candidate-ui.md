@@ -287,7 +287,7 @@ Core 按 `prediction::restates_question` 剔掉：与本地转出的问题相同
 偏好设置窗口（原生 AppKit，无「保存」按钮，改完立即写回并生效）是 **NSTabView 八页**（通用 / 候选窗口 / 快捷键 / 模糊音 / 词库 / 云服务 / 高级 / 关于），每页一列自上而下，窗口高度取最高的一页：
 「通用」（学习语言：只列打进包里有释义表的语言；每页候选数 1–9；双拼方案；英文模式候选开关与「终端 / 编辑器里不给」）、「候选窗口」（外观 跟随系统 / 浅色 / 深色；
 排布 竖排 / 横排；拼音显示 行内 + 窗口 / 只在行内 / 只在窗口）、「快捷键」（翻页键对与模式键仍是下拉预设；上屏第一 / 第二个译词的修饰键、删除候选的修饰键、翻译选中文字的组合键是**录制按钮**：
-点一下再按组合键，Esc 取消，`preferences/key_recorder.rs` 的 `KeyRecorder`，NSButton 子类接管 `mouseDown:` / `keyDown:`；
+点一下再按组合键，Esc 取消，按 ⌫ 清空这一项（配置里写 `none`，按钮标题显示「未设置」），`preferences/key_recorder.rs` 的 `KeyRecorder`，NSButton 子类接管 `mouseDown:` / `keyDown:`；
 页底「恢复默认快捷键」一键把翻页键、模式键、三个组合键写回缺省）、「模糊音」（九个勾选，三列摆）、「词库」（「导入词库…」走系统打开文件对话框，接受青简 TSV / Rime `.dict.yaml` / `.qj`，
 `qingjian_dictionary::import` 转成 `.qj` 放进用户目录 `dicts/`；下面列出每本附加词库：先是随包的 11 本领域词库（标「随包」，勾选写 `[dictionaries] domains`，
 缺省只勾成语，不能移除），再是导入的（勾选写 `disabled`，名字 · 条数 · 许可证，「移除」把文件挪到 `dicts/removed/` 不真删）；

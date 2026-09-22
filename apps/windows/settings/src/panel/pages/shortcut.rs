@@ -1,7 +1,8 @@
 //! 「快捷键」页：翻页键、模式键，译词 / 删候选 / 翻译选中文字的修饰键。
 //! 翻译选中文字只改修饰键，字母键固定用配置里当前的；要换字母直接改 `config.toml`。
+//! 每一项都能选「不使用」: 写进配置是 `none`, 这项键从此不生效.
 
-use qingjian_platform::Modifiers;
+use qingjian_platform::{KeyBinding, Modifiers};
 use windows_reactor::*;
 
 use crate::panel::controls::{field, index_of, page};
@@ -17,14 +18,15 @@ pub(crate) const PAGE_KEYS: [(&str, &str); 3] = [
 /// 可当模式键的字母（与 Core `ModeKeys::CANDIDATES` 一致）。
 pub(crate) const MODE_KEYS: [&str; 3] = ["v", "u", "i"];
 
-/// 修饰键预设：界面名 + 配置写法。
-pub(crate) const MODIFIERS: [(&str, &str); 6] = [
+/// 修饰键预设：界面名 + 配置写法; 最后一项是把这项快捷键关掉.
+pub(crate) const MODIFIERS: [(&str, &str); 7] = [
     ("Ctrl", "ctrl"),
     ("Alt", "alt"),
     ("Shift", "shift"),
     ("Ctrl + Shift", "shift+ctrl"),
     ("Ctrl + Alt", "ctrl+alt"),
     ("Alt + Shift", "shift+alt"),
+    ("不使用", "none"),
 ];
 
 fn mode_combo(current: char, callback: Callback<Option<usize>>) -> ComboBox {
@@ -39,10 +41,10 @@ fn mode_combo(current: char, callback: Callback<Option<usize>>) -> ComboBox {
 }
 
 /// 按解析后相等找当前项，不依赖字符串写法。
-fn modifier_combo(current: Modifiers, callback: Callback<Option<usize>>) -> ComboBox {
+fn modifier_combo(current: KeyBinding<Modifiers>, callback: Callback<Option<usize>>) -> ComboBox {
     let selected = MODIFIERS
         .iter()
-        .position(|(_, value)| value.parse::<Modifiers>().ok() == Some(current))
+        .position(|(_, value)| value.parse::<KeyBinding<Modifiers>>().ok() == Some(current))
         .unwrap_or(0);
     ComboBox::new()
         .items_source(MODIFIERS.iter().map(|(label, _)| *label))
@@ -101,9 +103,9 @@ pub(crate) fn view(settings: &Settings, context: &mut ViewContext<Settings>) -> 
         ),
         field(
             "翻译选中文字",
-            "选中一段文字后按这组键 + 当前字母（缺省 Ctrl+Alt+T），把它译成学习语言，回车 / 空格替换、Esc 保留原文。需要云服务。这里只改修饰键，字母固定用当前的。",
+            "选中一段文字后按这组键 + 当前字母 (缺省 Ctrl+Alt+T), 把它译成学习语言, 回车 / 空格替换, Esc 保留原文. 需要云服务. 这里只改修饰键, 字母固定用当前的; 选「不使用」就关掉这个键.",
             modifier_combo(
-                s.translate_selection.modifiers,
+                s.translate_selection.map(|combo| combo.modifiers),
                 context.callback(Message::TranslateSelection),
             ),
         ),

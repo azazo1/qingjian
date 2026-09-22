@@ -4,13 +4,13 @@ use objc2::MainThreadMarker;
 use objc2::rc::Retained;
 use objc2_app_kit::{NSButton, NSPopUpButton};
 use qingjian_core::ModeKeys;
-use qingjian_platform::{Config, PAGE_KEY_OPTIONS};
+use qingjian_platform::{Config, KeyBinding, KeyCombo, Modifiers, PAGE_KEY_OPTIONS};
 
 use crate::preferences::controls::{
     GROUP_GAP, button, checkbox, note, note_full, page_keys_label, row_checkbox, row_popup,
     row_recorder, select, set_checked,
 };
-use crate::preferences::key_recorder::{KeyRecorder, RecorderKind};
+use crate::preferences::key_recorder::{KeyRecorder, OFF_KEY, OFF_LABEL, RecorderKind};
 use crate::preferences::layout::{Layout, PAGE_PADDING, ROW_HEIGHT};
 use crate::preferences::setting::Setting;
 use crate::preferences::target::PreferencesTarget;
@@ -148,7 +148,7 @@ impl ShortcutsPage {
         note_full(
             layout,
             mtm,
-            "改快捷键：点一下右边的按钮，再按下新的组合键（要带修饰键 ⌃ ⌥ ⇧ ⌘），Esc 取消。避开 ⌃+数字（切换桌面）和 ⌘+数字 / ⌘T（应用常用键）。",
+            "改快捷键: 点一下右边的按钮, 再按下新的组合键 (要带修饰键 ⌃ ⌥ ⇧ ⌘), Esc 取消, ⌫ 清空 (清空后这项键不生效). 避开 ⌃+数字 (切换桌面) 和 ⌘+数字 / ⌘T (应用常用键).",
         );
         let reset = button(mtm, "恢复默认快捷键", Setting::ResetShortcuts, target);
         layout.place(&reset, PAGE_PADDING, 160.0, ROW_HEIGHT + 4.0);
@@ -195,12 +195,25 @@ impl ShortcutsPage {
         );
         set_checked(&self.question_mark, keys.question_mark);
         let (first, second) = config.shortcut.translation_keys();
-        self.translation.show(&first.key(), &first.label());
-        self.translation_second.show(&second.key(), &second.label());
-        let delete = config.shortcut.delete_keys();
-        self.delete_candidate.show(&delete.key(), &delete.label());
-        let translate = config.shortcut.translate_selection;
-        self.translate_selection
-            .show(&translate.key_string(), &translate.label());
+        show_modifiers(&self.translation, first);
+        show_modifiers(&self.translation_second, second);
+        show_modifiers(&self.delete_candidate, config.shortcut.delete_keys());
+        show_combo(&self.translate_selection, config.shortcut.translate_selection);
+    }
+}
+
+/// 一行修饰键录制按钮按配置刷新; 配成 `none` 的显示「未设置」.
+fn show_modifiers(recorder: &KeyRecorder, binding: KeyBinding<Modifiers>) {
+    match binding.key() {
+        Some(keys) => recorder.show(&keys.key(), &keys.label()),
+        None => recorder.show(OFF_KEY, OFF_LABEL),
+    }
+}
+
+/// 同上, 记组合键的那一行 (`control+option+t`).
+fn show_combo(recorder: &KeyRecorder, binding: KeyBinding<KeyCombo>) {
+    match binding.key() {
+        Some(combo) => recorder.show(&combo.key_string(), &combo.label()),
+        None => recorder.show(OFF_KEY, OFF_LABEL),
     }
 }
