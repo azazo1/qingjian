@@ -255,7 +255,8 @@ impl Host {
                     if clash {
                         tracing::warn!("两组译词快捷键不能相同，未改");
                     } else {
-                        self.settings.set_value("shortcut", name, chosen.to_string());
+                        self.settings
+                            .set_value("shortcut", name, chosen.to_string());
                     }
                 }
                 Err(error) => tracing::warn!(%error, "修饰键组合不合法，未改"),
@@ -332,8 +333,11 @@ impl Host {
                     .set_value("shortcut", "question", defaults.mode.question.to_string());
                 self.settings
                     .set_bool("shortcut", "question_mark", defaults.mode.question_mark);
-                self.settings
-                    .set_value("shortcut", "translation", defaults.translation.to_string());
+                self.settings.set_value(
+                    "shortcut",
+                    "translation",
+                    defaults.translation.to_string(),
+                );
                 self.settings.set_value(
                     "shortcut",
                     "translation_second",

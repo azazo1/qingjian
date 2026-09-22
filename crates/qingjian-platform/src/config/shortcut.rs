@@ -176,7 +176,10 @@ mod tests {
         let swapped: ShortcutConfig =
             toml::from_str("translation = \"control+option\"\ntranslation_second = \"option\"\n")
                 .unwrap();
-        assert_eq!(swapped.translation_keys().1, KeyBinding::on(Modifiers::OPTION));
+        assert_eq!(
+            swapped.translation_keys().1,
+            KeyBinding::on(Modifiers::OPTION)
+        );
     }
 
     #[test]

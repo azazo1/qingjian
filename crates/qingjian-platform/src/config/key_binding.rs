@@ -61,7 +61,10 @@ impl<T: FromStr<Err = String>> FromStr for KeyBinding<T> {
 
     fn from_str(text: &str) -> Result<Self, Self::Err> {
         let text = text.trim();
-        if matches!(text.to_ascii_lowercase().as_str(), "none" | "off" | "disabled") {
+        if matches!(
+            text.to_ascii_lowercase().as_str(),
+            "none" | "off" | "disabled"
+        ) {
             return Ok(Self::Off);
         }
         text.parse::<T>().map(Self::On)

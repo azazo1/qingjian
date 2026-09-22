@@ -198,7 +198,10 @@ impl ShortcutsPage {
         show_modifiers(&self.translation, first);
         show_modifiers(&self.translation_second, second);
         show_modifiers(&self.delete_candidate, config.shortcut.delete_keys());
-        show_combo(&self.translate_selection, config.shortcut.translate_selection);
+        show_combo(
+            &self.translate_selection,
+            config.shortcut.translate_selection,
+        );
     }
 }
 
