@@ -117,17 +117,11 @@ impl ShortcutConfig {
                     "双键切换的两个键有一个认不出来，整对退回缺省"
                 );
             }
-            return (
-                MacSwitchKey::DEFAULT_ENGLISH,
-                MacSwitchKey::DEFAULT_CHINESE,
-            );
+            return (MacSwitchKey::DEFAULT_ENGLISH, MacSwitchKey::DEFAULT_CHINESE);
         };
         if english == chinese {
             tracing::warn!("双键切换的两个键相同，整对退回缺省");
-            return (
-                MacSwitchKey::DEFAULT_ENGLISH,
-                MacSwitchKey::DEFAULT_CHINESE,
-            );
+            return (MacSwitchKey::DEFAULT_ENGLISH, MacSwitchKey::DEFAULT_CHINESE);
         }
         (english, chinese)
     }
@@ -222,7 +216,10 @@ mod tests {
         assert!(!default.mac_switch_dual);
         assert!(default.mac_switch_plan().is_empty());
         assert!(default.mac_caps_lock_switch, "缺省 Caps Lock 就是切换键");
-        assert_eq!(default.mac_switch_toggle_key(), MacSwitchKey::DEFAULT_TOGGLE);
+        assert_eq!(
+            default.mac_switch_toggle_key(),
+            MacSwitchKey::DEFAULT_TOGGLE
+        );
     }
 
     #[test]
@@ -238,10 +235,7 @@ mod tests {
         );
         assert_eq!(
             plan.dual,
-            Some((
-                MacSwitchKey::DEFAULT_ENGLISH,
-                MacSwitchKey::DEFAULT_CHINESE
-            ))
+            Some((MacSwitchKey::DEFAULT_ENGLISH, MacSwitchKey::DEFAULT_CHINESE))
         );
 
         // 只开双键：单键那组不参与
@@ -253,10 +247,9 @@ mod tests {
 
     #[test]
     fn mac_switch_plan_falls_back_instead_of_doing_half() {
-        let single: ShortcutConfig = toml::from_str(
-            "mac_switch_single = true\nmac_switch_toggle = \"right-command\"\n",
-        )
-        .unwrap();
+        let single: ShortcutConfig =
+            toml::from_str("mac_switch_single = true\nmac_switch_toggle = \"right-command\"\n")
+                .unwrap();
         assert_eq!(
             single.mac_switch_plan().toggle,
             Some(MacSwitchKey::Modifier(MacModifier::RightCommand))
@@ -290,18 +283,14 @@ mod tests {
             let half: ShortcutConfig = toml::from_str(text).unwrap();
             assert_eq!(
                 half.mac_switch_plan().dual,
-                Some((
-                    MacSwitchKey::DEFAULT_ENGLISH,
-                    MacSwitchKey::DEFAULT_CHINESE
-                ))
+                Some((MacSwitchKey::DEFAULT_ENGLISH, MacSwitchKey::DEFAULT_CHINESE))
             );
         }
 
         // 组合键也能当切换键
-        let combo: ShortcutConfig = toml::from_str(
-            "mac_switch_single = true\nmac_switch_toggle = \"control+option+z\"\n",
-        )
-        .unwrap();
+        let combo: ShortcutConfig =
+            toml::from_str("mac_switch_single = true\nmac_switch_toggle = \"control+option+z\"\n")
+                .unwrap();
         let Some(MacSwitchKey::Combo(combo)) = combo.mac_switch_plan().toggle else {
             panic!("组合键应当原样生效");
         };

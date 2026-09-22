@@ -171,7 +171,9 @@ impl FromStr for MacSwitchKey {
             return Ok(Self::Modifier(modifier));
         }
         trimmed.parse::<KeyCombo>().map(Self::Combo).map_err(|_| {
-            format!("expected a modifier (left-command) or a combo (control+option+z), got {text:?}")
+            format!(
+                "expected a modifier (left-command) or a combo (control+option+z), got {text:?}"
+            )
         })
     }
 }

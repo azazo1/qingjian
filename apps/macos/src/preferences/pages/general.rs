@@ -195,7 +195,12 @@ impl GeneralPage {
             RecorderKind::SingleOrCombo,
             target,
         );
-        let mac_switch_dual = checkbox(mtm, "双键切换：两个键各切一边", Setting::MacSwitchDual, target);
+        let mac_switch_dual = checkbox(
+            mtm,
+            "双键切换：两个键各切一边",
+            Setting::MacSwitchDual,
+            target,
+        );
         row_checkbox(layout, &mac_switch_dual);
         let mac_switch_english = row_recorder(
             layout,
@@ -309,7 +314,8 @@ impl GeneralPage {
         set_checked(&self.mac_switch_single, single);
         set_checked(&self.mac_switch_dual, dual);
         let toggle = config.shortcut.mac_switch_toggle_key();
-        self.mac_switch_toggle.show(&toggle.key_string(), &toggle.label());
+        self.mac_switch_toggle
+            .show(&toggle.key_string(), &toggle.label());
         self.mac_switch_toggle.setEnabled(single);
         let (english, chinese) = config.shortcut.mac_switch_dual_keys();
         self.mac_switch_english

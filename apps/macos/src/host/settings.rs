@@ -288,9 +288,7 @@ impl Host {
                 self.settings.set_bool("shortcut", "mac_switch_dual", on);
             }
             (
-                Setting::MacSwitchToggle
-                | Setting::MacSwitchEnglish
-                | Setting::MacSwitchChinese,
+                Setting::MacSwitchToggle | Setting::MacSwitchEnglish | Setting::MacSwitchChinese,
                 SettingValue::Text(text),
             ) => match text.parse::<MacSwitchKey>() {
                 Ok(key) => {
@@ -304,7 +302,8 @@ impl Host {
                 Err(error) => tracing::warn!(%error, "切换键不合法，未改"),
             },
             (Setting::MacCapsLockSwitch, SettingValue::Bool(on)) => {
-                self.settings.set_bool("shortcut", "mac_caps_lock_switch", on);
+                self.settings
+                    .set_bool("shortcut", "mac_caps_lock_switch", on);
             }
             (Setting::ModeBadge, SettingValue::Bool(on)) => {
                 self.settings.set_bool("general", "mode_badge", on);

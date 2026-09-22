@@ -11,12 +11,12 @@ use objc2::runtime::AnyObject;
 use objc2::{DefinedClass, MainThreadMarker, MainThreadOnly, define_class, msg_send, sel};
 use objc2_app_kit::{
     NSAppearance, NSAppearanceCustomization, NSAppearanceNameAqua, NSAppearanceNameDarkAqua,
-    NSAttributedStringNSStringDrawing, NSBezierPath, NSColor, NSFont, NSFontAttributeName, NSPanel,
-    NSForegroundColorAttributeName, NSView,
+    NSAttributedStringNSStringDrawing, NSBezierPath, NSColor, NSFont, NSFontAttributeName,
+    NSForegroundColorAttributeName, NSPanel, NSView,
 };
 use objc2_foundation::{
-    NSAttributedString, NSDictionary, NSObject, NSObjectProtocol, NSPoint, NSRect, NSSize, NSString,
-    NSTimer,
+    NSAttributedString, NSDictionary, NSObject, NSObjectProtocol, NSPoint, NSRect, NSSize,
+    NSString, NSTimer,
 };
 use qingjian_platform::ThemeMode;
 
@@ -63,8 +63,7 @@ impl ModeBadge {
     pub fn show(&mut self, text: &str, anchor: NSRect) {
         let size = self.view.set_text(text);
         let origin = place_at_caret(self.mtm, size, anchor);
-        self.panel
-            .setFrame_display(NSRect::new(origin, size), true);
+        self.panel.setFrame_display(NSRect::new(origin, size), true);
         self.panel.orderFrontRegardless();
         if let Some(timer) = self.timer.take() {
             timer.invalidate();
@@ -178,10 +177,7 @@ impl BadgeView {
         let size = string.size();
         *self.ivars().text.borrow_mut() = Some(string);
         self.setNeedsDisplay(true);
-        NSSize::new(
-            size.width + PADDING_X * 2.0,
-            size.height + PADDING_Y * 2.0,
-        )
+        NSSize::new(size.width + PADDING_X * 2.0, size.height + PADDING_Y * 2.0)
     }
 }
 
