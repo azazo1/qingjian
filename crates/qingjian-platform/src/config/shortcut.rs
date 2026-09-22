@@ -190,14 +190,16 @@ mod tests {
         // 与平台缺省的译词键撞上才算「冲突」，两边平台都成立
         let clash: ShortcutConfig = toml::from_str(&format!(
             "delete_candidate = \"{}\"\n",
-            default.translation.key()
+            default.translation
         ))
         .unwrap();
+        assert_ne!(clash.delete_candidate, default.delete_candidate);
         assert_eq!(clash.delete_keys(), default.delete_candidate);
         // 不与任何一组译词键冲突的修饰键：平台上取一个，断言它原样生效
+        let (first, second) = default.translation_keys();
         let free = [Modifiers::OPTION, Modifiers::CONTROL, Modifiers::SHIFT]
             .into_iter()
-            .find(|m| *m != default.translation && *m != default.translation_second)
+            .find(|m| Some(*m) != first.key() && Some(*m) != second.key())
             .unwrap();
         let custom: ShortcutConfig =
             toml::from_str(&format!("delete_candidate = \"{}\"\n", free.key())).unwrap();
