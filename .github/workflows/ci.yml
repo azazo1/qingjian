@@ -1,8 +1,9 @@
-# 四个 job：Linux 跑 fmt / clippy / 全 workspace 测试（排除 IMK 外壳）；macOS 与 Windows runner 各编各的壳并跑平台测试，
+# 七个 job：Linux 跑 fmt / clippy / 全 workspace 测试（排除 IMK 外壳）；macOS 与 Windows runner 各编各的壳并跑平台测试，
 # 平台特有的编译错（Objective-C 调用、TSF 导出、WinUI）在 PR 里就暴露，不等发版。仓库公开，Actions 不计费。
+# 各平台的 clippy 与 test 拆成独立 job 并行，两者用同一个 shared-key 共用一份 target 缓存，避免编译产物存两份。
 # push main 与手动触发另外各打一份未签名的包传成 artifact: macOS 的 arm64 与 x86_64 各占一个 runner 并行打,
-# Windows 出 Inno 安装包, 从 Actions 页面直接下载就能试; PR 只跑检查不打包. 正式发布仍走 release.yml 的标签流程
-# (那边要签名, 公证与版本门禁).
+# Windows 出 Inno 安装包 (只有一个架构, 但检查与打包也拆成独立 job 并行), 从 Actions 页面直接下载就能试;
+# PR 只跑检查不打包. 正式发布仍走 release.yml 的标签流程 (那边要签名, 公证与版本门禁).
 # actions 一律钉到 commit（注释里是对应的标签），Dependabot 每周提 PR 更新；cargo 全加 --locked，Cargo.lock 没提交就报错。
 name: ci
 
@@ -60,7 +61,8 @@ jobs:
           bash -n apps/linux/scripts/install.sh apps/linux/scripts/uninstall.sh
           python3 apps/linux/tests/installation.py
 
-  macos:
+  # IMK 外壳的 clippy 与 test 分两个 job 并行；两边用同一个 shared-key，共用一份 target 缓存
+  macos-clippy:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -73,15 +75,33 @@ jobs:
           components: clippy
 
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          shared-key: macos-check
 
       - name: Clippy (IMK shell)
         run: cargo clippy -p qingjian-macos --all-targets --locked -- -D warnings
+
+  macos-test:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: dtolnay/rust-toolchain@02cb101ec7c40f2c49e1d9714d64511d8e1b74de # v1
+        with:
+          toolchain: 1.96.0
+
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          shared-key: macos-check
 
       - name: Test (IMK shell)
         run: cargo test -p qingjian-macos --locked
 
   # 打测试包单独成一个 job：两个架构各占一个 runner 并行编，比在一个 runner 上串行编两遍省一半墙钟时间。
   # PR 上整个 job 不启动（macOS runner 计费是 Linux 的 10 倍）。
+  # 打包走 release profile 与交叉 target，跟上面的 debug 产物不共享，所以这里没有 shared-key。
   macos-package:
     if: github.event_name != 'pull_request'
     runs-on: macos-latest
@@ -130,7 +150,8 @@ jobs:
           # pkg 与 exe 本身就是压缩容器，再压一遍纯属浪费时间
           compression-level: 0
 
-  windows:
+  # 32 位 DLL 的 check 归这里：同属编译检查，而且 i686 target 只在这个 job 装
+  windows-clippy:
     runs-on: windows-latest
     env:
       # Server 的 build.rs 嵌 uiAccess manifest，没签名的 exe（含测试二进制）起不来（os error 740）；与 release.yml 一样关掉
@@ -147,26 +168,63 @@ jobs:
           targets: i686-pc-windows-msvc
 
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          shared-key: windows-check
 
       - name: Clippy (Server, TSF DLL, Settings)
         run: cargo clippy -p qingjian-windows-server -p qingjian-windows-tsf -p qingjian-windows-settings --all-targets --locked -- -D warnings
-
-      - name: Test (Server, TSF DLL, Settings)
-        run: cargo test -p qingjian-windows-server -p qingjian-windows-tsf -p qingjian-windows-settings --locked
 
       # 安装包另带一份 32 位 DLL（企业微信 / WPS 这类 32 位应用只能加载它）
       - name: Check (TSF DLL, 32-bit)
         run: cargo check -p qingjian-windows-tsf --target i686-pc-windows-msvc --locked
 
-      # 以下是测试包，只在 push main 与手动触发时做
+  windows-test:
+    runs-on: windows-latest
+    env:
+      QINGJIAN_UIACCESS: '0'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: dtolnay/rust-toolchain@02cb101ec7c40f2c49e1d9714d64511d8e1b74de # v1
+        with:
+          toolchain: 1.96.0
+
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          shared-key: windows-check
+
+      - name: Test (Server, TSF DLL, Settings)
+        run: cargo test -p qingjian-windows-server -p qingjian-windows-tsf -p qingjian-windows-settings --locked
+
+  # Windows 只有一个安装包（x86_64，包内另带 32 位 DLL），没有按架构分的余地，
+  # 但检查与打包拆开能让两者并行，也不用等检查跑完才开始编安装包。
+  windows-package:
+    if: github.event_name != 'pull_request'
+    runs-on: windows-latest
+    env:
+      # 没有代码签名证书：Server 不带 uiAccess（没签名的 exe 带 uiAccess=true 起不来）
+      QINGJIAN_UIACCESS: '0'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: dtolnay/rust-toolchain@02cb101ec7c40f2c49e1d9714d64511d8e1b74de # v1
+        with:
+          toolchain: 1.96.0
+          # build.ps1 另编一份 32 位 TSF DLL（企业微信 / WPS 这类 32 位应用只能加载它）
+          targets: i686-pc-windows-msvc
+
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+
       - name: Fetch product data
-        if: github.event_name != 'pull_request'
         shell: bash
         run: tools/release/data-fetch.sh
 
       # 与 release.yml 同版本（7.1.0，自带简体中文翻译；Chocolatey 只有 6.x，6 的安装包不带简中）。钉死 GitHub Release 上的文件。
       - name: Install Inno Setup 7.1.0
-        if: github.event_name != 'pull_request'
         shell: pwsh
         run: |
           $url = 'https://github.com/jrsoftware/issrc/releases/download/is-7_1_0/innosetup-7.1.0-x64.exe'
@@ -179,20 +237,16 @@ jobs:
           Start-Process -FilePath $exe -ArgumentList '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', '/SP-' -Wait
           & "${env:ProgramFiles}\Inno Setup 7\ISCC.exe" --version
 
-      # 没有代码签名证书，QINGJIAN_UIACCESS=0 由 build.ps1 自己设（不签名时 Server 带 uiAccess 起不来）
       - name: Build installer
-        if: github.event_name != 'pull_request'
         shell: pwsh
         run: powershell -NoProfile -ExecutionPolicy Bypass -File apps\windows\installer\build.ps1
 
       - name: Read installer name
-        if: github.event_name != 'pull_request'
         id: package
         shell: bash
         run: echo "name=$(basename "$(ls target/installer/*-setup.exe)" .exe)" >> "$GITHUB_OUTPUT"
 
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        if: github.event_name != 'pull_request'
         with:
           name: ${{ steps.package.outputs.name }}
           path: target/installer/*-setup.exe
