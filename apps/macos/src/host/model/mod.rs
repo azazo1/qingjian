@@ -7,13 +7,14 @@
 //! jev / laya). 两者互斥, 由 [`Host::apply_rescorer`] 按配置挑一个接上.
 
 use std::sync::mpsc::{TryRecvError, channel};
+use std::time::Duration;
 
 use qingjian_decision::DecisionScorer;
 use qingjian_neural::{CharScorer, NeuralError};
 
 mod rescore_monitor;
 
-pub(super) use rescore_monitor::RescoreMonitor;
+pub(super) use rescore_monitor::{DEFAULT_MAX_WAIT, RescoreMonitor};
 
 use super::*;
 
@@ -125,8 +126,14 @@ impl Host {
                     tracing::info!(
                         backend = config.decision.backend.key(),
                         endpoint = config.decision.endpoint(),
+                        timeout_ms = config.decision.timeout_ms,
                         "决策模型接上整句重排"
                     );
+                    // 云端一次判断要几秒: 轮询的上限跟着它的请求超时放宽 (多留一秒收尾),
+                    // 否则结果回来时壳已经停止收结果了
+                    self.rescore.set_max_wait(Duration::from_millis(
+                        config.decision.timeout_ms.saturating_add(1_000),
+                    ));
                     self.engine
                         .set_async_sentence_scorer(Some(Box::new(scorer)));
                     self.rescore_current_round();
@@ -135,6 +142,8 @@ impl Host {
                 Err(error) => tracing::warn!(%error, "决策模型起不来, 改用本地整句模型"),
             }
         }
+        // 本地模型二三十毫秒就回, 等待上限用缺省的兜底值
+        self.rescore.set_max_wait(DEFAULT_MAX_WAIT);
         if config.model.enabled {
             self.load_local_model();
         }
@@ -167,7 +176,7 @@ impl Host {
         if !self.engine.poll_rescoring() {
             // 等太久多半是前文变了（上屏后接着打下一段）、结果作废；真卡住也只是这轮不重排
             if self.rescore.expired() {
-                tracing::debug!("等本地整句模型超时，本轮不重排");
+                tracing::debug!("等重排结果超时, 本轮不重排");
                 self.rescore.stop();
             }
             return;

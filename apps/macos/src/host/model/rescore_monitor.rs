@@ -13,8 +13,9 @@ const DEBOUNCE: f64 = 0.08;
 /// 轮询间隔：模型一次二三十毫秒。
 const POLL_INTERVAL: f64 = 0.02;
 
-/// 最长等多久；后台线程卡住时兜底。
-const MAX_WAIT: Duration = Duration::from_secs(2);
+/// 最长等多久; 后台线程卡住时兜底. 本地整句模型二三十毫秒就回, 用这个缺省值;
+/// 接决策模型 (云端一次判断要几秒) 时按它的请求超时放宽, 见 [`RescoreMonitor::set_max_wait`].
+pub(super) const DEFAULT_MAX_WAIT: Duration = Duration::from_secs(2);
 
 /// 等模型加载的间隔：加载要几百毫秒到几秒，接上晚几十毫秒无妨。
 const LOAD_INTERVAL: f64 = 0.1;
@@ -32,6 +33,9 @@ pub struct RescoreMonitor {
     /// 本轮开始等结果的时间。
     since: Option<Instant>,
 
+    /// 本轮最多等多久 (见 [`DEFAULT_MAX_WAIT`]): 打分器慢的时候, 等过它就不再收结果.
+    max_wait: Duration,
+
     mtm: MainThreadMarker,
 }
 
@@ -42,8 +46,15 @@ impl RescoreMonitor {
             debounce: None,
             poll: None,
             since: None,
+            max_wait: DEFAULT_MAX_WAIT,
             mtm,
         }
+    }
+
+    /// 换等待上限: 本地整句模型用缺省的两秒, 决策模型按它的请求超时放宽.
+    /// 换打分器时都要调一次 (见 `Host::apply_rescorer`), 否则云端的结果到了壳已经不听了.
+    pub(super) fn set_max_wait(&mut self, max_wait: Duration) {
+        self.max_wait = max_wait;
     }
 
     /// 模型在后台加载：定时看一眼接上没有。按键路径也会看，但用户停键后没人再看，接上的那一刻就没人知道。
@@ -120,7 +131,7 @@ impl RescoreMonitor {
     }
 
     pub fn expired(&self) -> bool {
-        self.since.is_some_and(|since| since.elapsed() > MAX_WAIT)
+        self.since.is_some_and(|since| since.elapsed() > self.max_wait)
     }
 }
 

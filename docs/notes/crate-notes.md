@@ -227,7 +227,8 @@ IMK 输入法，源码按 `app / host / imk / candidates / menubar / preferences
   `set_async_sentence_scorer` 接上，`refresh` 每键先读应用光标前 64 字给 Engine 当前文、查询后 `schedule_rescoring`，`RescoreMonitor` 停键 80 ms 请求、20 ms 轮询，
   结果到了重查一次只重画当前页（翻过页 / 动过高亮不动）；「云服务」页有开关（`[model] enabled`）。
 - 决策模型: `Host::apply_rescorer` 按 `[decision]` 挑整句重排的来源 (决策模型优先, 起不来退回本地整句模型, 两者都没有就不重排),
-  `DecisionScorer` 只在主线程构造 (建 HTTP 客户端与运行时), 接上与本地模型同一条重排链路; "云服务" 页有开关, 后端, 接口地址与密钥框.
+  `DecisionScorer` 只在主线程构造 (建 HTTP 客户端与运行时), 接上与本地模型同一条重排链路; 壳等结果的上限 (`RescoreMonitor::set_max_wait`) 跟着 `[decision] timeout_ms` 放宽 (多留一秒),
+  本地模型仍用两秒缺省; "云服务" 页有开关, 后端, 接口地址与密钥框.
 - 端到端验证可用 `osascript` 的 System Events 往 TextEdit 发按键再读回文本（终端需要辅助功能权限；输入法得在中文模式）。
 
 ## apps/windows
