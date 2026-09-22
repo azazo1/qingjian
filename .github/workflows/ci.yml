@@ -1,5 +1,7 @@
 # 三个 job：Linux 跑 fmt / clippy / 全 workspace 测试（排除 IMK 外壳）；macOS 与 Windows runner 各编各的壳并跑平台测试，
 # 平台特有的编译错（Objective-C 调用、TSF 导出、WinUI）在 PR 里就暴露，不等发版。仓库公开，Actions 不计费。
+# push main 与手动触发另外各打一份未签名的包传成 artifact: macOS 出 pkg (arm64 与 x86_64 各一份), Windows 出 Inno 安装包,
+# 从 Actions 页面直接下载就能试; PR 只跑检查不打包. 正式发布仍走 release.yml 的标签流程 (那边要签名, 公证与版本门禁).
 # actions 一律钉到 commit（注释里是对应的标签），Dependabot 每周提 PR 更新；cargo 全加 --locked，Cargo.lock 没提交就报错。
 name: ci
 
@@ -7,6 +9,7 @@ on:
   push:
     branches: [main]
   pull_request:
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -62,11 +65,15 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+          # bundle.sh 用提交数当 pkg 的构建号，浅克隆下恒为 1
+          fetch-depth: 0
 
       - uses: dtolnay/rust-toolchain@02cb101ec7c40f2c49e1d9714d64511d8e1b74de # v1
         with:
           toolchain: 1.96.0
           components: clippy
+          # 打 pkg 要 arm64 与交叉编译的 x86_64 两份
+          targets: aarch64-apple-darwin, x86_64-apple-darwin
 
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
 
@@ -75,6 +82,40 @@ jobs:
 
       - name: Test (IMK shell)
         run: cargo test -p qingjian-macos --locked
+
+      # 以下是测试包，只在 push main 与手动触发时做；PR 跳过，macOS runner 计费是 Linux 的 10 倍
+      - name: Fetch product data
+        if: github.event_name != 'pull_request'
+        run: tools/release/data-fetch.sh
+
+      # 没有签名 Secrets，出来的是 ad-hoc 签名的包，装的时候要在「隐私与安全性」里放行（与 release.yml 无证书时的分支一致）
+      - name: Build pkg (arm64, x86_64)
+        if: github.event_name != 'pull_request'
+        id: package
+        run: |
+          QINGJIAN_TARGET=aarch64-apple-darwin apps/macos/scripts/bundle.sh --pkg
+          QINGJIAN_TARGET=x86_64-apple-darwin apps/macos/scripts/bundle.sh --pkg
+          echo "arm64=$(basename "$(ls target/pkg/*-macos-arm64.pkg)" .pkg)" >> "$GITHUB_OUTPUT"
+          echo "x86_64=$(basename "$(ls target/pkg/*-macos-x86_64.pkg)" .pkg)" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: github.event_name != 'pull_request'
+        with:
+          name: ${{ steps.package.outputs.arm64 }}
+          path: target/pkg/*-macos-arm64.pkg
+          if-no-files-found: error
+          overwrite: true
+          # pkg 与 exe 本身就是压缩容器，再压一遍纯属浪费时间
+          compression-level: 0
+
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: github.event_name != 'pull_request'
+        with:
+          name: ${{ steps.package.outputs.x86_64 }}
+          path: target/pkg/*-macos-x86_64.pkg
+          if-no-files-found: error
+          overwrite: true
+          compression-level: 0
 
   windows:
     runs-on: windows-latest
@@ -103,3 +144,45 @@ jobs:
       # 安装包另带一份 32 位 DLL（企业微信 / WPS 这类 32 位应用只能加载它）
       - name: Check (TSF DLL, 32-bit)
         run: cargo check -p qingjian-windows-tsf --target i686-pc-windows-msvc --locked
+
+      # 以下是测试包，只在 push main 与手动触发时做
+      - name: Fetch product data
+        if: github.event_name != 'pull_request'
+        shell: bash
+        run: tools/release/data-fetch.sh
+
+      # 与 release.yml 同版本（7.1.0，自带简体中文翻译；Chocolatey 只有 6.x，6 的安装包不带简中）。钉死 GitHub Release 上的文件。
+      - name: Install Inno Setup 7.1.0
+        if: github.event_name != 'pull_request'
+        shell: pwsh
+        run: |
+          $url = 'https://github.com/jrsoftware/issrc/releases/download/is-7_1_0/innosetup-7.1.0-x64.exe'
+          # 下载来的安装程序要以管理员身份执行，先核对 SHA-256（2026-09-11 从上面地址下载后算出），对不上就不装。
+          $expected = '0362a383ed217d4c4239b5933866dd96d3eb2102737da92f80f6057a4b40df2f'
+          $exe = Join-Path $env:RUNNER_TEMP 'innosetup.exe'
+          Invoke-WebRequest -Uri $url -OutFile $exe
+          $actual = (Get-FileHash -Path $exe -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($actual -ne $expected) { throw "Inno Setup 安装程序 SHA-256 不符：$actual" }
+          Start-Process -FilePath $exe -ArgumentList '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', '/SP-' -Wait
+          & "${env:ProgramFiles}\Inno Setup 7\ISCC.exe" --version
+
+      # 没有代码签名证书，QINGJIAN_UIACCESS=0 由 build.ps1 自己设（不签名时 Server 带 uiAccess 起不来）
+      - name: Build installer
+        if: github.event_name != 'pull_request'
+        shell: pwsh
+        run: powershell -NoProfile -ExecutionPolicy Bypass -File apps\windows\installer\build.ps1
+
+      - name: Read installer name
+        if: github.event_name != 'pull_request'
+        id: package
+        shell: bash
+        run: echo "name=$(basename "$(ls target/installer/*-setup.exe)" .exe)" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: github.event_name != 'pull_request'
+        with:
+          name: ${{ steps.package.outputs.name }}
+          path: target/installer/*-setup.exe
+          if-no-files-found: error
+          overwrite: true
+          compression-level: 0

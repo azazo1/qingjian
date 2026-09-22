@@ -1,6 +1,8 @@
-| `.github/workflows/ci.yml` | push main、PR | `core`（Linux）fmt / clippy / 全 workspace 测试（排除 IMK 壳）；`macos` 编 IMK 壳并跑它的测试；`windows` 编 Server / TSF DLL / Settings 并跑测试。仓库公开，Actions 不计费 |
+| `.github/workflows/ci.yml` | push main, PR, 手动触发 | `core` (Linux) fmt / clippy / 全 workspace 测试 (排除 IMK 壳); `macos` 编 IMK 壳并跑它的测试; `windows` 编 Server / TSF DLL / Settings 并跑测试. push main 与手动触发再各打一份未签名的测试包传成 artifact (见「测试包 artifact」), PR 只跑检查. 仓库公开, Actions 不计费 |
 | `.github/workflows/audit.yml` | 每周一、Cargo.lock 变动 | `cargo audit`（RustSec 已知漏洞） |
-| `.github/dependabot.yml` | 每周一 | Cargo 依赖与钉 commit 的 actions 的更新 PR |# 发版流程
+| `.github/dependabot.yml` | 每周一 | Cargo 依赖与钉 commit 的 actions 的更新 PR |
+
+# 发版流程
 
 2026-09-07 搭起来的：GitHub Actions 按标签打包、建 Release、生成官网下载页用的 `releases.json`。
 这里记怎么发一版、各环节的依赖，以及官网怎么消费产物。
@@ -67,8 +69,17 @@ cargo 命令全 `--locked`（含 `bundle.sh` 与 `build.ps1`）。普通 CI 只�
 
 | 文件 | 触发 | 做什么 |
 |---|---|---|
-| `.github/workflows/ci.yml` | push main、PR | Linux 上 `cargo fmt --check` / clippy / test，排除 `qingjian-macos`（IMK 外壳只能在 macOS 编译，macOS runner 计费是 Linux 的 10 倍） |
+| `.github/workflows/ci.yml` | push main, PR, 手动触发 (Actions 页面的 Run workflow) | Linux 上 `cargo fmt --check` / clippy / test, 排除 `qingjian-macos` (IMK 外壳只能在 macOS 编译, macOS runner 计费是 Linux 的 10 倍); push main 与手动触发再打测试包传 artifact, 见「测试包 artifact」 |
 | `.github/workflows/release.yml` | 推 `macos-v*` / `windows-v*` 标签 | `macos` job（`macos-26`）：下载产品数据 → 可选签名公证 → `bundle.sh --pkg` 打 arm64 与交叉编译的 x86_64 → 建 Release；`windows` job（`windows-latest`）：下载产品数据 → `build.ps1` 打 Inno Setup 安装包 → 建 Release。两者最后都跑 `publish-releases-json.sh` |
+
+## 测试包 artifact
+
+`ci.yml` 在 push main 与手动触发 (Actions 页面的 Run workflow) 时, 除原有检查外还各打一份**未签名**的包传成 Actions artifact, 测试者不必自己编译、也不必等发版:
+
+- macOS: `qingjian-<版本>-macos-arm64.pkg` 与 `-x86_64.pkg`, 由 `bundle.sh --pkg` 打出, 没有证书就是 ad-hoc 签名, 首次打开要在「系统设置 → 隐私与安全性」里放行.
+- Windows: `qingjian-<版本>-windows-x86_64-setup.exe`, 由 `build.ps1` 打出, `QINGJIAN_UIACCESS=0`, SmartScreen 会拦.
+
+artifact 名就是包文件名去掉扩展名. 这些包不走发版流程: 没有 `SHA256SUMS` / `build-info.json` / `releases.json`, 不建 Release, 也不推官网; 版本号是 `0.1.3-dev-<短哈希>` 这种开发版号 (发版提交上才不带 `-dev`), 一眼能与线上包区分. PR 只跑检查不打测试包, artifact 按 GitHub 默认保留 90 天.
 
 ## 产品数据从哪来
 
