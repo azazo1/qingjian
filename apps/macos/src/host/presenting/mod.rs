@@ -91,7 +91,7 @@ impl Host {
             Some((cells, columns)) => (cells.clone(), *columns),
             None => (self.session.page_cells(), 0),
         };
-        let rows: Vec<Row> = cells
+        let mut rows: Vec<Row> = cells
             .iter()
             .enumerate()
             .map(|(i, cell)| {
@@ -117,6 +117,19 @@ impl Host {
                 row
             })
             .collect();
+        // 模型重排过的候选: 在译文之前加一个 "AI 87%" 的小标, 说明这次排序是模型定的
+        // (置信度只有相对分的打分器才算得出, 见 `Engine::model_confidence`)
+        for row in rows.iter_mut() {
+            if let Some(confidence) = self.engine.model_confidence(&row.text) {
+                row.annotation.insert(
+                    0,
+                    (
+                        format!("AI {:.0}%", confidence * 100.0),
+                        crate::candidates::Tone::Model,
+                    ),
+                );
+            }
+        }
         // 页上的译词告诉 Engine：用户上屏那一刻它们在屏幕上，算「见过」（词汇记录）；窗口收起时传空
         self.engine
             .note_displayed(cells.iter().copied().filter_map(Cell::candidate));

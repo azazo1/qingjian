@@ -18,4 +18,11 @@ pub trait SentenceScorer: Send {
     fn is_remote(&self) -> bool {
         false
     }
+
+    /// 相对分的满量程: `form()` 为 [`ScoreForm::Relative`] 时, 分 = 置信度 x 这个值, Core 据此还原出
+    /// 每条候选 0 到 1 的置信度给壳显示 (候选旁的模型徽标). 缺省 `None`: 没有置信度这个概念 ——
+    /// 字级模型的整句 log 概率只有相对大小, 不是概率.
+    fn relative_scale(&self) -> Option<f64> {
+        None
+    }
 }

@@ -258,6 +258,7 @@ impl Engine {
     ) -> Self {
         self.scorer_form = scorer.form();
         self.scorer_remote = scorer.is_remote();
+        self.scorer_scale = scorer.relative_scale();
         self.sentence_scorer = Some(scorer);
         self.rescorer = None;
         self.set_neural_parameters(weight, margin, context);
@@ -286,8 +287,10 @@ impl Engine {
             .as_ref()
             .map_or(ScoreForm::Absolute, |scorer| scorer.form());
         self.scorer_remote = scorer.as_ref().is_some_and(|scorer| scorer.is_remote());
+        self.scorer_scale = scorer.as_ref().and_then(|scorer| scorer.relative_scale());
         self.rescorer = scorer.map(super::rescoring::RescoreWorker::spawn);
         *self.neural_cache.borrow_mut() = super::rescoring::NeuralCache::default();
+        self.model_confidence.borrow_mut().clear();
         self.forget_span_cache();
     }
 

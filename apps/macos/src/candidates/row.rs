@@ -13,6 +13,9 @@ pub enum Tone {
 
     /// 词性与分隔符，最浅。
     Faint,
+
+    /// 模型重排的置信度小标 (`AI 87%`), 用强调色.
+    Model,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

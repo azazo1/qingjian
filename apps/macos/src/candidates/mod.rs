@@ -12,6 +12,6 @@ mod window;
 pub(crate) use bitmap::available_families;
 pub use frame::Frame;
 pub use preedit::Preedit;
-pub use row::Row;
+pub use row::{Row, Tone};
 pub use window::CandidateWindow;
 pub(crate) use window::{build_float_panel, place_at_caret};

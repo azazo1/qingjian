@@ -108,7 +108,25 @@ impl Engine {
                 .partial_cmp(&a.score)
                 .unwrap_or(std::cmp::Ordering::Equal)
         });
+        // 相对分带满量程时, 顺手把每条候选的置信度 (分 / 满量程) 记下来给壳显示模型徽标
+        if self.scorer_form == ScoreForm::Relative
+            && let Some(scale) = self.scorer_scale.filter(|scale| *scale > 0.0)
+        {
+            let mut confidences = self.model_confidence.borrow_mut();
+            confidences.clear();
+            for path in paths.iter() {
+                if let Some(score) = cache.get(&path.text) {
+                    confidences.insert(path.text.clone(), (score / scale).clamp(0.0, 1.0) as f32);
+                }
+            }
+        }
         self.last_rescored.set(true);
+    }
+
+    /// 某条文本最近一次重排的模型置信度 (0 到 1); 没接带置信度的打分器或这条没被重排过时为 `None`.
+    /// 壳拿它在候选旁显示模型徽标 (相对分才算得出置信度, 字级模型的 log 概率不算).
+    pub fn model_confidence(&self, text: &str) -> Option<f32> {
+        self.model_confidence.borrow().get(text).copied()
     }
 
     /// 最近一次查询里有整句路径还没拿到神经分：壳该在用户停顿后调 [`Self::request_rescoring`]。

@@ -94,6 +94,11 @@ impl SentenceScorer for DecisionScorer {
     fn is_remote(&self) -> bool {
         self.remote
     }
+
+    /// 分就是 `概率 x span`, 所以满量程是 span: Core 拿它还原出每条候选的概率给壳显示.
+    fn relative_scale(&self) -> Option<f64> {
+        Some(self.span)
+    }
 }
 
 /// 末尾 `count` 个字符; `count` 为 0 时给空串 (后端按 "没有前文" 处理).
