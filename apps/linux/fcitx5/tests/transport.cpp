@@ -1,5 +1,6 @@
 //! 传输错误在有界时间内使整条连接失效，已发送事件不重放。
 #include "qingjian.h"
+#include "protocol.h"
 #include "support/input.h"
 #include "support/wire.h"
 #include <fcitx/inputcontextmanager.h>
@@ -25,12 +26,12 @@ int main(int argc, char **argv) {
         int connection = accept(listener, nullptr, nullptr);
         auto opened = readMessage(connection).at("OpenSession");
         const auto session = opened.at("session");
-        assert(opened.at("protocol") == 6);
-        writeMessage(connection, {{"Update", {{"session", session}, {"linux_ui", {{"version", failure == "old-version" ? 2 : 3}}}}}});
+        assert(opened.at("protocol") == qingjian::kProtocolVersion);
+        writeMessage(connection, {{"Update", {{"session", session}, {"linux_ui", {{"version", failure == "old-version" ? 2 : qingjian::kUiVersion}}}}}});
         if (failure != "old-version") {
             auto identity = readMessage(connection).at("LinuxHello");
             identity.erase("version"); identity.erase("session"); identity["revision"] = 1;
-            writeMessage(connection, {{"LinuxHello", {{"session", session}, {"version", 3}, {"preedit", "both"}}}});
+            writeMessage(connection, {{"LinuxHello", {{"session", session}, {"version", qingjian::kUiVersion}, {"preedit", "both"}}}});
             for (const auto *name : {"Capabilities", "Focus"}) {
                 const auto event = readMessage(connection).at("LinuxEvent").at("event");
                 assert(event.contains(name));

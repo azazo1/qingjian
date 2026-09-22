@@ -3,6 +3,7 @@
 #include "candidate/list.h"
 #include "candidate/word.h"
 #include "key/mapping.h"
+#include "protocol.h"
 #include <fcitx/addonmanager.h>
 #include <fcitx/inputcontext.h>
 #include <fcitx/inputcontextmanager.h>
@@ -149,12 +150,12 @@ bool QingjianEngine::connect(InputContext *context) {
         if (!shared_->flush()) throw std::runtime_error("close exchange");
         session->generation = shared_->generation;
         nlohmann::json response;
-        if (!shared_->connection.send({{"OpenSession", {{"session", session->id}, {"app", context->program()}, {"protocol", 7}}}}, &response)
+        if (!shared_->connection.send({{"OpenSession", {{"session", session->id}, {"app", context->program()}, {"protocol", qingjian::kProtocolVersion}}}}, &response)
             || response.at("Update").at("session") != session->id
-            || response.at("Update").at("linux_ui").at("version") != 3)
+            || response.at("Update").at("linux_ui").at("version") != qingjian::kUiVersion)
             throw std::runtime_error("protocol mismatch");
-        if (!shared_->connection.send({{"LinuxHello", {{"version", 3}, {"session", session->id}, {"generation", session->generation}, {"context", contextIdentity(context)}}}}, &response)
-            || response.at("LinuxHello").at("version") != 3 || response.at("LinuxHello").at("session") != session->id) throw std::runtime_error("linux handshake");
+        if (!shared_->connection.send({{"LinuxHello", {{"version", qingjian::kUiVersion}, {"session", session->id}, {"generation", session->generation}, {"context", contextIdentity(context)}}}}, &response)
+            || response.at("LinuxHello").at("version") != qingjian::kUiVersion || response.at("LinuxHello").at("session") != session->id) throw std::runtime_error("linux handshake");
         session->preeditMode = response.at("LinuxHello").at("preedit").get<std::string>();
         if (session->preeditMode != "both" && session->preeditMode != "window" && session->preeditMode != "inline")
             throw std::runtime_error("preedit mode");

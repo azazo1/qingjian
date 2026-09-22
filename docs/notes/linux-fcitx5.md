@@ -30,6 +30,7 @@ CTest 的 `real-server` 实际运行 Rust Server 并通过 InputContext 输入�
 同用户 Unix socket，长度前缀为 4 字节小端，单消息上限 16 MiB；每次插件收发共用 200 ms 截止时间。
 插件只持有一条连接和一个 I/O watcher，每个 InputContext 分配独立、递增的 session ID。
 每个会话先 `OpenSession` 校验共享协议版本（7），再协商 `LinuxHello` v3，携带 session/generation/context，返回会话编号和既有预编辑设置。
+插件侧的这两个号取自 `src/protocol.h` 的 `kProtocolVersion` 与 `kUiVersion`, 与 Rust 的 `PROTOCOL_VERSION` / `LINUX_UI_PROTOCOL` 成对; 测试夹具也从同一处取, 升版本时只改这里.
 首次能力确认前不接受输入；握手与能力状态逐会话保存。同一连接支持超过 64 个上下文，64 条连接的资源保护不限制单连接会话数。
 Linux 的首个回包仍是含 `linux_ui` 的 `Update`，不额外发送 Windows DLL 使用的 `SessionOpened`；旧版插件的协议 5 连接会被拒绝，升级时需同时更新 Server 与插件。
 旧版本或损坏响应关闭连接、清空显示并放行当前输入；重连创建全新输入状态，旧提交不会重放。

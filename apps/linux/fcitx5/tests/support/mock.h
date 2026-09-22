@@ -1,5 +1,6 @@
 //! 可控 Server 夹具，只模拟返回帧，记录插件发送的框架事实。
 #pragma once
+#include "protocol.h"
 #include "wire.h"
 #include <cstring>
 #include <filesystem>
@@ -42,14 +43,14 @@ struct Mock {
         int fd = accept(listener, nullptr, nullptr);
         auto opened = readMessage(fd).at("OpenSession");
         const auto session = opened.at("session");
-        assert(opened.at("protocol") == 6);
-        writeMessage(fd, {{"Update", {{"session", session}, {"linux_ui", {{"version", mode == "mismatch" ? 2 : 3}}}}}});
+        assert(opened.at("protocol") == kProtocolVersion);
+        writeMessage(fd, {{"Update", {{"session", session}, {"linux_ui", {{"version", mode == "mismatch" ? 2 : kUiVersion}}}}}});
         if (mode == "mismatch") { close(fd); return; }
         auto identity = readMessage(fd).at("LinuxHello");
-        assert(identity.at("version") == 3);
+        assert(identity.at("version") == kUiVersion);
         identity.erase("version"); identity.erase("session");
         identity["revision"] = 0;
-        writeMessage(fd, {{"LinuxHello", {{"version", 3}, {"session", session}, {"preedit", mode == "inline" || mode == "window" ? mode : "both"}}}});
+        writeMessage(fd, {{"LinuxHello", {{"version", kUiVersion}, {"session", session}, {"preedit", mode == "inline" || mode == "window" ? mode : "both"}}}});
         auto frame = emptyFrame();
         char byte;
         while (recv(fd, &byte, 1, MSG_PEEK) > 0) {
