@@ -128,9 +128,7 @@ impl Component for Settings {
             Message::CloudApiKey(value) => self.save("predict", "api_key", value),
             Message::CloudModel(value) => self.save("predict", "model", value),
             Message::CloudBaseUrl(value) => self.save("predict", "base_url", value),
-            Message::CloudReasoningEffort(value) => {
-                self.save("predict", "reasoning_effort", value)
-            }
+            Message::CloudReasoningEffort(value) => self.save("predict", "reasoning_effort", value),
             Message::CloudMaxTokens(value) => {
                 // 0 或留空都是不发这个参数；不是整数就不写（框里可能是刚敲了一半）
                 let text = value.trim();

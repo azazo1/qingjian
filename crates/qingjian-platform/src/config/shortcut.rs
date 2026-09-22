@@ -188,11 +188,8 @@ mod tests {
         let parsed: ShortcutConfig = toml::from_str("").unwrap();
         assert_eq!(parsed.delete_keys(), default.delete_candidate);
         // 与平台缺省的译词键撞上才算「冲突」，两边平台都成立
-        let clash: ShortcutConfig = toml::from_str(&format!(
-            "delete_candidate = \"{}\"\n",
-            default.translation
-        ))
-        .unwrap();
+        let clash: ShortcutConfig =
+            toml::from_str(&format!("delete_candidate = \"{}\"\n", default.translation)).unwrap();
         assert_ne!(clash.delete_candidate, default.delete_candidate);
         assert_eq!(clash.delete_keys(), default.delete_candidate);
         // 不与任何一组译词键冲突的修饰键：平台上取一个，断言它原样生效

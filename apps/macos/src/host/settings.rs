@@ -522,7 +522,8 @@ impl Host {
                 };
                 match value {
                     Some(value) if value != config.predict.max_tokens => {
-                        self.settings.set_value("predict", "max_tokens", value as i64);
+                        self.settings
+                            .set_value("predict", "max_tokens", value as i64);
                     }
                     Some(_) => {}
                     None => self.preferences.set_status(
