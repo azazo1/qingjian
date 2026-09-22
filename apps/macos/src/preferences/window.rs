@@ -224,8 +224,8 @@ impl PreferencesWindow {
         self.panel.present();
     }
 
-    /// 按配置刷新所有控件。`key_present` 是云联想的密钥已经有了（环境或配置里），
-    /// `decision_key_present` 是决策模型（jev）的密钥；密钥框永远不回显值。
+    /// 按配置刷新所有控件. `key_present` 是云联想的密钥已经有了 (环境或配置里),
+    /// `decision_key_present` 是决策模型 (jev) 的密钥; 密钥框永远不回显值.
     pub fn sync(
         &self,
         config: &Config,

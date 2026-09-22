@@ -357,12 +357,12 @@ impl Host {
                     self.settings.set_value("decision", "endpoint", text);
                 }
             }
-            // 决策模型的密钥与云联想的走同一套：写进配置目录的 .env，不进 config.toml
+            // 决策模型的密钥与云联想的走同一套: 写进配置目录的 .env, 不进 config.toml
             (Setting::DecisionApiKey, SettingValue::Text(text)) => {
                 let text = text.trim();
                 if text.chars().any(|c| !c.is_ascii_graphic()) {
                     self.preferences.set_status(
-                        "密钥没有保存：里面有空格或非英文字符，多半是粘贴时多带了别的内容",
+                        "密钥没有保存: 里面有空格或非英文字符, 多半是粘贴时多带了别的内容",
                     );
                     return;
                 }
@@ -378,7 +378,7 @@ impl Host {
                     self.preferences.set_status("密钥已保存");
                 } else {
                     self.preferences
-                        .set_status("密钥没有保存：写不进配置目录的 .env，详情见日志");
+                        .set_status("密钥没有保存: 写不进配置目录的 .env, 详情见日志");
                 }
                 return;
             }

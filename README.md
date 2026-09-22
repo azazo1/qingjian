@@ -8,14 +8,9 @@
 
 - 双拼下行内拼音显示敲的键: 输入框里的拼音行按音节显示双拼码 (`kd'fa've`), 候选窗口里仍是解出的全拼 (`kai'fa'zhe`). 配置项 `[general] inline_keys` 缺省开, 偏好设置「候选窗口」页可改.
 - CI 在 push main 与手动触发时, 除原有检查外还各打一份未签名的测试包传成 Actions artifact (macOS 的 pkg 两个架构、Windows 的 Inno 安装包), PR 只跑检查不打包. 见 `docs/notes/release.md`.
+- 决策模型接入: 新增 `crates/qingjian-decision` 与配置 `[decision]`, 把 jev (云端接口) 与 laya (本地服务) 这类 typed decision 模型接成整句重排的第二个来源 (与 `[model]` 的本地字级模型互斥, 只走 HTTP 不内嵌推理栈); macOS 壳与偏好设置 "云服务" 页已接上, 见 `docs/design/decision-models.md` 与 `docs/user/input/decision-model.md`.
 
 青简（Qingjian）是一个使用 **Rust** 开发的跨平台输入法。
-
-> **本仓库是自用 fork。** 跟着 [upstream](https://github.com/qingjian-team/qingjian) 走，改动都落在 `main` 上，随时可以 `git merge upstream/main`。
-> 相对 upstream 多出来的东西：
->
-> - 决策模型接入（`crates/qingjian-decision`，配置 `[decision]`）：把 jev（云端接口）与 laya（本地服务）这类 typed decision 模型接成整句重排的第二个来源，
->   与 `[model]` 的本地字级模型互斥，只走 HTTP、不内嵌推理栈；macOS 壳与偏好设置「云服务」页都已接上。设计见 [docs/design/decision-models.md](docs/design/decision-models.md)。
 
 https://github.com/user-attachments/assets/d145fde9-a641-4543-8b15-dd7a2685de3d
 

@@ -15,7 +15,7 @@ impl SentenceScorer for Prefers {
     }
 }
 
-/// 假打分器：给的分只有同一批之间可比（决策模型那种），绝对值没有意义。
+/// 假打分器: 给的分只有同一批之间可比 (决策模型那种), 绝对值没有意义.
 struct Relative(&'static str);
 
 impl SentenceScorer for Relative {
@@ -72,7 +72,7 @@ fn relative_scores_are_centered_on_the_batch() {
     let mut paths = vec![path("开饭", -10.0), path("开放", -11.0), path("开始", -12.0)];
     engine.rescore_paths(&mut paths);
     assert_eq!(texts(&paths), ["开放", "开饭", "开始"]);
-    // 批内均值 2.0：开饭 −10 + 0.5·(1−2) = −10.5；开放 −11 + 0.5·(4−2) = −10；开始 −12 + 0.5·(1−2) = −12.5
+    // 批内均值 2.0: 开饭 −10 + 0.5·(1−2) = −10.5; 开放 −11 + 0.5·(4−2) = −10; 开始 −12 + 0.5·(1−2) = −12.5
     assert!((paths[0].score - -10.0).abs() < 1e-9);
     assert!((paths[1].score - -10.5).abs() < 1e-9);
     assert!((paths[2].score - -12.5).abs() < 1e-9);

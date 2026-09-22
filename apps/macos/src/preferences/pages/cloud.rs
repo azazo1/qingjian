@@ -1,5 +1,5 @@
-//! 「云服务」页：本地整句模型开关，决策模型（laya / jev）开关与后端配置，云联想开关、云端词格数、
-//! 接口地址 / 模型 / 密钥、测试连接。
+//! "云服务" 页: 本地整句模型开关, 决策模型 (laya / jev) 开关与后端配置, 云联想开关, 云端词格数,
+//! 接口地址 / 模型 / 密钥, 测试连接.
 
 use objc2::MainThreadMarker;
 use objc2::rc::Retained;
@@ -23,16 +23,16 @@ pub struct CloudPage {
     /// 本地整句模型开关。
     local_model: Retained<NSButton>,
 
-    /// 决策模型开关。
+    /// 决策模型开关.
     decision: Retained<NSButton>,
 
-    /// 决策模型后端（本地服务 / 云端）。
+    /// 决策模型后端 (本地服务 / 云端).
     decision_backend: Retained<NSPopUpButton>,
 
-    /// 决策模型接口地址。
+    /// 决策模型接口地址.
     decision_endpoint: Retained<NSTextField>,
 
-    /// 决策模型的密钥输入框（只有云端后端用），永远不回显已有值。
+    /// 决策模型的密钥输入框 (只有云端后端用), 永远不回显已有值.
     decision_key: Retained<NSSecureTextField>,
 
     /// 云联想开关。
@@ -68,7 +68,7 @@ impl CloudPage {
         note(
             layout,
             mtm,
-            "把整句候选交给决策模型挑最顺的一条：本地服务全程离线，云端会把光标前文发出去。开着时上面的本地整句模型不再生效（两者占同一个位置）。",
+            "把整句候选交给决策模型挑最顺的一条: 本地服务全程离线, 云端会把光标前文发出去. 开着时上面的本地整句模型不再生效 (两者占同一个位置).",
         );
         let backend_titles: Vec<String> = BackendKind::ALL
             .iter()
@@ -89,7 +89,7 @@ impl CloudPage {
         note(
             layout,
             mtm,
-            "接口地址留空用后端的缺省值（本地服务 http://127.0.0.1:8080/api/predict，云端 https://api.typesafe.ai/v1/systemone）；密钥只有云端用得上，填进这里会写进配置目录的 .env。",
+            "接口地址留空用后端的缺省值 (本地服务 http://127.0.0.1:8080/api/predict, 云端 https://api.typesafe.ai/v1/systemone); 密钥只有云端用得上, 填进这里会写进配置目录的 .env.",
         );
         let enabled = checkbox(mtm, "启用云联想", Setting::CloudEnabled, target);
         row_checkbox(layout, &enabled);
@@ -151,9 +151,9 @@ impl CloudPage {
         }
     }
 
-    /// `key_present` 是云联想的密钥已经有了（环境或配置里）；密钥框永远不回显值，只换占位文字。
-    /// `decision_key_present` 同理，是决策模型（jev）的密钥。`model_present` 是包里或用户目录里有模型文件，
-    /// 没有就把本地模型的勾选灰掉；云联想关着时它下面的项全灰。
+    /// `key_present` 是云联想的密钥已经有了 (环境或配置里); 密钥框永远不回显值, 只换占位文字.
+    /// `decision_key_present` 同理, 是决策模型 (jev) 的密钥. `model_present` 是包里或用户目录里有模型文件,
+    /// 没有就把本地模型的勾选灰掉; 云联想关着时它下面的项全灰.
     pub fn sync(
         &self,
         config: &Config,
@@ -180,7 +180,7 @@ impl CloudPage {
             .setStringValue(&NSString::from_str(&config.decision.endpoint));
         self.decision_key.setStringValue(&NSString::from_str(""));
         let decision_hint = if decision_key_present {
-            "已设置，输入新值可替换"
+            "已设置, 输入新值可替换"
         } else {
             "未设置"
         };

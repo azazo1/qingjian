@@ -52,7 +52,7 @@ pub use theme_mode::ThemeMode;
 /// 用户配置文件（TOML）。所有平台同一份格式，缺省值全部在各分节的 `Default` 里。
 ///
 /// 配置文件是唯一事实源：菜单、设置窗口、手改文件三个入口都只写这个文件，再由壳热加载。
-/// 只派生 `PartialEq`：`[decision] span` 是浮点数，整份配置不再满足 `Eq` 的自反要求。
+/// 只派生 `PartialEq`: `[decision] span` 是浮点数, 整份配置不再满足 `Eq` 的自反要求.
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct Config {
@@ -87,7 +87,7 @@ pub struct Config {
     /// 本地整句模型。
     pub model: LocalModelConfig,
 
-    /// 决策模型：整句重排的第二个来源（与 `model` 互斥，两者都开时用它）。
+    /// 决策模型: 整句重排的第二个来源 (与 `model` 互斥, 两者都开时用它).
     pub decision: DecisionConfig,
 }
 
@@ -315,24 +315,24 @@ disabled = []
 enabled = true
 
 [decision]
-# 决策模型：整句重排的第二个来源，与上面的本地整句模型互斥（这个开着就用它，本地模型不再加载）。
-# 这类模型不生成文本，只回答「这几条候选里哪条最顺」，一次前向出答案。默认关闭。目前只有 macOS 壳接上（Windows / Linux 待接）。
+# 决策模型: 整句重排的第二个来源, 与上面的本地整句模型互斥 (这个开着就用它, 本地模型不再加载).
+# 这类模型不生成文本, 只回答 "这几条候选里哪条最顺", 一次前向出答案. 默认关闭. 目前只有 macOS 壳接上 (Windows / Linux 待接).
 enabled = false
-# 后端：laya 本地 HTTP 服务（laya-serve，或自己用 laya-mlx 包的同类服务，全程离线）/
-# jev TypeSafe System One 云端接口（需要密钥，光标前文会离开本机）
+# 后端: laya 本地 HTTP 服务 (laya-serve, 或自己用 laya-mlx 包的同类服务, 全程离线) /
+# jev TypeSafe System One 云端接口 (需要密钥, 光标前文会离开本机)
 backend = "laya"
-# 接口地址；留空按后端取缺省（laya 是 http://127.0.0.1:8080/api/predict，jev 是 https://api.typesafe.ai/v1/systemone）
+# 接口地址; 留空按后端取缺省 (laya 是 http://127.0.0.1:8080/api/predict, jev 是 https://api.typesafe.ai/v1/systemone)
 endpoint = ""
-# 模型名，只有 jev 用
+# 模型名, 只有 jev 用
 model = "jev-latest"
-# 密钥，只有 jev 用：填在这里，或留空并设置 api_key_env 指定的环境变量
+# 密钥, 只有 jev 用: 填在这里, 或留空并设置 api_key_env 指定的环境变量
 # api_key = ""
 api_key_env = "TYPESAFE_API_KEY"
-# 单次请求超时（毫秒）：超时这一轮不重排，按键本来也不等它
+# 单次请求超时 (毫秒): 超时这一轮不重排, 按键本来也不等它
 timeout_ms = 1500
-# 给模型看的光标前文最多几个字符（0 不给）
+# 给模型看的光标前文最多几个字符 (0 不给)
 context_chars = 48
-# 决策分到路径分的换算跨度（nat）：模型最偏好的那条相对批内均值最多加这么多分，越大越敢翻盘
+# 决策分到路径分的换算跨度 (nat): 模型最偏好的那条相对批内均值最多加这么多分, 越大越敢翻盘
 span = 4.0
 
 [predict]

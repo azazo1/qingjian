@@ -135,11 +135,11 @@ pub struct Engine {
     /// 整句路径的同步神经重打分器（字级 Transformer，查询里当场打分；CLI 评测用）。
     sentence_scorer: Option<Box<dyn SentenceScorer>>,
 
-    /// 当前打分器给的分是什么量纲（见 [`ScoreForm`]）：接打分器时从它自己的 [`SentenceScorer::form`] 取一次存下。
-    /// 异步打分器进了后台线程，Engine 手里只剩通道，所以不能等到重排时再问。
+    /// 当前打分器给的分是什么量纲 (见 [`ScoreForm`]): 接打分器时从它自己的 [`SentenceScorer::form`] 取一次存下.
+    /// 异步打分器进了后台线程, Engine 手里只剩通道, 所以不能等到重排时再问.
     scorer_form: ScoreForm,
 
-    /// 当前打分器会不会把前文发到本机之外（[`SentenceScorer::is_remote`]）；私密输入期间这种打分器不参与重排。
+    /// 当前打分器会不会把前文发到本机之外 ([`SentenceScorer::is_remote`]); 私密输入期间这种打分器不参与重排.
     scorer_remote: bool,
 
     /// 异步重打分：后台线程里的打分器，壳在停顿后送任务、轮询结果（见 [`rescoring`]）。

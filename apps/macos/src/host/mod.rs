@@ -175,7 +175,7 @@ pub struct Host {
     /// 上次套用的 `[model]`，变了才重载 / 卸载。
     applied_model: Option<LocalModelConfig>,
 
-    /// 上次套用的 `[decision]`，变了才重建决策后端。
+    /// 上次套用的 `[decision]`, 变了才重建决策后端.
     applied_decision: Option<DecisionConfig>,
 
     /// 当前会话的候选、高亮、页码、preedit。

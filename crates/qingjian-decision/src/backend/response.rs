@@ -1,4 +1,4 @@
-//! 两个后端共用的响应解析：Laya 与 Jev 的响应形状一致，形状变了只改这里。
+//! 两个后端共用的响应解析: Laya 与 Jev 的响应形状一致, 形状变了只改这里.
 
 use std::collections::BTreeMap;
 
@@ -8,10 +8,10 @@ use crate::answer::ChoiceAnswer;
 use crate::error::DecisionError;
 use crate::question::Question;
 
-/// 从后端响应体里取出各问题的选择题答案。
+/// 从后端响应体里取出各问题的选择题答案.
 ///
-/// Laya 与 Jev 的响应形状一致：`answers` 是按问题 id 索引的对象，每条答案带 `choice` 与 `probabilities`，
-/// 概率按选项文本索引。两个后端共用这一份解析，形状变了只改这里。
+/// Laya 与 Jev 的响应形状一致: `answers` 是按问题 id 索引的对象, 每条答案带 `choice` 与 `probabilities`,
+/// 概率按选项文本索引. 两个后端共用这一份解析.
 pub(super) fn parse_answers(
     raw: &Value,
     questions: &[Question],

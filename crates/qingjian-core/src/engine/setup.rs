@@ -278,8 +278,8 @@ impl Engine {
         self
     }
 
-    /// 运行时换 / 卸异步重打分器（壳里模型在后台加载完才接上，配置关掉就卸）。换打分器时连它的分的量纲一起记下：
-    /// 打分器随后进了后台线程，重排时问不到。
+    /// 运行时换 / 卸异步重打分器 (壳里模型在后台加载完才接上, 配置关掉就卸). 换打分器时连它的分的量纲一起记下:
+    /// 打分器随后进了后台线程, 重排时问不到.
     pub fn set_async_sentence_scorer(&mut self, scorer: Option<Box<dyn SentenceScorer>>) {
         self.sentence_scorer = None;
         self.scorer_form = scorer

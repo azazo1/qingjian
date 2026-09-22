@@ -1,6 +1,6 @@
 [package]
 name = "qingjian-decision"
-description = "整句重排的第二个来源：jev / laya 这类 typed decision 模型（choice 题型），只走 HTTP 不内嵌推理"
+description = "整句重排的第二个来源: jev / laya 这类 typed decision 模型 (choice 题型), 只走 HTTP 不内嵌推理"
 version.workspace = true
 edition.workspace = true
 license.workspace = true

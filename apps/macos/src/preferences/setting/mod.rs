@@ -56,16 +56,16 @@ pub enum Setting {
     /// `[model] enabled`。
     LocalModelEnabled,
 
-    /// `[decision] enabled`。
+    /// `[decision] enabled`.
     DecisionEnabled,
 
-    /// `[decision] backend`，弹出菜单：本地服务 (laya) / 云端 (jev)。
+    /// `[decision] backend`, 弹出菜单: 本地服务 (laya) / 云端 (jev).
     DecisionBackend,
 
-    /// `[decision] endpoint`。
+    /// `[decision] endpoint`.
     DecisionEndpoint,
 
-    /// `[decision] api_key_env` 那个环境变量，密钥写到 `.env`。
+    /// `[decision] api_key_env` 那个环境变量, 密钥写到 `.env`.
     DecisionApiKey,
 
     /// 默认中文标点模式。

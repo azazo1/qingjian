@@ -81,7 +81,7 @@ impl Host {
         if force || config.dictionaries != self.applied_dictionaries {
             self.reload_dictionaries();
         }
-        // 整句重排的来源（决策模型 / 本地整句模型）占用 Engine 里同一个位置，一起装配
+        // 整句重排的来源 (决策模型 / 本地整句模型) 占用 Engine 里同一个位置, 一起装配
         let decision_changed = self.applied_decision.as_ref() != Some(&config.decision);
         let model_changed = self.applied_model.as_ref() != Some(&config.model);
         if force || decision_changed || model_changed {

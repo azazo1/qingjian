@@ -1,5 +1,5 @@
-//! 神经重打分：整句转换的前几条路径交给第二打分来源（[`SentenceScorer`]）再排一次。字级语言模型给整句 log 概率，
-//! 决策模型（`qingjian-decision`）给同一批候选之间的相对优劣，两种量纲在 [`Engine::rescore_paths`] 里分别处理。
+//! 神经重打分: 整句转换的前几条路径交给第二打分来源 ([`SentenceScorer`]) 再排一次. 字级语言模型给整句 log 概率,
+//! 决策模型 (`qingjian-decision`) 给同一批候选之间的相对优劣, 两种量纲在 [`Engine::rescore_paths`] 里分别处理.
 //!
 //! 打分有两种接法：同步的（[`Engine::with_sentence_scorer`]，查询里当场打，CLI 评测用）和异步的
 //! （[`Engine::with_async_sentence_scorer`]，后台线程；壳里用）。两种都经过一张「前文 + 文本 → 神经分」的缓存
@@ -37,8 +37,8 @@ impl Engine {
         }
     }
 
-    /// 私密输入期间不让「会把前文发到本机之外」的打分器（云端决策模型）干活：一个字都不出去，
-    /// 这一轮也不重排。本地模型不受影响（`is_remote` 为假）。
+    /// 私密输入期间不让 "会把前文发到本机之外" 的打分器 (云端决策模型) 干活: 一个字都不出去,
+    /// 这一轮也不重排. 本地模型不受影响 (`is_remote` 为假).
     fn privacy_blocks_rescoring(&self) -> bool {
         self.private && self.scorer_remote
     }
@@ -84,8 +84,8 @@ impl Engine {
             }
         }
         let lambda = self.neural_weight;
-        // 相对分（决策模型这类只判「哪条更顺」的打分器）只有同一批候选之间可比，先按批内均值居中再叠加；
-        // 绝对分（字级语言模型的整句 log 概率）与静态模型同量纲，直接替换掉它。
+        // 相对分 (决策模型这类只判 "哪条更顺" 的打分器) 只有同一批候选之间可比, 先按批内均值居中再叠加;
+        // 绝对分 (字级语言模型的整句 log 概率) 与静态模型同量纲, 直接替换掉它.
         let mean = match self.scorer_form {
             ScoreForm::Absolute => 0.0,
             ScoreForm::Relative => {
