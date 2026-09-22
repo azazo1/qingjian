@@ -20,8 +20,11 @@ use crate::question::Question;
 /// 接口是同步的: 它只被整句重排的后台线程调用, 那里没有异步上下文, 运行时在 `http` 里自己管.
 pub trait DecisionBackend: Send {
     /// 与 `questions` 一一对应的答案, 顺序一致. 失败返回错误, 调用方这一轮不重排.
-    fn decide(&self, state: &str, questions: &[Question])
-    -> Result<Vec<ChoiceAnswer>, DecisionError>;
+    fn decide(
+        &self,
+        state: &str,
+        questions: &[Question],
+    ) -> Result<Vec<ChoiceAnswer>, DecisionError>;
 }
 
 /// 按配置打开后端.

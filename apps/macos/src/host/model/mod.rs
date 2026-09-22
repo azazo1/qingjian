@@ -127,7 +127,8 @@ impl Host {
                         endpoint = config.decision.endpoint(),
                         "决策模型接上整句重排"
                     );
-                    self.engine.set_async_sentence_scorer(Some(Box::new(scorer)));
+                    self.engine
+                        .set_async_sentence_scorer(Some(Box::new(scorer)));
                     self.rescore_current_round();
                     return;
                 }

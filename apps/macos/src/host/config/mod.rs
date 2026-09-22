@@ -104,8 +104,7 @@ impl Host {
             .api_key
             .as_deref()
             .is_some_and(|key| !key.trim().is_empty())
-            || std::env::var(&config.decision.api_key_env)
-                .is_ok_and(|key| !key.trim().is_empty());
+            || std::env::var(&config.decision.api_key_env).is_ok_and(|key| !key.trim().is_empty());
         self.dictionary_list = self.dictionary_infos();
         self.preferences.sync(
             &config,

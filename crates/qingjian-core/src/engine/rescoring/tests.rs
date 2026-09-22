@@ -69,7 +69,11 @@ fn sync_scorer_reorders_paths_in_place() {
 #[test]
 fn relative_scores_are_centered_on_the_batch() {
     let engine = engine().with_sentence_scorer(Box::new(Relative("开放")), Some(0.5), None, None);
-    let mut paths = vec![path("开饭", -10.0), path("开放", -11.0), path("开始", -12.0)];
+    let mut paths = vec![
+        path("开饭", -10.0),
+        path("开放", -11.0),
+        path("开始", -12.0),
+    ];
     engine.rescore_paths(&mut paths);
     assert_eq!(texts(&paths), ["开放", "开饭", "开始"]);
     // 批内均值 2.0: 开饭 −10 + 0.5·(1−2) = −10.5; 开放 −11 + 0.5·(4−2) = −10; 开始 −12 + 0.5·(1−2) = −12.5

@@ -2,9 +2,9 @@
 
 use serde_json::{Map, Value, json};
 
+use super::DecisionBackend;
 use super::http::Http;
 use super::response::parse_answers;
-use super::DecisionBackend;
 use crate::answer::ChoiceAnswer;
 use crate::config::DecisionConfig;
 use crate::error::DecisionError;
@@ -59,7 +59,9 @@ impl DecisionBackend for JevBackend {
             );
         }
         let body = json!({ "state": state, "model": self.model, "questions": wire });
-        let raw = self.http.post_json(&self.endpoint, &body, Some(&self.key))?;
+        let raw = self
+            .http
+            .post_json(&self.endpoint, &body, Some(&self.key))?;
         parse_answers(&raw, questions)
     }
 }

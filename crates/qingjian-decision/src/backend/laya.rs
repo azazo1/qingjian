@@ -2,9 +2,9 @@
 
 use serde_json::json;
 
+use super::DecisionBackend;
 use super::http::Http;
 use super::response::parse_answers;
-use super::DecisionBackend;
 use crate::answer::ChoiceAnswer;
 use crate::config::DecisionConfig;
 use crate::error::DecisionError;

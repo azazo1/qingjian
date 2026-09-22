@@ -50,7 +50,10 @@ impl Http {
             }
             let response = request.send().await.map_err(|error| self.classify(error))?;
             let status = response.status();
-            let text = response.text().await.map_err(|error| self.classify(error))?;
+            let text = response
+                .text()
+                .await
+                .map_err(|error| self.classify(error))?;
             if !status.is_success() {
                 return Err(DecisionError::Status {
                     status: status.as_u16(),
