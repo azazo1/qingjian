@@ -6,6 +6,7 @@ mod general;
 mod key_combo;
 mod layout_mode;
 mod log_level;
+mod mac_switch;
 mod model;
 mod modifiers;
 mod preedit_mode;
@@ -38,6 +39,7 @@ pub use general::{
 pub use key_combo::KeyCombo;
 pub use layout_mode::LayoutMode;
 pub use log_level::LogLevel;
+pub use mac_switch::{MacModifier, MacSwitchAction, MacSwitchKey, MacSwitchPlan};
 pub use model::LocalModelConfig;
 pub use modifiers::Modifiers;
 pub use preedit_mode::PreeditMode;
@@ -156,8 +158,21 @@ english_candidates_off = [
 macro_rules! template_shortcut_keys {
     () => {
         r#"# 中 / 英模式切换键：单击这个修饰键在中英之间翻转。shift 单击 (缺省, 与微软拼音一致) / control 单击 / none 不切换。
-# macOS 的切换键是 Caps Lock（系统级），本项不生效
+# 本项只 Windows 用; macOS 的切换入口见下面的 mac_switch 一组
 switch_mode = "shift"
+# macOS: 中 / 英切换. 两个开关可以同时开, 也都能与 Caps Lock 并存; 同一个键两边都配时以双键那边为准
+# 单键切换: 下面的键单击一下在中英之间翻转
+mac_switch_single = false
+# 一个修饰键单击 (left-command / right-command / left-shift / right-shift / left-option / right-option / left-control / right-control)
+# 或修饰键加字母或数字的组合键 (control+option+z). 组合键里带 command 会把应用的同名快捷键抢过来, 避开
+mac_switch_toggle = "left-command"
+# 双键切换: 下面两个键单击各切一边 (前一个英文, 后一个中文), 写法同上
+mac_switch_dual = false
+mac_switch_english = "left-command"
+mac_switch_chinese = "right-command"
+# Caps Lock 是否也切中 / 英: true 缺省 (与以前一致); false 时它只当大小写锁, 亮着敲字母直接上屏大写.
+# 关掉它又没开上面两个开关时键盘就没法切中英了, 只能切到别的输入法
+mac_caps_lock_switch = true
 # 数字键配这些修饰键上屏候选的译词：translation 第一个译词，translation_second 第二个（候选右侧有两个译词时）
 # 任意修饰键组合（option / shift / control / command 用 + 连），偏好设置里点按钮录制；别用 control+数字（系统切桌面）和 command+数字（应用切标签页）
 translation = "option"
@@ -229,8 +244,8 @@ chinese_first = false
 # 中文模式下按住 Shift 敲的字母：passthrough 拼音原样上屏、字母交给应用（缺省，与以前一致）/ compose 收进组句
 # 缓冲区参与匹配，这样 Cpan 与 cpan 一样能出「C盘」。英文模式与英文直输段（no-Way）不受影响
 shift_letter = "passthrough"
-# 内置英文模式：开着时单击切换键（[shortcut] switch_mode）或 Caps Lock 亮着进英文模式
-# 关掉后青简保持中文模式，切换键与语言栏按钮都不再切过去；要打英文请用系统快捷键（Win+Space）切到别的输入法。只有 Windows 用，macOS 的中英切换是 Caps Lock
+# 内置英文模式：开着时单击切换键（[shortcut] switch_mode，macOS 见 mac_switch 一组）或 Caps Lock 亮着进英文模式
+# 关掉后青简保持中文模式，切换键与语言栏按钮都不再切过去；要打英文请用系统快捷键（Win+Space / ⌃Space）切到别的输入法
 english_mode = true
 # 中文模式下（没在组句时）敲的标点转全角：, . ? ! : ; ( ) 等，数字后面的 . 保持半角。Windows 上悬浮状态条的「，。」格可以点着切；macOS 在偏好设置中选择默认中文标点模式
 full_width_punctuation = true

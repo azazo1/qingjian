@@ -10,6 +10,7 @@ mod config;
 mod diagnostics;
 mod dictionaries;
 mod init;
+mod mode;
 mod model;
 mod presenting;
 mod session;
@@ -32,8 +33,8 @@ use qingjian_platform::extra_dictionaries;
 use qingjian_platform::{
     AppsConfig, CandidateRenderer, DEFAULT_ENGLISH_CANDIDATES_OFF, DecisionConfig,
     DictionariesConfig, GeneralConfig, KeyCombo, LEARNING_LANGUAGE_OFF, LayoutMode,
-    LocalModelConfig, LogLevel, Modifiers, PAGE_KEY_OPTIONS, PreeditMode, Scheme, ShortcutConfig,
-    ThemeMode,
+    LocalModelConfig, LogLevel, MacSwitchPlan, Modifiers, PAGE_KEY_OPTIONS, PreeditMode, Scheme,
+    ShortcutConfig, ThemeMode,
 };
 use qingjian_predict::{
     CloudGlossFiller, CloudPredictor, ConnectionTest, PredictConfig, PredictError,
@@ -51,6 +52,7 @@ use cloud::{CloudTestMonitor, PredictMonitor};
 use config::{ConfigWatch, TextReplacement};
 pub use dictionaries::DictionaryInfo;
 pub use init::init;
+pub use mode::{ModeState, SwitchMatcher};
 use model::RescoreMonitor;
 use presenting::Notice;
 pub use presenting::TranslationJob;
@@ -146,6 +148,22 @@ pub struct Host {
 
     /// 英文模式是否给英文候选（配置 `[general] english_candidates`）。
     pub english_candidates: bool,
+
+    /// 内置英文模式总开关（配置 `[general] english_mode`）：关掉后固定中文模式，
+    /// Caps Lock 与配置的切换键都不再切到英文。以前只有 Windows 认这一项，现在 macOS 也认。
+    pub english_mode: bool,
+
+    /// macOS 的切换键方案（配置 `[shortcut] mac_switch` 一组）。
+    pub mac_switch: MacSwitchPlan,
+
+    /// Caps Lock 是否也切中 / 英（配置 `[shortcut] mac_caps_lock_switch`）。
+    pub mac_caps_lock_switch: bool,
+
+    /// 中 / 英模式的当前值与 Caps Lock 的物理状态。
+    pub mode: ModeState,
+
+    /// 切换键的单击判定状态（按下到抬起之间没插进别的键才算一次）。
+    pub switch_keys: SwitchMatcher,
 
     /// 上次从系统读到的文本替换（激活输入法时重读），`[general] system_text_replacements` 开着时并进自定义短语。
     text_replacements: Vec<TextReplacement>,

@@ -10,7 +10,7 @@ use objc2_app_kit::{
 use objc2_foundation::{NSArray, NSRect, NSString};
 use qingjian_core::Language;
 
-use super::key_recorder::KeyRecorder;
+use super::key_recorder::{KeyRecorder, RecorderKind};
 use super::layout::{CONTROL_X, LABEL_WIDTH, Layout, PAGE_PADDING, ROW_HEIGHT};
 use super::setting::Setting;
 use super::target::PreferencesTarget;
@@ -152,10 +152,10 @@ pub(super) fn row_recorder(
     mtm: MainThreadMarker,
     title: &str,
     setting: Setting,
-    modifiers_only: bool,
+    kind: RecorderKind,
     target: &PreferencesTarget,
 ) -> Retained<KeyRecorder> {
-    let recorder = KeyRecorder::new(mtm, modifiers_only);
+    let recorder = KeyRecorder::new(mtm, kind);
     wire(&recorder, setting, target);
     let label = caption(mtm, title);
     layout.place(&label, PAGE_PADDING, LABEL_WIDTH, ROW_HEIGHT);

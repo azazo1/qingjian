@@ -14,8 +14,6 @@ use objc2::{MainThreadMarker, MainThreadOnly, define_class, msg_send, sel};
 use objc2_app_kit::{NSMenu, NSStatusBar, NSStatusItem, NSVariableStatusItemLength};
 use objc2_foundation::{NSObject, NSObjectProtocol, NSString, NSTimer, ns_string};
 
-use crate::imk::modifiers;
-
 /// 轮询 Caps Lock 状态的间隔。
 const POLL_INTERVAL: f64 = 0.25;
 
@@ -60,8 +58,8 @@ impl ModeIndicator {
         }
     }
 
-    /// 输入法激活：展开状态项并开始轮询；停用时安排的收起取消。
-    pub fn activate(&mut self) {
+    /// 输入法激活：展开状态项并开始轮询；停用时安排的收起取消。`english` 是当前模式。
+    pub fn activate(&mut self, english: bool) {
         if let Some(timer) = self.collapse_timer.take() {
             timer.invalidate();
         }
@@ -70,7 +68,7 @@ impl ModeIndicator {
             self.item.setLength(NSVariableStatusItemLength);
         }
         self.english = None;
-        self.update();
+        self.update(english);
         if self.timer.is_none() {
             let target = ModeMonitor::new(self.mtm);
             let timer = unsafe {
@@ -131,12 +129,11 @@ impl ModeIndicator {
         self.english = None;
     }
 
-    /// 按当前 Caps Lock 状态刷新标题；收起时不动。
-    pub fn update(&mut self) {
+    /// 按当前模式刷新标题；收起时不动。`english` 由宿主给（它同时负责读 Caps Lock 的跳变）。
+    pub fn update(&mut self, english: bool) {
         if !self.shown {
             return;
         }
-        let english = modifiers::caps_lock_on();
         if self.english == Some(english) {
             return;
         }
@@ -163,7 +160,11 @@ define_class!(
     impl ModeMonitor {
         #[unsafe(method(tick:))]
         fn tick(&self, _timer: Option<&AnyObject>) {
-            crate::host::with(|h| h.indicator.update());
+            // 一轮询一拍：先按物理 Caps Lock 刷模式，再把结果画到标题上
+            crate::host::with(|h| {
+                let english = h.refresh_mode();
+                h.indicator.update(english);
+            });
         }
 
         #[unsafe(method(collapse:))]

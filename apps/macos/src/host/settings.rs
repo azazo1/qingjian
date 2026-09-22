@@ -4,7 +4,7 @@ use super::diagnostics::{copy_to_pasteboard, open_with_system};
 use super::*;
 use crate::preferences::DEFAULT_FONT_LABEL;
 use qingjian_decision::BackendKind;
-use qingjian_platform::ShiftLetter;
+use qingjian_platform::{MacSwitchKey, ShiftLetter};
 
 impl Host {
     /// 写短语前读取文件；外部规则有变化时同步列表并请用户重新确认。
@@ -281,6 +281,31 @@ impl Host {
                     Err(error) => tracing::warn!(%error, "快捷键不合法，未改"),
                 }
             }
+            (Setting::MacSwitchSingle, SettingValue::Bool(on)) => {
+                self.settings.set_bool("shortcut", "mac_switch_single", on);
+            }
+            (Setting::MacSwitchDual, SettingValue::Bool(on)) => {
+                self.settings.set_bool("shortcut", "mac_switch_dual", on);
+            }
+            (
+                Setting::MacSwitchToggle
+                | Setting::MacSwitchEnglish
+                | Setting::MacSwitchChinese,
+                SettingValue::Text(text),
+            ) => match text.parse::<MacSwitchKey>() {
+                Ok(key) => {
+                    let name = match setting {
+                        Setting::MacSwitchToggle => "mac_switch_toggle",
+                        Setting::MacSwitchEnglish => "mac_switch_english",
+                        _ => "mac_switch_chinese",
+                    };
+                    self.settings.set_value("shortcut", name, key.key_string());
+                }
+                Err(error) => tracing::warn!(%error, "切换键不合法，未改"),
+            },
+            (Setting::MacCapsLockSwitch, SettingValue::Bool(on)) => {
+                self.settings.set_bool("shortcut", "mac_caps_lock_switch", on);
+            }
             (Setting::ResetShortcuts, _) => {
                 let defaults = ShortcutConfig::default();
                 self.settings
@@ -310,6 +335,30 @@ impl Host {
                     "shortcut",
                     "delete_candidate",
                     defaults.delete_candidate.key(),
+                );
+                self.settings
+                    .set_bool("shortcut", "mac_switch_single", defaults.mac_switch_single);
+                self.settings.set_value(
+                    "shortcut",
+                    "mac_switch_toggle",
+                    defaults.mac_switch_toggle_key().key_string(),
+                );
+                self.settings
+                    .set_bool("shortcut", "mac_switch_dual", defaults.mac_switch_dual);
+                self.settings.set_value(
+                    "shortcut",
+                    "mac_switch_english",
+                    defaults.mac_switch_dual_keys().0.key_string(),
+                );
+                self.settings.set_value(
+                    "shortcut",
+                    "mac_switch_chinese",
+                    defaults.mac_switch_dual_keys().1.key_string(),
+                );
+                self.settings.set_bool(
+                    "shortcut",
+                    "mac_caps_lock_switch",
+                    defaults.mac_caps_lock_switch,
                 );
             }
             (Setting::DictionaryEnabled(index), SettingValue::Bool(on)) => {

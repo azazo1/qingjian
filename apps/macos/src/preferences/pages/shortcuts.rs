@@ -10,7 +10,7 @@ use crate::preferences::controls::{
     GROUP_GAP, button, checkbox, note, note_full, page_keys_label, row_checkbox, row_popup,
     row_recorder, select, set_checked,
 };
-use crate::preferences::key_recorder::KeyRecorder;
+use crate::preferences::key_recorder::{KeyRecorder, RecorderKind};
 use crate::preferences::layout::{Layout, PAGE_PADDING, ROW_HEIGHT};
 use crate::preferences::setting::Setting;
 use crate::preferences::target::PreferencesTarget;
@@ -100,7 +100,7 @@ impl ShortcutsPage {
             mtm,
             "上屏第一个译词",
             Setting::TranslationKeys,
-            true,
+            RecorderKind::ModifiersOnly,
             target,
         );
         let translation_second = row_recorder(
@@ -108,7 +108,7 @@ impl ShortcutsPage {
             mtm,
             "上屏第二个译词",
             Setting::TranslationSecondKeys,
-            true,
+            RecorderKind::ModifiersOnly,
             target,
         );
         note(
@@ -122,7 +122,7 @@ impl ShortcutsPage {
             mtm,
             "删除候选",
             Setting::DeleteCandidateKeys,
-            true,
+            RecorderKind::ModifiersOnly,
             target,
         );
         note(
@@ -136,7 +136,7 @@ impl ShortcutsPage {
             mtm,
             "翻译选中的文字",
             Setting::TranslateSelectionKeys,
-            false,
+            RecorderKind::Combo,
             target,
         );
         note(

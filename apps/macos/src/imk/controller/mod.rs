@@ -6,11 +6,11 @@
 use objc2::rc::{Allocated, Retained};
 use objc2::runtime::{AnyObject, Sel};
 use objc2::{define_class, msg_send, sel};
-use objc2_app_kit::{NSEvent, NSEventModifierFlags, NSEventType, NSMenu};
+use objc2_app_kit::{NSEvent, NSEventMask, NSEventModifierFlags, NSEventType, NSMenu};
 use objc2_foundation::NSObjectProtocol;
 use objc2_input_method_kit::{IMKInputController, IMKServer};
 use qingjian_core::{Candidate, QUESTION_PREFIX};
-use qingjian_platform::Modifiers;
+use qingjian_platform::{MacSwitchAction, Modifiers};
 
 use super::{TextClient, catch_panic, modifiers, recover_from_panic, secure_input};
 use crate::candidates::Preedit;
@@ -20,6 +20,7 @@ use crate::menubar;
 mod command;
 mod commit;
 mod display;
+mod switch;
 mod text;
 mod translate;
 
@@ -68,6 +69,16 @@ define_class!(
             }
         }
 
+        /// IMK 缺省只把 keyDown 交给输入法（`recognizedEvents:` 缺省值是 NSKeyDownMask）；
+        /// 中 / 英切换键要认修饰键的按下抬起，所以这里把 flagsChanged 也要过来。
+        ///
+        /// 代价写在 IMK 文档里：只有"只要 keyDown"的输入法才享受缺省的鼠标处理（点到组句区外自动 commitComposition:），
+        /// 声明了别的类型之后这条就没了。Squirrel（Rime 的 macOS 壳）同样这么声明。
+        #[unsafe(method(recognizedEvents:))]
+        fn recognized_events(&self, _sender: Option<&AnyObject>) -> usize {
+            (NSEventMask::KeyDown.0 | NSEventMask::FlagsChanged.0) as usize
+        }
+
         /// 应用要求立刻结束本次输入（切换焦点、切换输入法等）。
         #[unsafe(method(commitComposition:))]
         fn commit_composition(&self, client: Option<&AnyObject>) {
@@ -99,7 +110,8 @@ define_class!(
                     h.engine.set_application(bundle);
                     h.refresh_text_replacements();
                     h.reload_config_if_changed();
-                    h.indicator.activate();
+                    let english = h.refresh_mode();
+                    h.indicator.activate(english);
                     h.watch.start();
                 });
             });
@@ -179,11 +191,38 @@ fn digit_key(key_code: u16) -> Option<usize> {
 }
 
 impl QingjianInputController {
-    /// 一个按键事件的分发：只管按下；Cmd / Ctrl 组合除 Cmd+左右外一律交给应用；命令键映射成选择器；其余按字符当文本。
+    /// IMK 送来的事件分发：按键走 [`Self::dispatch_key_down`]，修饰键的按下抬起走 [`Self::dispatch_modifier_change`]，
+    /// 其余（鼠标之类，我们没声明）一律放行。
     fn dispatch_event(&self, event: &NSEvent, client: TextClient<'_>) -> bool {
-        if event.r#type() != NSEventType::KeyDown {
-            return false;
+        match event.r#type() {
+            NSEventType::KeyDown => self.dispatch_key_down(event, client),
+            NSEventType::FlagsChanged => self.dispatch_modifier_change(event, client),
+            _ => false,
         }
+    }
+
+    /// 修饰键按下 / 抬起（`flagsChanged`）：配置成切换键的修饰键单击一下切中 / 英。
+    ///
+    /// 始终返回 false 放行：⌘ / ⇧ / ⌥ / ⌃ 是系统与应用都要的状态，输入法只旁听，绝不吞掉。
+    fn dispatch_modifier_change(&self, event: &NSEvent, client: TextClient<'_>) -> bool {
+        let Some(key) = modifiers::modifier_key(event.keyCode()) else {
+            return false;
+        };
+        // flagsChanged 不带"按下 / 抬起"，看这个键所属的修饰键标志现在还在不在：
+        // 还在就是按下，没了就是抬起（左右两个同类键同时按着时可能认错，那样只是不触发切换，不会切错）
+        let down = event
+            .modifierFlags()
+            .contains(modifiers::modifier_flag(key));
+        let action =
+            host::with(|h| h.switch_keys.modifier_changed(key, down, &h.mac_switch)).flatten();
+        if let Some(action) = action {
+            self.apply_switch(action, client);
+        }
+        false
+    }
+
+    /// 一个按键事件的分发：只管按下；Cmd / Ctrl 组合除 Cmd+左右外一律交给应用；命令键映射成选择器；其余按字符当文本。
+    fn dispatch_key_down(&self, event: &NSEvent, client: TextClient<'_>) -> bool {
         let flags = event.modifierFlags();
         let (command, control, option, shift) = (
             flags.contains(NSEventModifierFlags::Command),
@@ -200,14 +239,26 @@ impl QingjianInputController {
         };
         // 提示在显示：敲任何键先收掉，键照常处理
         host::with(|h| h.clear_notice());
+        // 敲的是哪个字符（忽略修饰键的影响：⌥T 仍然是 t），切换键与翻译快捷键都按它认
+        let typed = event
+            .charactersIgnoringModifiers()
+            .map(|c| c.to_string().to_ascii_lowercase());
+        // 配成组合键的切换键：命中就切过去并吃掉这个键（配了 ⌘ 组合的话应用就收不到了，配置注释里写着避开）
+        if let Some(action) = typed
+            .as_deref()
+            .and_then(|t| t.chars().next())
+            .and_then(|c| host::with(|h| h.mac_switch.combo_action(pressed, c)).flatten())
+        {
+            self.apply_switch(action, client);
+            return true;
+        }
+        // 这个键不是切换键：它打断修饰键的单击判定（⌘C 的 C、组句里的字母都算）
+        host::with(|h| h.switch_keys.key_down());
         // 翻译选中文字进行中：回车 / 空格 / 1 接受，Esc 放弃，其他键放弃后照常交给应用
         if host::with(|h| h.translation.is_some()).unwrap_or(false) {
             return self.handle_translation_review(key, client);
         }
         // 翻译快捷键（不在组句中）：读应用里的选区，交给云端
-        let typed = event
-            .charactersIgnoringModifiers()
-            .map(|c| c.to_string().to_ascii_lowercase());
         let combo = host::with(|h| h.translate_keys).unwrap_or_default();
         if pressed == combo.modifiers
             && typed.as_deref().and_then(|t| t.chars().next()) == Some(combo.key)

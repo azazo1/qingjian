@@ -7,8 +7,9 @@ use qingjian_core::Language;
 use qingjian_platform::{Config, MAX_PAGE_SIZE, Scheme};
 
 use crate::preferences::controls::{
-    checkbox, language_label, note, row_checkbox, row_popup, select, set_checked,
+    checkbox, language_label, note, row_checkbox, row_popup, row_recorder, select, set_checked,
 };
+use crate::preferences::key_recorder::{KeyRecorder, RecorderKind};
 use crate::preferences::layout::Layout;
 use crate::preferences::setting::Setting;
 use crate::preferences::target::PreferencesTarget;
@@ -46,6 +47,14 @@ pub struct GeneralPage {
 
     /// 默认中文标点模式。
     punctuation: Retained<NSPopUpButton>,
+
+    /// 中 / 英切换：单键切换开关 + 那个键，双键切换开关 + 两个键，Caps Lock 是否也切。
+    mac_switch_single: Retained<NSButton>,
+    mac_switch_toggle: Retained<KeyRecorder>,
+    mac_switch_dual: Retained<NSButton>,
+    mac_switch_english: Retained<KeyRecorder>,
+    mac_switch_chinese: Retained<KeyRecorder>,
+    mac_caps_lock: Retained<NSButton>,
 }
 
 impl GeneralPage {
@@ -168,6 +177,56 @@ impl GeneralPage {
             mtm,
             "不勾（缺省）是临时打英文：拼音先上屏，这个大写字母原样交给应用。勾上后它进拼音缓冲区、按小写参与匹配，Cpan 与 cpan 一样能出「C盘」；回车原样上屏时保留大写。",
         );
+        let mac_switch_single = checkbox(
+            mtm,
+            "单键切换：按一次在中 / 英之间翻转",
+            Setting::MacSwitchSingle,
+            target,
+        );
+        row_checkbox(layout, &mac_switch_single);
+        let mac_switch_toggle = row_recorder(
+            layout,
+            mtm,
+            "切换键",
+            Setting::MacSwitchToggle,
+            RecorderKind::SingleOrCombo,
+            target,
+        );
+        let mac_switch_dual = checkbox(mtm, "双键切换：两个键各切一边", Setting::MacSwitchDual, target);
+        row_checkbox(layout, &mac_switch_dual);
+        let mac_switch_english = row_recorder(
+            layout,
+            mtm,
+            "切换成英文",
+            Setting::MacSwitchEnglish,
+            RecorderKind::SingleOrCombo,
+            target,
+        );
+        let mac_switch_chinese = row_recorder(
+            layout,
+            mtm,
+            "切换成中文",
+            Setting::MacSwitchChinese,
+            RecorderKind::SingleOrCombo,
+            target,
+        );
+        note(
+            layout,
+            mtm,
+            "两个开关可以同时开（同一个键两边都配时按双键那边算）。点按钮后按一个修饰键：左 ⌘、右 ⌘、左 ⇧ 等，左右分开算，也可以按一组组合键。都是单击才生效：按住它再按别的键算普通快捷键，不切换；组合键里带 ⌘ 会把应用的快捷键抢过来（如 ⌘Z），尽量避开。",
+        );
+        let mac_caps_lock = checkbox(
+            mtm,
+            "Caps Lock 也切换中 / 英",
+            Setting::MacCapsLockSwitch,
+            target,
+        );
+        row_checkbox(layout, &mac_caps_lock);
+        note(
+            layout,
+            mtm,
+            "不勾时 Caps Lock 只当大小写锁：亮着敲字母直接上屏大写，中英切换交给上面的开关（都没开就只能切到别的输入法了）。",
+        );
         Self {
             learning_language,
             page_size,
@@ -180,6 +239,12 @@ impl GeneralPage {
             shift_letter,
             languages: languages.to_vec(),
             punctuation,
+            mac_switch_single,
+            mac_switch_toggle,
+            mac_switch_dual,
+            mac_switch_english,
+            mac_switch_chinese,
+            mac_caps_lock,
         }
     }
 
@@ -220,5 +285,23 @@ impl GeneralPage {
             .setEnabled(general.english_candidates);
         set_checked(&self.chinese_first, general.chinese_first);
         set_checked(&self.shift_letter, general.shift_letter.compose());
+        // 中 / 英切换：两个开关各自管一组录制按钮，关掉的那组灰着
+        let (single, dual) = (
+            config.shortcut.mac_switch_single,
+            config.shortcut.mac_switch_dual,
+        );
+        set_checked(&self.mac_switch_single, single);
+        set_checked(&self.mac_switch_dual, dual);
+        let toggle = config.shortcut.mac_switch_toggle_key();
+        self.mac_switch_toggle.show(&toggle.key_string(), &toggle.label());
+        self.mac_switch_toggle.setEnabled(single);
+        let (english, chinese) = config.shortcut.mac_switch_dual_keys();
+        self.mac_switch_english
+            .show(&english.key_string(), &english.label());
+        self.mac_switch_chinese
+            .show(&chinese.key_string(), &chinese.label());
+        self.mac_switch_english.setEnabled(dual);
+        self.mac_switch_chinese.setEnabled(dual);
+        set_checked(&self.mac_caps_lock, config.shortcut.mac_caps_lock_switch);
     }
 }

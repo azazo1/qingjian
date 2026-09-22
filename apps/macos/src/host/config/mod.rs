@@ -35,6 +35,9 @@ impl Host {
         self.preedit_mode = config.general.preedit;
         self.inline_keys = config.general.inline_keys;
         self.english_candidates = config.general.english_candidates;
+        self.english_mode = config.general.english_mode;
+        self.mac_switch = config.shortcut.mac_switch_plan();
+        self.mac_caps_lock_switch = config.shortcut.mac_caps_lock_switch;
         self.apps = config.apps.clone();
         self.window.set_theme(config.general.theme);
         self.window.set_layout(config.general.layout);
@@ -91,7 +94,9 @@ impl Host {
         }
         let cloud_active = self.engine.prediction_enabled();
         self.indicator.set_cloud(cloud_active);
-        self.indicator.update();
+        // 模式跟着配置一起刷：关掉 Caps Lock 切换或整个英文模式后，指示器要立刻改回「中」
+        let english = self.refresh_mode();
+        self.indicator.update(english);
         self.menu.sync(&config, cloud_active, self.settings.error());
         let key_present = config
             .predict

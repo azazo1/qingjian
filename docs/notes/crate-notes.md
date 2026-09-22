@@ -146,7 +146,9 @@ Engine 侧在 `engine/rescoring/`: 接了打分器就取 Viterbi 前 `RESCORE_PA
 `Config`（TOML 配置文件，`[general]` / `[shortcut]` / `[fuzzy]` / `[dictionaries]` / `[apps]` / `[predict]` 分节，首次运行写模板，
 `set_value` 用 toml_edit 原地改键保留注释；`[model] enabled` 本地整句模型开关，`LocalModelConfig`；
 `[decision]` 决策模型 (整句重排的第二个来源, 与 `[model]` 互斥), `DecisionConfig`;
-中英模式两项：`[shortcut] switch_mode`（`SwitchKey`：shift / control / none，单击切换键）与 `[general] english_mode`（内置英文模式总开关））；
+中英模式两项：`[shortcut] switch_mode`（`SwitchKey`：shift / control / none，单击切换键，Windows 用）与 `[general] english_mode`（内置英文模式总开关，两个平台都认）；
+macOS 另有 `[shortcut] mac_switch_single` / `mac_switch_dual` 两个开关（`MacSwitchPlan` 是 `toggle` 与 `dual` 两个 `Option`，两个开关可同时开，同一个键两边都配时双键优先），
+键位写成 `left-command` 这类带左右的修饰键或 `control+option+z` 这类组合键（`MacSwitchKey`，`mac_switch_plan()` 校验，写坏的整组退回缺省）；`mac_caps_lock_switch` 决定 Caps Lock 是否也切）；
 `extra_dictionaries` 列出 / 加载随包领域词库与用户 `dicts/`
 （mac 壳与 Windows Server 共用，同名 `.qj` 优先于 `.tsv`）；`code_tables` 同构地列出 / 加载随包根 `codes/` 与用户 `codes/` 的码表
 （`[aux_code] disabled` 是黑名单，`[general] aux_code_key` 缺省 `;` 且校验后退回缺省、`aux_code_show` 是显示码开关）；
@@ -203,13 +205,20 @@ IMK 输入法，源码按 `app / host / imk / candidates / menubar / preferences
 - 配置项：云联想 `[predict]`（偏好设置「云服务」页有「测试连接」按钮：`qingjian_predict::ConnectionTest` 起线程发一条最小请求，`Host` 用独立定时器 `CloudTestMonitor` 轮询结果显示到窗口底部；
   `reasoning_effort` 缺省 `none`，DeepSeek V4 默认思考，不关正文为空）；模糊音 `[fuzzy]` 默认都关；`[general]` 学习语言（`off` 不显示译文）/ 每页候选数 / 翻页键 / 外观 / 竖排横排 / 拼音显示位置 /
   英文模式候选开关 / 中文优先 `chinese_first` / 双拼方案 `shuangpin`（小鹤 / 自然码 / 微软 / 搜狗 / 智能ABC / 小浪 / 首道，空为全拼）/ 日志级别 `log_level`（缺省 info 不含敲的内容，debug 逐键记，热切换）/ 输入日志 `input_log`；
-  `[shortcut]` 模式键 v / u、`question_mark`（缺省关，开了空缓冲区敲 `?` 进问字）、上屏第一 / 第二个译词的修饰键 `translation` / `translation_second`、删候选 `delete_candidate`（缺省 shift，用户词整删、词库词清学习）、翻译选中文字 `translate_selection`；
+  `[shortcut]` 模式键 v / u、`question_mark`（缺省关，开了空缓冲区敲 `?` 进问字）、上屏第一 / 第二个译词的修饰键 `translation` / `translation_second`、删候选 `delete_candidate`（缺省 shift，用户词整删、词库词清学习）、翻译选中文字 `translate_selection`、
+  中英切换 `switch_mode`（Windows 用）与 `mac_switch_single` / `mac_switch_dual` 两个开关加三个键位（macOS，两个开关可同时开；`mac_caps_lock_switch` 决定 Caps Lock 是否也切，偏好设置「通用」页可录制成带左右的修饰键或组合键）；
   `[apps] english_candidates_off` 按 bundle identifier 列出英文模式不给候选的应用（缺省终端 / 编辑器 / IDE，`*` 前缀匹配）；
   `[dictionaries] domains` 打开随包的领域词库（`Resources/dicts/` 11 本，缺省只开 `idioms`），`disabled` 关掉用户目录 `dicts/` 里的某本导入词库；
   偏好设置「词库」页随包的可开关、导入的可开关 / 移除，可导入 TSV / Rime yaml / .qj。
 - 系统文本替换（系统设置「键盘 → 文本替换」）：`host/config/text_replacements.rs` 从 `NSUserDefaults` 全局域读 `NSUserDictionaryReplacementItems`
   （每条 `{ on, replace, with }`），激活输入法时重读，变了就经 Core `merge_replacements` 并进配置里的自定义短语再 `set_custom_phrases`；
   `[general] system_text_replacements` 开关（缺省开，「自定义短语」页勾选框），内容可能含证件号、地址，日志只记条数。
+- 中 / 英模式：`Host::mode`（`host/mode.rs` 的 `ModeState`，显式状态）加 `Host::mac_switch`（`MacSwitchPlan`，单键与双键两个开关可同时开）。模式由三处改：Caps Lock 的物理跳变（`Host::sync_mode` 每次按键读一次、
+  菜单栏指示器那 0.25 s 的轮询也读）、配置的切换键单击（`host/mode.rs` 的 `SwitchMatcher`，与 Windows 的 `KeyTap` 同一套"按下到抬起之间没别的键"判定）、以及 `apply_switch`。
+  修饰键事件靠 `imk/controller/mod.rs` 覆盖 `recognizedEvents:` 多要一个 `FlagsChanged`（IMK 缺省只给 keyDown，Rime 的 Squirrel 也是这么做的）；
+  左右靠 flagsChanged 的键码认（`imk/modifiers.rs::modifier_key`，55/54 是左右 ⌘）。声明之后 IMK 不再提供缺省的鼠标处理（点到组句区外自动 commitComposition:）。
+  Caps Lock 不参与切换时（`mac_caps_lock_switch` 或 `english_mode` 关掉）只当大小写锁：亮着敲字母直接上屏大写。
+  组句途中切换键命中，已敲字母先 `commit_raw` 原样上屏。
 - 输入法进程由 launchd 拉起，看不到 shell 的环境变量：密钥写进配置同目录的 `.env`（`QINGJIAN_API_KEY=...`，输入法启动时 dotenvy 读入）或 `config.toml` 的 `api_key`。
 - 本地整句模型：`bundle.sh` 把 `data/model/`（或 `QINGJIAN_MODEL_DIR`）三件套打进 `Resources/model/`，用户目录 `model/` 优先；`host/model/mod.rs` 在后台线程加载并预热（首次 Metal 编译）后
   `set_async_sentence_scorer` 接上，`refresh` 每键先读应用光标前 64 字给 Engine 当前文、查询后 `schedule_rescoring`，`RescoreMonitor` 停键 80 ms 请求、20 ms 轮询，

@@ -406,7 +406,10 @@ CC-CEDICT 表（`dict-convert cedict`）保留为备用来源，覆盖面广但�
   失焦 / 停用时 DLL 发 `Commit`，Server 回 `Committed { text }`（缓冲区原样交出，对应 macOS 的 `commitComposition`），
   DLL 用最近收键记下的 `ITfContext` 经编辑会话落进文档；应用强行终止组句（`OnCompositionTerminated`）时拼音已被框架定成普通文本，
   DLL 只记「Server 缓冲过期」，下次说话前先 `Commit` 并丢掉交出的文本，不再插一次。
-  中英模式：**Windows 与 macOS 机制不同**。macOS 用 Caps Lock 当中英切换键；Windows 按本地习惯，单击切换键在中 / 英间翻转，
+  中英模式：**Windows 与 macOS 机制不同**。macOS 的模式是进程里的一份显式状态（`host/mode.rs` 的 `ModeState`）：Caps Lock 的物理跳变
+  （`[shortcut] mac_caps_lock_switch`，缺省开）与两个可配的切换键开关（`mac_switch_single` 一个键翻转 / `mac_switch_dual` 两个键各切一边，
+  键可以写成带左右的修饰键或组合键，两个开关可同时开）都改它；修饰键事件靠覆盖 `recognizedEvents:` 多要一个 `FlagsChanged`（IMK 缺省只给 keyDown），
+  单击判定与 Windows 同一套（按下到抬起之间没插进别的键）。Windows 按本地习惯，单击切换键在中 / 英间翻转，
   切换键由 `[shortcut] switch_mode` 定（`shift` 缺省 / `control` / `none` 不切换），`[general] english_mode` 关掉则整个内置英文模式停用（issue #81）。
   单击判定在**击键 sink** 里（`com/key/tap.rs`，喂 `OnTestKeyDown` / `OnTestKeyUp`：按下切换键到抬起之间没有别的键插进来就是一次单击；
   微软 SampleIME 的 `OnTestKeyDown` 同样处理 VK_SHIFT，sink 收得到独立修饰键）。之前用线程级 `WH_KEYBOARD` 钩子判定，但钩子**看不到被 TSF 吃掉的键**

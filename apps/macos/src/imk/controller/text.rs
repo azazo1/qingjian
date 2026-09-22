@@ -7,12 +7,16 @@ impl QingjianInputController {
         tracing::debug!(%text, "inputText");
         self.note_application(&client);
         let mut composing = host::with(|h| !h.engine.composition().is_empty()).unwrap_or(false);
-        let english = modifiers::caps_lock_on();
+        // 模式是显式状态：Caps Lock 的物理跳变（它参与切换时）与配置的切换键都改它
+        let caps = modifiers::caps_lock_on();
+        let english = host::with(|h| h.sync_mode(caps)).unwrap_or(false);
+        // Caps Lock 不参与切换（关掉 `mac_caps_lock_switch`，或关掉整个内置英文模式）时它只锁大小写
+        let caps_locks_case = caps && !host::with(|h| h.caps_lock_switches_mode()).unwrap_or(false);
         // 终端、编辑器这类应用（`[apps] english_candidates_off`）里英文模式是纯直通
         let english_candidates = english
             && host::with(|h| h.english_candidates_in(client.bundle_identifier().as_deref()))
                 .unwrap_or(false);
-        // 英文模式组词中 Caps Lock 灭了（或开关关了）：敲的字母先原样上屏，别把它们当拼音
+        // 英文模式组词中切回中文（Caps Lock 灭了、或按了切换键）：敲的字母先原样上屏，别把它们当拼音
         if composing
             && !english_candidates
             && host::with(|h| h.engine.english_mode()).unwrap_or(false)
@@ -32,7 +36,7 @@ impl QingjianInputController {
             return false;
         };
         let c = char::from(*byte);
-        host::with(|h| h.indicator.update());
+        host::with(|h| h.indicator.update(english));
         // 缓冲区为空时敲 ? 先进问字模式（配置 `[shortcut] question_mark`，缺省关），中英文模式都行：
         // 后面跟字母就是在问字，跟别的键就还原成问号
         if !composing
@@ -58,9 +62,19 @@ impl QingjianInputController {
             c
         };
         host::with(|h| h.engine.set_english_mode(english_candidates && !question));
+        // Caps Lock 只锁大小写（不当中 / 英切换键）时：亮着敲字母一律直接上屏大写，与 Windows 的 Caps 一致
+        if caps_locks_case && !question && c.is_ascii_alphabetic() {
+            if composing {
+                self.commit_raw(client);
+            }
+            let letter = c.to_ascii_uppercase();
+            client.insert_text(&letter.to_string());
+            host::with(|h| h.engine.note_passthrough(letter));
+            return true;
+        }
         let (page_previous, page_next) =
             host::with(|h| h.page_keys).unwrap_or(qingjian_platform::DEFAULT_PAGE_KEYS);
-        // Caps Lock 亮着 = 英文模式：不组句、不转标点，字母默认小写、按住 Shift 才大写
+        // 英文模式（Caps Lock 亮着，或用切换键切过来的）：不组句、不转标点，字母默认小写、按住 Shift 才大写
         if english && !question {
             // Caps Lock 亮着时 macOS 不管按没按 Shift 送来的都是大写，只能读 Shift 状态：按着才大写
             let letter = if modifiers::shift_down() {

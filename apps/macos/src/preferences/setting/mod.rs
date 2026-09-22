@@ -176,6 +176,22 @@ pub enum Setting {
     /// `[apps] english_candidates_off`，勾选框：勾上写缺省的终端 / 编辑器列表，去掉写空表。
     EnglishCandidatesOffInApps,
 
+    /// `[shortcut] mac_switch_single`，勾选框：单键切换开关（`mac_switch_toggle` 那个键单击翻转）。
+    MacSwitchSingle,
+
+    /// `[shortcut] mac_switch_toggle`，快捷键录制按钮（修饰键单击或组合键）：单键切换用的那个键。
+    MacSwitchToggle,
+
+    /// `[shortcut] mac_switch_dual`，勾选框：双键切换开关。
+    MacSwitchDual,
+
+    /// `[shortcut] mac_switch_english` / `mac_switch_chinese`，快捷键录制按钮：双键切换的两个键。
+    MacSwitchEnglish,
+    MacSwitchChinese,
+
+    /// `[shortcut] mac_caps_lock_switch`，勾选框：Caps Lock 是否也切中 / 英。
+    MacCapsLockSwitch,
+
     /// `[shortcut] delete_candidate`，快捷键录制按钮（只记修饰键）。
     DeleteCandidateKeys,
 
@@ -234,6 +250,12 @@ impl Setting {
             Self::CloudSlots => 24,
             Self::EnglishCandidatesOffInApps => 25,
             Self::DeleteCandidateKeys => 26,
+            Self::MacSwitchSingle => 60,
+            Self::MacSwitchToggle => 61,
+            Self::MacSwitchEnglish => 62,
+            Self::MacSwitchChinese => 63,
+            Self::MacCapsLockSwitch => 64,
+            Self::MacSwitchDual => 65,
             Self::InputLog => 27,
             Self::Learning => 45,
             Self::ClearInputLog => 28,
@@ -301,6 +323,12 @@ impl Setting {
             24 => Self::CloudSlots,
             25 => Self::EnglishCandidatesOffInApps,
             26 => Self::DeleteCandidateKeys,
+            60 => Self::MacSwitchSingle,
+            61 => Self::MacSwitchToggle,
+            62 => Self::MacSwitchEnglish,
+            63 => Self::MacSwitchChinese,
+            64 => Self::MacCapsLockSwitch,
+            65 => Self::MacSwitchDual,
             27 => Self::InputLog,
             45 => Self::Learning,
             28 => Self::ClearInputLog,
@@ -380,6 +408,12 @@ mod tests {
             Setting::CloudSlots,
             Setting::EnglishCandidatesOffInApps,
             Setting::DeleteCandidateKeys,
+            Setting::MacSwitchSingle,
+            Setting::MacSwitchToggle,
+            Setting::MacSwitchDual,
+            Setting::MacSwitchEnglish,
+            Setting::MacSwitchChinese,
+            Setting::MacCapsLockSwitch,
             Setting::InputLog,
             Setting::SystemTextReplacements,
             Setting::ShiftLetter,

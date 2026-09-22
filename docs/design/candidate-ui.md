@@ -313,7 +313,7 @@ Core 按 `prediction::restates_question` 剔掉：与本地转出的问题相同
 
 | 系统 | 切中英 | 英文模式 |
 |---|---|---|
-| macOS | Caps Lock 位置的中/英键。系统层面它切的是 Caps Lock 状态，我们把「Caps Lock 亮着」当作英文模式 | 默认小写，按住 Shift 大写；标点不转全角。macOS 上 Caps Lock 亮着时按不按 Shift 送来的都是大写，所以按键时读一次 Shift 的硬件状态（`NSEvent.modifierFlags`）决定大小写 |
+| macOS | 缺省是 Caps Lock 位置的中/英键：系统层面它切的是 Caps Lock 状态，「Caps Lock 亮着」就是英文模式。也可以在偏好设置「通用」页另配单键切换（一个修饰键或组合键翻转）与双键切换（两个键各切一边），两者可同时开；关掉 Caps Lock 切换后它只当大小写锁 | 默认小写，按住 Shift 大写；标点不转全角。macOS 上 Caps Lock 亮着时按不按 Shift 送来的都是大写，所以按键时读一次 Shift 的硬件状态（`NSEvent.modifierFlags`）决定大小写 |
 | Windows（Phase 5） | 单击切换键切中英，键与开关在「设置 → 通用」：`[shortcut] switch_mode` 取 `shift` / `control` / `none`，`[general] english_mode` 关掉则固定中文、不再登记语言栏按钮；Caps Lock 是真正的大小写锁定 | 默认小写，按住 Shift 大写 |
 
 macOS 上如果系统开了「使用大写锁定键切换 ABC 输入法」，按键会直接切到 ABC 输入源，我们收到 deactivate、
