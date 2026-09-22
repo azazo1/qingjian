@@ -69,7 +69,12 @@ impl Engine {
             .as_ref()
             .and_then(|t| t.senses().get(sense))
             .map(|s| s.text.clone())?;
-        Some(self.commit_with(candidate, InputSource::Translation, Some(sense), Some(&text)))
+        Some(self.commit_with(
+            candidate,
+            InputSource::Translation,
+            Some(sense),
+            Some(&text),
+        ))
     }
 
     /// 候选比输入短时（`kaifazhe` 选了 开发），剩余拼音留在缓冲区，壳应接着 [`Self::query`]。

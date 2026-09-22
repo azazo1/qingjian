@@ -129,7 +129,10 @@ impl Query {
     pub fn marked_segments(&self) -> Vec<MarkedSegment> {
         let mut segments: Vec<MarkedSegment> = Vec::with_capacity(4);
         if !self.pending.is_empty() {
-            segments.push(MarkedSegment::new(self.pending.clone(), MarkedKind::Pending));
+            segments.push(MarkedSegment::new(
+                self.pending.clone(),
+                MarkedKind::Pending,
+            ));
         }
         segments.extend(self.typed_segments());
         segments
