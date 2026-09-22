@@ -128,6 +128,21 @@ impl Component for Settings {
             Message::CloudApiKey(value) => self.save("predict", "api_key", value),
             Message::CloudModel(value) => self.save("predict", "model", value),
             Message::CloudBaseUrl(value) => self.save("predict", "base_url", value),
+            Message::CloudReasoningEffort(value) => {
+                self.save("predict", "reasoning_effort", value)
+            }
+            Message::CloudMaxTokens(value) => {
+                // 0 或留空都是不发这个参数；不是整数就不写（框里可能是刚敲了一半）
+                let text = value.trim();
+                let tokens = if text.is_empty() {
+                    Some(0)
+                } else {
+                    text.parse::<u32>().ok()
+                };
+                if let Some(tokens) = tokens {
+                    self.save("predict", "max_tokens", i64::from(tokens));
+                }
+            }
             Message::CloudSlots(Some(value)) => {
                 let slots = (value.round() as i64).clamp(0, 9);
                 self.save("predict", "slots", slots);

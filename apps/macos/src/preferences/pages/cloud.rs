@@ -1,5 +1,5 @@
 //! "云服务" 页: 本地整句模型开关, 决策模型 (laya / jev) 开关与后端配置, 云联想开关, 云端词格数,
-//! 接口地址 / 模型 / 密钥, 测试连接.
+//! 接口地址 / 模型 / 推理强度 / 输出额度 / 密钥, 测试连接.
 
 use objc2::MainThreadMarker;
 use objc2::rc::Retained;
@@ -46,6 +46,12 @@ pub struct CloudPage {
 
     /// 模型名。
     model: Retained<NSTextField>,
+
+    /// 推理强度; 留空表示不发这个参数。
+    reasoning_effort: Retained<NSTextField>,
+
+    /// 输出额度; 0 或留空表示不发这个参数。
+    max_tokens: Retained<NSTextField>,
 
     /// 密钥输入框，永远不回显已有值。
     api_key: Retained<NSSecureTextField>,
@@ -121,6 +127,20 @@ impl CloudPage {
         row_control(layout, mtm, "接口地址", &base_url);
         let model = text_field(mtm, Setting::Model, target);
         row_control(layout, mtm, "模型", &model);
+        let reasoning_effort = text_field(mtm, Setting::ReasoningEffort, target);
+        row_control(layout, mtm, "推理强度", &reasoning_effort);
+        note(
+            layout,
+            mtm,
+            "随请求发 reasoning_effort: 填 none 关掉模型的思考 (联想要的是快), 接口报 400 说这个参数只认哪几个值时照它填 (low / medium / high / xhigh / max), 留空则不发这个参数, 由接口用自己的缺省值.",
+        );
+        let max_tokens = text_field(mtm, Setting::MaxTokens, target);
+        row_control(layout, mtm, "输出额度", &max_tokens);
+        note(
+            layout,
+            mtm,
+            "随请求发 max_tokens: 联想只要几条短句, 200 够; 填 0 或留空则不发这个参数, 由接口用自己的缺省值. 接口连这个参数也不认时填 0.",
+        );
         let api_key = secure_field(mtm, Setting::ApiKey, target);
         row_control(layout, mtm, "API 密钥", &api_key);
         note(
@@ -146,6 +166,8 @@ impl CloudPage {
             slots,
             base_url,
             model,
+            reasoning_effort,
+            max_tokens,
             api_key,
             test,
         }
@@ -191,6 +213,8 @@ impl CloudPage {
         self.slots.setEnabled(cloud);
         self.base_url.setEnabled(cloud);
         self.model.setEnabled(cloud);
+        self.reasoning_effort.setEnabled(cloud);
+        self.max_tokens.setEnabled(cloud);
         self.api_key.setEnabled(cloud);
         self.test.setEnabled(cloud);
         select(&self.slots, Some(config.predict.slots.min(MAX_CLOUD_SLOTS)));
@@ -198,6 +222,16 @@ impl CloudPage {
             .setStringValue(&NSString::from_str(&config.predict.base_url));
         self.model
             .setStringValue(&NSString::from_str(&config.predict.model));
+        self.reasoning_effort
+            .setStringValue(&NSString::from_str(&config.predict.reasoning_effort));
+        // 0 与留空是同一件事 (不发这个参数), 界面上都显示成空
+        let max_tokens = if config.predict.max_tokens == 0 {
+            String::new()
+        } else {
+            config.predict.max_tokens.to_string()
+        };
+        self.max_tokens
+            .setStringValue(&NSString::from_str(&max_tokens));
         self.api_key.setStringValue(&NSString::from_str(""));
         let hint = if key_present {
             "已设置，输入新值可替换"

@@ -12,6 +12,8 @@
 - macOS 的中 / 英切换可配: `[shortcut] mac_switch_single` (单键切换, 键在 `mac_switch_toggle`) 与 `mac_switch_dual` (双键切换, 键在 `mac_switch_english` / `mac_switch_chinese`) 两个开关可同时开, 键可以是带左右的修饰键 (`left-command` / `right-command` 等) 或组合键 (`control+option+z`), 例如左 ⌘ 切英文、右 ⌘ 切中文; `[shortcut] mac_caps_lock_switch` 决定 Caps Lock 是否也切 (`false` 时它只当大小写锁), `[general] english_mode` 关掉后 macOS 也固定中文模式. 实现照 Rime 的 Squirrel: 在 `recognizedEvents:` 里多要一个 flagsChanged, 单击判定与 Windows 的 `KeyTap` 同一套. 见 `docs/user/input/english-mode.md`.
 - macOS 切换中 / 英时光标旁闪一下当前模式: 新增 `menubar/badge.rs` (一块浮动小面板, 一秒后自己收, 配置 `[general] mode_badge` 缺省开), 与菜单栏状态项是同一件事的两种显示; 建面板与摆放逻辑从候选窗口抽成 `candidates::window` 的 `build_float_panel` / `place_at_caret` 共用.
 - 快捷键可以设成不用: `[shortcut]` 的 `translation` / `translation_second` / `delete_candidate` / `translate_selection` 四项都改走新的 `KeyBinding` 类型 (`config/key_binding.rs`), 值写 `none` 就是这项键不用 (不再占着那个组合, 事件照常交给应用); macOS 偏好设置的快捷键页录制时按 ⌫ 即清空 (按钮显示「未设置」), Windows 设置的快捷键页多一项「不使用」, 两个 Server 的匹配与 TSF 的保留键登记对关掉的项一律不认.
+- 偏好设置的「云服务」页多一项「推理强度」文本框 (配置 `[predict] reasoning_effort`), 直接对应请求里的同名字段, 换服务商时不必再手改 TOML: 接口回 400 说这个参数只认哪几个值 (例如只认 `low` / `medium` / `high` / `xhigh` / `max`, 不认缺省的 `none`) 时, 在界面上照它填或留空 (留空即请求里不带这个参数) 即可; macOS 与 Windows 两端同形.
+- 同一页再增一项「输出额度」文本框 (配置 `[predict] max_tokens`, 缺省 `200`): 填 0 或留空则请求里不带 `max_tokens`, 由服务商用自己的缺省值 —— 给不认这个参数 (新式推理模型要求 `max_completion_tokens`) 或要按服务商缺省跑的服务商. 释义兜底一次要写 8 个词的译词, 额度取配置值与自己的 600 里大的那个, 配置写 0 时它也不发.
 
 青简（Qingjian）是一个使用 **Rust** 开发的跨平台输入法。
 

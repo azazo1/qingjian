@@ -86,6 +86,25 @@ pub(crate) fn view(settings: &Settings, context: &mut ViewContext<Settings>) -> 
                 .on_text_changed(context.callback(Message::CloudModel)),
         ),
         field(
+            "推理强度",
+            "随请求发 reasoning_effort: none 关掉模型的思考 (联想要的是快), 接口报 400 说这个参数只认哪几个值时照它填 (low / medium / high / xhigh / max), 留空则不发这个参数.",
+            TextBox::new()
+                .text(p.reasoning_effort.clone())
+                .on_text_changed(context.callback(Message::CloudReasoningEffort)),
+        ),
+        field(
+            "输出额度",
+            "随请求发 max_tokens: 联想只要几条短句, 200 够; 填 0 或留空则不发这个参数, 由服务商用自己的缺省值.",
+            TextBox::new()
+                // 0 与留空是同一件事 (不发这个参数), 界面上都显示成空
+                .text(if p.max_tokens == 0 {
+                    String::new()
+                } else {
+                    p.max_tokens.to_string()
+                })
+                .on_text_changed(context.callback(Message::CloudMaxTokens)),
+        ),
+        field(
             "API 密钥",
             "只保存在这台电脑上，不会随配置文件导出，也不显示已填的值。留空则读环境变量 QINGJIAN_API_KEY。",
             PasswordBox::new()

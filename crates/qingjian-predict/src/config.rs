@@ -42,6 +42,11 @@ pub struct PredictConfig {
     /// 其余 minimal / low / medium / high / xhigh 照传；留空则不发（给不认这个参数的接口）。
     /// DeepSeek V4 这类默认带思考的模型不关会把 token 预算全花在思考上，正文为空。
     pub reasoning_effort: String,
+
+    /// 输出额度，随请求发 `max_tokens`：联想只要几条短句，200 够用；写 0 则不发这个参数，
+    /// 由服务商用自己的缺省值（给不认它、或要按服务商缺省跑的服务商）。
+    /// 释义兜底一次问一批词，自己要的额度更大，见 `gloss::worker`。
+    pub max_tokens: u32,
 }
 
 impl Default for PredictConfig {
@@ -59,6 +64,7 @@ impl Default for PredictConfig {
             slots: 2,
             sentence: true,
             reasoning_effort: "none".to_owned(),
+            max_tokens: 200,
         }
     }
 }

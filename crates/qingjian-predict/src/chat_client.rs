@@ -15,9 +15,6 @@ use crate::config::PredictConfig;
 use crate::error::PredictError;
 use crate::prompt::{self, Reply};
 
-/// 联想回复的 token 上限：几条短句足够，防止模型长篇大论。
-const MAX_TOKENS: u32 = 200;
-
 /// 采样温度：联想要稳，不要花。
 const TEMPERATURE: f32 = 0.3;
 
@@ -42,6 +39,9 @@ pub struct ChatClient {
     /// 推理强度；`None` 表示不发这个参数。
     reasoning_effort: Option<ReasoningEffort>,
 
+    /// 输出额度；0 表示不发这个参数，由服务商用缺省值。
+    max_tokens: u32,
+
     /// 接口关思考用的是哪种参数（按接口地址定）。
     thinking_switch: ThinkingSwitch,
 }
@@ -56,20 +56,27 @@ impl ChatClient {
             model: config.model.clone(),
             timeout: Duration::from_millis(config.timeout_ms),
             reasoning_effort: parse_reasoning_effort(&config.reasoning_effort),
+            max_tokens: config.max_tokens,
             thinking_switch: ThinkingSwitch::for_url(&config.base_url),
         }
+    }
+
+    /// 配置里的输出额度；0 表示请求里不带这个参数。
+    pub fn max_tokens(&self) -> u32 {
+        self.max_tokens
     }
 
     pub async fn complete(&self, request: &PredictionRequest) -> Result<Reply, PredictError> {
         let user = prompt::user_prompt(request);
         tracing::debug!(sequence = request.sequence, %user, "联想请求");
         let content = self
-            .chat(prompt::system_prompt(request), &user, MAX_TOKENS)
+            .chat(prompt::system_prompt(request), &user, self.max_tokens)
             .await?;
         Ok(prompt::parse_reply(&content, request))
     }
 
     /// 一问一答：系统提示 + 用户消息，要 JSON 对象，返回正文。联想与释义兜底共用。
+    /// `max_tokens` 是这次请求的输出额度，0 表示不带这个参数（服务商用自己的缺省值）。
     pub async fn chat(
         &self,
         system: &str,
@@ -83,9 +90,9 @@ impl ChatClient {
         let mut args = CreateChatCompletionRequestArgs::default();
         args.model(&self.model)
             .messages(messages)
-            .max_tokens(max_tokens)
             .temperature(TEMPERATURE)
             .response_format(ResponseFormat::JsonObject);
+        with_max_tokens(&mut args, max_tokens);
         if let Some(effort) = self.reasoning_effort.clone() {
             args.reasoning_effort(effort);
         }
@@ -198,6 +205,13 @@ fn is_opencode(base_url: &str) -> bool {
     host_of(base_url).is_some_and(|host| host == "opencode.ai" || host.ends_with(".opencode.ai"))
 }
 
+/// 额度为 0 就不设这个字段：请求里没有它，服务商用缺省值（有的接口不认这个参数，直接 400）。
+fn with_max_tokens(args: &mut CreateChatCompletionRequestArgs, max_tokens: u32) {
+    if max_tokens > 0 {
+        args.max_tokens(max_tokens);
+    }
+}
+
 /// 配置里的推理强度字符串转成接口枚举；留空不发，认不得的值当留空并记一条警告。
 fn parse_reasoning_effort(value: &str) -> Option<ReasoningEffort> {
     match value.trim().to_ascii_lowercase().as_str() {
@@ -231,6 +245,19 @@ mod tests {
         ));
         assert!(parse_reasoning_effort("").is_none());
         assert!(parse_reasoning_effort("maximum").is_none());
+    }
+
+    /// 额度写 0 的时候请求里不该出现 max_tokens，非 0 就照原样带上。
+    #[test]
+    fn max_tokens_of_zero_is_left_out_of_the_request() {
+        let body = |max_tokens| {
+            let mut args = CreateChatCompletionRequestArgs::default();
+            args.model("m");
+            with_max_tokens(&mut args, max_tokens);
+            serde_json::to_value(args.build().unwrap()).unwrap()
+        };
+        assert_eq!(body(200)["max_tokens"], 200);
+        assert!(body(0).get("max_tokens").is_none());
     }
 
     #[test]

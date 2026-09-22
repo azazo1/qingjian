@@ -17,6 +17,15 @@ pub const BATCH_SIZE: usize = 8;
 /// 回复的 token 上限：8 个词各两条短译词绰绰有余。
 const MAX_TOKENS: u32 = 600;
 
+/// 这次释义请求的输出额度。配置里的额度是照联想定的（几条短句），这里一次要写 8 个词的译词，
+/// 所以取两者里大的那个；配置写 0 表示请求里不带这个参数，这里也不带，免得同一家接口再拒一次。
+fn gloss_max_tokens(configured: u32) -> u32 {
+    match configured {
+        0 => 0,
+        configured => configured.max(MAX_TOKENS),
+    }
+}
+
 /// 后台线程：攒词、发请求、回释义。
 pub struct GlossWorker {
     /// 请求入口。主线程 drop 掉发送端后线程自然退出。
@@ -101,9 +110,10 @@ impl GlossWorker {
             return;
         }
         let start = Instant::now();
+        let max_tokens = gloss_max_tokens(self.client.max_tokens());
         let system = prompt::system_prompt(language);
         let user = prompt::user_prompt(&words);
-        match runtime.block_on(self.client.chat(system, &user, MAX_TOKENS)) {
+        match runtime.block_on(self.client.chat(system, &user, max_tokens)) {
             Ok(content) => {
                 let filled = prompt::parse_reply(&content, language, &words);
                 tracing::info!(
@@ -124,5 +134,17 @@ impl GlossWorker {
                 tracing::warn!(language = language.code(), asked = words.len(), %error, "释义兜底失败");
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn gloss_keeps_its_own_budget_but_honours_the_switch_off() {
+        assert_eq!(gloss_max_tokens(200), MAX_TOKENS);
+        assert_eq!(gloss_max_tokens(1000), 1000);
+        assert_eq!(gloss_max_tokens(0), 0);
     }
 }

@@ -15,9 +15,6 @@ const SYSTEM_PROMPT: &str = "你是输入法的连通性测试。";
 /// 用户消息：要一个固定的 JSON，回复越短越好。
 const USER_PROMPT: &str = "回复 JSON 对象 {\"ok\": true}，不要别的内容。";
 
-/// 回复 token 上限：只要几个字。
-const MAX_TOKENS: u32 = 32;
-
 /// 一次进行中的连通性测试。
 pub struct ConnectionTest {
     /// 测试线程送回的结果；线程只发一次。
@@ -64,7 +61,8 @@ fn run(client: &ChatClient, model: String) -> Result<ConnectionReport, PredictEr
         .enable_all()
         .build()?;
     let started = Instant::now();
-    let reply = runtime.block_on(client.chat(SYSTEM_PROMPT, USER_PROMPT, MAX_TOKENS))?;
+    // 额度用配置里的那个：测试连接就是要复现真实联想请求会遇到的报错
+    let reply = runtime.block_on(client.chat(SYSTEM_PROMPT, USER_PROMPT, client.max_tokens()))?;
     Ok(ConnectionReport {
         model,
         elapsed: started.elapsed(),

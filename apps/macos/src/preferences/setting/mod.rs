@@ -101,6 +101,13 @@ pub enum Setting {
     /// `[predict] model`。
     Model,
 
+    /// `[predict] reasoning_effort`, 文本框: 推理强度 (none / minimal / low / medium / high / xhigh),
+    /// 留空表示不发这个参数 (给不认它的接口).
+    ReasoningEffort,
+
+    /// `[predict] max_tokens`, 文本框: 输出额度, 0 或留空表示不发这个参数.
+    MaxTokens,
+
     /// 密钥，写到 `.env`。
     ApiKey,
 
@@ -230,6 +237,8 @@ impl Setting {
             Self::CloudEnabled => 7,
             Self::BaseUrl => 8,
             Self::Model => 9,
+            Self::ReasoningEffort => 67,
+            Self::MaxTokens => 68,
             Self::ApiKey => 10,
             Self::OpenConfigFile => 11,
             Self::Layout => 12,
@@ -303,6 +312,8 @@ impl Setting {
             7 => Self::CloudEnabled,
             8 => Self::BaseUrl,
             9 => Self::Model,
+            67 => Self::ReasoningEffort,
+            68 => Self::MaxTokens,
             10 => Self::ApiKey,
             11 => Self::OpenConfigFile,
             12 => Self::Layout,
@@ -393,6 +404,8 @@ mod tests {
             Setting::DecisionApiKey,
             Setting::BaseUrl,
             Setting::Model,
+            Setting::ReasoningEffort,
+            Setting::MaxTokens,
             Setting::ApiKey,
             Setting::OpenConfigFile,
             Setting::Layout,

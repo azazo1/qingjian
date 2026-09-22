@@ -505,6 +505,31 @@ impl Host {
                     self.settings.set_value("predict", "model", text);
                 }
             }
+            // 推理强度: 留空就是不发这个参数 (给不认它的接口), 所以空值也要写进去
+            (Setting::ReasoningEffort, SettingValue::Text(text)) => {
+                let text = text.trim();
+                if text != config.predict.reasoning_effort {
+                    self.settings.set_value("predict", "reasoning_effort", text);
+                }
+            }
+            // 输出额度: 0 或留空都是不发这个参数; 不是整数就不写 (文本框里可能是刚敲了一半)
+            (Setting::MaxTokens, SettingValue::Text(text)) => {
+                let text = text.trim();
+                let value = if text.is_empty() {
+                    Some(0)
+                } else {
+                    text.parse::<u32>().ok()
+                };
+                match value {
+                    Some(value) if value != config.predict.max_tokens => {
+                        self.settings.set_value("predict", "max_tokens", value as i64);
+                    }
+                    Some(_) => {}
+                    None => self.preferences.set_status(
+                        "输出额度没有保存: 填一个非负整数, 填 0 表示请求里不带这个参数",
+                    ),
+                }
+            }
             (Setting::ApiKey, SettingValue::Text(text)) => {
                 let text = text.trim();
                 // 密码框看不见内容，粘贴多了（带上了终端提示符、命令）用户发现不了；这种值写进 .env 还会让整个文件解析失败
