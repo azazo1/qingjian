@@ -10,6 +10,7 @@ members = [
     "crates/qingjian-lm",
     "crates/qingjian-format",
     "crates/qingjian-neural",
+    "crates/qingjian-decision",
     "crates/qingjian-render",
     "apps/linux/server", "apps/cli", "apps/macos", "apps/windows/server", "apps/windows/tsf", "apps/windows/settings", "tools/dict-convert", "tools/gloss-gen",
 ]
@@ -34,6 +35,7 @@ qingjian-predict = { path = "crates/qingjian-predict" }
 qingjian-lm = { path = "crates/qingjian-lm" }
 qingjian-format = { path = "crates/qingjian-format" }
 qingjian-neural = { path = "crates/qingjian-neural" }
+qingjian-decision = { path = "crates/qingjian-decision" }
 qingjian-render = { path = "crates/qingjian-render" }
 
 # 外部依赖统一在这里定版本，子 crate 一律 `xxx.workspace = true`

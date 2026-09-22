@@ -256,6 +256,8 @@ impl Engine {
         margin: Option<f64>,
         context: Option<usize>,
     ) -> Self {
+        self.scorer_form = scorer.form();
+        self.scorer_remote = scorer.is_remote();
         self.sentence_scorer = Some(scorer);
         self.rescorer = None;
         self.set_neural_parameters(weight, margin, context);
@@ -276,9 +278,14 @@ impl Engine {
         self
     }
 
-    /// 运行时换 / 卸异步重打分器（壳里模型在后台加载完才接上，配置关掉就卸）。
+    /// 运行时换 / 卸异步重打分器（壳里模型在后台加载完才接上，配置关掉就卸）。换打分器时连它的分的量纲一起记下：
+    /// 打分器随后进了后台线程，重排时问不到。
     pub fn set_async_sentence_scorer(&mut self, scorer: Option<Box<dyn SentenceScorer>>) {
         self.sentence_scorer = None;
+        self.scorer_form = scorer
+            .as_ref()
+            .map_or(ScoreForm::Absolute, |scorer| scorer.form());
+        self.scorer_remote = scorer.as_ref().is_some_and(|scorer| scorer.is_remote());
         self.rescorer = scorer.map(super::rescoring::RescoreWorker::spawn);
         *self.neural_cache.borrow_mut() = super::rescoring::NeuralCache::default();
         self.forget_span_cache();

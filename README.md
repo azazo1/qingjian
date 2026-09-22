@@ -4,6 +4,12 @@
 
 青简（Qingjian）是一个使用 **Rust** 开发的跨平台输入法。
 
+> **本仓库是自用 fork。** 跟着 [upstream](https://github.com/qingjian-team/qingjian) 走，改动都落在 `main` 上，随时可以 `git merge upstream/main`。
+> 相对 upstream 多出来的东西：
+>
+> - 决策模型接入（`crates/qingjian-decision`，配置 `[decision]`）：把 jev（云端接口）与 laya（本地服务）这类 typed decision 模型接成整句重排的第二个来源，
+>   与 `[model]` 的本地字级模型互斥，只走 HTTP、不内嵌推理栈；macOS 壳与偏好设置「云服务」页都已接上。设计见 [docs/design/decision-models.md](docs/design/decision-models.md)。
+
 https://github.com/user-attachments/assets/d145fde9-a641-4543-8b15-dd7a2685de3d
 
 上面这段话全部由青简在 macOS 上输入：整句拼音一口气敲完，停顿一下由本地小模型重排候选，候选旁附英文译文与词性。

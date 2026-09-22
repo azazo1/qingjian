@@ -16,8 +16,9 @@ pub use config::{
     AppsConfig, AuxCodeConfig, CandidateRenderer, Config, DEFAULT_DOMAINS,
     DEFAULT_ENGLISH_CANDIDATES_OFF, DEFAULT_ENGLISH_CANDIDATES_OFF_LINUX,
     DEFAULT_ENGLISH_CANDIDATES_OFF_MACOS, DEFAULT_ENGLISH_CANDIDATES_OFF_WINDOWS,
-    DEFAULT_PAGE_KEYS, DictionariesConfig, GeneralConfig, KeyCombo, LEARNING_LANGUAGE_OFF,
-    LayoutMode, LocalModelConfig, LogLevel, MAX_PAGE_SIZE, Modifiers, PAGE_KEY_OPTIONS,
-    PreeditMode, Scheme, ShiftLetter, ShortcutConfig, SwitchKey, ThemeMode, scheme_label,
+    DEFAULT_PAGE_KEYS, DecisionConfig, DictionariesConfig, GeneralConfig, KeyCombo,
+    LEARNING_LANGUAGE_OFF, LayoutMode, LocalModelConfig, LogLevel, MAX_PAGE_SIZE, Modifiers,
+    PAGE_KEY_OPTIONS, PreeditMode, Scheme, ShiftLetter, ShortcutConfig, SwitchKey, ThemeMode,
+    scheme_label,
 };
 pub use error::ConfigError;

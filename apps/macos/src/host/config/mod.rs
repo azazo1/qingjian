@@ -80,12 +80,12 @@ impl Host {
         if force || config.dictionaries != self.applied_dictionaries {
             self.reload_dictionaries();
         }
-        if self.applied_model.as_ref() != Some(&config.model) {
-            if config.model.enabled {
-                self.load_local_model();
-            } else {
-                self.unload_local_model();
-            }
+        // 整句重排的来源（决策模型 / 本地整句模型）占用 Engine 里同一个位置，一起装配
+        let decision_changed = self.applied_decision.as_ref() != Some(&config.decision);
+        let model_changed = self.applied_model.as_ref() != Some(&config.model);
+        if force || decision_changed || model_changed {
+            self.apply_rescorer(&config);
+            self.applied_decision = Some(config.decision.clone());
             self.applied_model = Some(config.model.clone());
         }
         let cloud_active = self.engine.prediction_enabled();
@@ -98,10 +98,18 @@ impl Host {
             .as_deref()
             .is_some_and(|key| !key.trim().is_empty())
             || std::env::var(&config.predict.api_key_env).is_ok_and(|key| !key.trim().is_empty());
+        let decision_key_present = config
+            .decision
+            .api_key
+            .as_deref()
+            .is_some_and(|key| !key.trim().is_empty())
+            || std::env::var(&config.decision.api_key_env)
+                .is_ok_and(|key| !key.trim().is_empty());
         self.dictionary_list = self.dictionary_infos();
         self.preferences.sync(
             &config,
             key_present,
+            decision_key_present,
             self.settings.error(),
             &self.dictionary_list,
         );

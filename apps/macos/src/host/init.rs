@@ -160,6 +160,7 @@ pub fn init(mtm: MainThreadMarker, info: &BundleInfo) -> Result<(), HostError> {
             rescore: RescoreMonitor::new(mtm),
             model_loader: None,
             applied_model: None,
+            applied_decision: None,
             session: Session::default(),
             sentence: None,
             anchor: NSRect::ZERO,
