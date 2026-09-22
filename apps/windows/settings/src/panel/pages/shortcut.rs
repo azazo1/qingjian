@@ -113,7 +113,7 @@ pub(crate) fn view(settings: &Settings, context: &mut ViewContext<Settings>) -> 
             ),
         ),
         field(
-            "记词组（默认未设置）",
+            "记词组",
             "在应用里选中一段文字后按这组键 + 当前字母 (缺省 Ctrl+Alt+P), 候选窗显示它的拼音 (可退格改), 回车把这段文字记成用户词, Esc 取消. 选中的文字不会被改动. 这里只改修饰键, 字母固定用当前的; 选「不使用」就关掉这个键.",
             modifier_combo(
                 s.learn_phrase.map(|combo| combo.modifiers),
