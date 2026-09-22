@@ -131,7 +131,8 @@ impl RescoreMonitor {
     }
 
     pub fn expired(&self) -> bool {
-        self.since.is_some_and(|since| since.elapsed() > self.max_wait)
+        self.since
+            .is_some_and(|since| since.elapsed() > self.max_wait)
     }
 }
 

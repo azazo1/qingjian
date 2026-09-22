@@ -14,7 +14,8 @@ use qingjian_neural::{CharScorer, NeuralError};
 
 mod rescore_monitor;
 
-pub(super) use rescore_monitor::{DEFAULT_MAX_WAIT, RescoreMonitor};
+use rescore_monitor::DEFAULT_MAX_WAIT;
+pub(super) use rescore_monitor::RescoreMonitor;
 
 use super::*;
 
