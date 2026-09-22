@@ -151,7 +151,7 @@ impl ShortcutsPage {
         let learn_phrase = row_recorder(
             layout,
             mtm,
-            "记词组",
+            "记词组（默认未设置）",
             Setting::LearnPhraseKeys,
             RecorderKind::Combo,
             target,
