@@ -49,10 +49,17 @@ impl QingjianInputController {
                 self.render(client);
                 return true;
             }
-            host::with(|h| {
-                h.engine.clear();
+            // 取消组句：取消掉的是还没确认的拼音，已经选中、还没交给应用的词（`Engine::clear` 的返回值）
+            // 照样上屏，用户选过的字不该跟着消失
+            let abandoned = host::with(|h| {
+                let abandoned = h.engine.clear();
                 h.cancel_prediction();
-            });
+                abandoned
+            })
+            .unwrap_or_default();
+            if !abandoned.is_empty() {
+                client.insert_text(&abandoned);
+            }
             self.refresh(client);
         } else if selector == sel!(insertTab:) {
             // 英文模式 Tab 选中高亮的词；中文模式有整句补全时接受它，否则翻页

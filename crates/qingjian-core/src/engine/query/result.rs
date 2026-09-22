@@ -88,6 +88,10 @@ pub struct Query {
 
     /// 光标停在中间时, 光标之后那部分的原样形式 (敲的键); 只有 [`Self::keys_display`] 有值时才用得上.
     pub rest_keys: String,
+
+    /// 这段组句里已经选中, 还没交给应用的词 (延迟上屏, 见 `Engine::pending_text`):
+    /// preedit 里显示在拼音前面, 退格能把它拆回候选.
+    pub pending: String,
 }
 
 impl Query {
@@ -121,10 +125,23 @@ impl Query {
 
     /// [`Self::marked_text`] 的分段形式：敲的拼音一段（`Typed`），光标后剩下的拼音连同前面的 `'` 一段（`Rest`）。
     /// 壳按段画样式；[`Self::marked_cursor`] 的位置按各段拼接后的字符数算。
+    /// 组句里已经选中, 还没交给应用的词 ([`Self::pending`]) 排在最前面一段.
     pub fn marked_segments(&self) -> Vec<MarkedSegment> {
-        let mut segments = match &self.correction {
-            Some(correction) => correction.marked_segments(),
-            None => Vec::with_capacity(2),
+        let mut segments: Vec<MarkedSegment> = Vec::with_capacity(4);
+        if !self.pending.is_empty() {
+            segments.push(MarkedSegment::new(self.pending.clone(), MarkedKind::Pending));
+        }
+        segments.extend(self.typed_segments());
+        segments
+    }
+
+    /// 还没上屏的拼音那部分的分段 (不含延迟上屏的已选词): 敲的拼音一段 (`Typed`),
+    /// 辅助码两段, 光标后剩下的拼音一段 (`Rest`).
+    fn typed_segments(&self) -> Vec<MarkedSegment> {
+        let mut segments = if let Some(correction) = &self.correction {
+            correction.marked_segments()
+        } else {
+            Vec::with_capacity(2)
         };
         if self.correction.is_none() {
             let typed = if let Some(display) = &self.typed_display {
@@ -159,26 +176,29 @@ impl Query {
 
     /// 光标在 [`Self::marked_text`] 里的字符下标（给平台层传给应用用的，所以按字符算，不是字节）。
     pub fn marked_cursor(&self) -> usize {
+        // 延迟上屏的已选词排在拼音前面, 光标一律从这里往后算
+        let pending = self.pending_chars();
         // 纠错生效、解码时显示串与敲的不一样长，作用域又总在光标前：光标就在敲的部分末尾
         // （光标在开头时作用域是整段，光标仍在开头）
         if self.decoded_keys && self.cursor == 0 {
-            return 0;
+            return pending;
         }
         // 辅码态光标也总在末尾：触发键与码段都拼在最后
         if self.correction.is_some() || self.decoded_keys || self.aux.is_some() {
-            return self
-                .marked_segments()
-                .iter()
-                .filter(|s| s.kind != MarkedKind::Rest)
-                .map(|s| s.text.chars().count())
-                .sum();
+            return pending
+                + self
+                    .typed_segments()
+                    .iter()
+                    .filter(|s| s.kind != MarkedKind::Rest)
+                    .map(|s| s.text.chars().count())
+                    .sum::<usize>();
         }
         let letters_before = self.text[..self.cursor.min(self.text.len())]
             .chars()
             .filter(|c| *c != '\'')
             .count();
         let after_apostrophe = self.text[..self.cursor.min(self.text.len())].ends_with('\'');
-        let marked: Vec<char> = self.marked_text().chars().collect();
+        let marked: Vec<char> = self.typed_text().chars().collect();
         let mut seen = 0;
         let mut position = 0;
         while position < marked.len() && seen < letters_before {
@@ -190,7 +210,20 @@ impl Query {
         if after_apostrophe && marked.get(position) == Some(&'\'') {
             position += 1;
         }
-        position
+        pending + position
+    }
+
+    /// 还没上屏的拼音那部分的显示文本 ([`Self::marked_text`] 去掉延迟上屏的已选词).
+    fn typed_text(&self) -> String {
+        self.typed_segments()
+            .iter()
+            .map(|s| s.text.as_str())
+            .collect()
+    }
+
+    /// 延迟上屏的已选词在 preedit 里的字符数.
+    fn pending_chars(&self) -> usize {
+        self.pending.chars().count()
     }
 
     /// 行内 (应用侧 marked text) 的文本: 双拼下是敲的键 (按音节切开, `kd'fa've`), 其余方案与
@@ -199,7 +232,8 @@ impl Query {
         let Some(keys) = &self.keys_display else {
             return self.marked_text();
         };
-        let mut text = keys.clone();
+        let mut text = self.pending.clone();
+        text.push_str(keys);
         if let Some(aux) = &self.aux {
             text.push(aux.trigger);
             text.push_str(&aux.code);
@@ -218,9 +252,10 @@ impl Query {
         if self.keys_display.is_none() {
             return self.marked_cursor();
         }
+        let pending = self.pending_chars();
         // 与 marked_cursor 同一套规则: 解码时光标就在敲的部分末尾, 光标在开头时仍在开头
         if self.cursor == 0 {
-            return 0;
+            return pending;
         }
         let keys = self
             .keys_display
@@ -229,6 +264,6 @@ impl Query {
         let aux = self.aux.as_ref().map_or(0, |aux| {
             aux.trigger.to_string().chars().count() + aux.code.chars().count()
         });
-        keys + aux
+        pending + keys + aux
     }
 }

@@ -11,6 +11,7 @@
 - 决策模型接入: 新增 `crates/qingjian-decision` 与配置 `[decision]`, 把 jev (云端接口) 与 laya (本地服务) 这类 typed decision 模型接成整句重排的第二个来源 (与 `[model]` 的本地字级模型互斥, 只走 HTTP 不内嵌推理栈); macOS 壳与偏好设置 "云服务" 页已接上, 见 `docs/design/decision-models.md` 与 `docs/user/input/decision-model.md`.
 - macOS 的中 / 英切换可配: `[shortcut] mac_switch_single` (单键切换, 键在 `mac_switch_toggle`) 与 `mac_switch_dual` (双键切换, 键在 `mac_switch_english` / `mac_switch_chinese`) 两个开关可同时开, 键可以是带左右的修饰键 (`left-command` / `right-command` 等) 或组合键 (`control+option+z`), 例如左 ⌘ 切英文、右 ⌘ 切中文; `[shortcut] mac_caps_lock_switch` 决定 Caps Lock 是否也切 (`false` 时它只当大小写锁), `[general] english_mode` 关掉后 macOS 也固定中文模式. 实现照 Rime 的 Squirrel: 在 `recognizedEvents:` 里多要一个 flagsChanged, 单击判定与 Windows 的 `KeyTap` 同一套. 见 `docs/user/input/english-mode.md`.
 - macOS 切换中 / 英时光标旁闪一下当前模式: 新增 `menubar/badge.rs` (一块浮动小面板, 一秒后自己收, 配置 `[general] mode_badge` 缺省开), 与菜单栏状态项是同一件事的两种显示; 建面板与摆放逻辑从候选窗口抽成 `candidates::window` 的 `build_float_panel` / `place_at_caret` 共用.
+- 组句里的上屏改成延迟: 一段拼音还没选完时 (例如双拼 `bilw` 先选了 `避`, 还剩 `lw`), 选中的词先留在 preedit 里 (`避lw`), 等这段拼音选完、回车原样上屏、取消组句或失焦时才真正交给应用. 退格按后进先出先把这个词拆回候选 (键还回缓冲区, 候选重新按整段拼音算), 拆完再删拼音字符, 与 Rime 的退格手感一致; 见 `docs/notes/crate-notes.md` 的 Engine 一节.
 
 青简（Qingjian）是一个使用 **Rust** 开发的跨平台输入法。
 

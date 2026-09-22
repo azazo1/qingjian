@@ -194,11 +194,22 @@ impl QingjianInputController {
     /// IMK 送来的事件分发：按键走 [`Self::dispatch_key_down`]，修饰键的按下抬起走 [`Self::dispatch_modifier_change`]，
     /// 其余（鼠标之类，我们没声明）一律放行。
     fn dispatch_event(&self, event: &NSEvent, client: TextClient<'_>) -> bool {
-        match event.r#type() {
+        let handled = match event.r#type() {
             NSEventType::KeyDown => self.dispatch_key_down(event, client),
             NSEventType::FlagsChanged => self.dispatch_modifier_change(event, client),
             _ => false,
+        };
+        // 这一键交给应用：文本流越过了这段组句，还没上屏的已选词得先交出去，
+        // 否则它们会挂在下一次组句的 preedit 前面（见 `Engine::take_pending`）
+        if !handled {
+            self.flush_pending(client);
+        } else if host::with(|h| h.engine.composition().is_empty() && h.engine.has_pending())
+            .unwrap_or(false)
+        {
+            // 组句已经结束（删空拼音、上屏完、Esc）却还有没交出去的词：补上屏，别把它们留在 Engine 里
+            self.flush_pending(client);
         }
+        handled
     }
 
     /// 修饰键按下 / 抬起（`flagsChanged`）：配置成切换键的修饰键单击一下切中 / 英。

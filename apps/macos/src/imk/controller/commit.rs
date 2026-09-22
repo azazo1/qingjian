@@ -21,9 +21,25 @@ impl QingjianInputController {
             return false;
         };
         tracing::debug!(%text, "commit");
-        client.insert_text(&text);
+        // 这段拼音还没选完时上屏文本是空的：词留在 Engine 里等组句结束（见 [`Self::flush_pending`]），
+        // 只有组句结束的那一次才真的交给应用
+        if !text.is_empty() {
+            client.insert_text(&text);
+        }
         self.refresh(client);
         true
+    }
+
+    /// 把 Engine 里还没交给应用的已选词上屏。这一键要交给应用（文本流越过组句）、
+    /// 组句被取消或失焦时调；没有就什么都不做。
+    pub(super) fn flush_pending(&self, client: TextClient<'_>) {
+        let pending = host::with(|h| h.engine.take_pending()).unwrap_or_default();
+        if pending.is_empty() {
+            return;
+        }
+        tracing::debug!(%pending, "还没上屏的已选词交给应用");
+        client.insert_text(&pending);
+        self.refresh(client);
     }
 
     /// 把拼音原样上屏并清空。缓冲区为空时返回 false。

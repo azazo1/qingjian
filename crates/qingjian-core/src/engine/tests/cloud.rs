@@ -155,9 +155,10 @@ fn cursor_in_the_middle_scopes_candidates_and_prediction_to_the_left_part() {
     assert_eq!(query.marked_text(), "kai'fa'zhe");
     assert_eq!(query.marked_cursor(), 6);
 
-    // 上屏 开发 后剩 zhe，光标落到末尾，接着打就是往后加
+    // 选中 开发 后剩 zhe，光标落到末尾，接着打就是往后加；这段拼音还没选完，上屏推迟到组句结束
     let kaifa = query.candidates.items[0].clone();
-    assert_eq!(engine.commit(&kaifa), "开发");
+    assert_eq!(engine.commit(&kaifa), "");
+    assert_eq!(engine.pending_text(), "开发");
     assert_eq!(engine.composition().text(), "zhe");
     assert_eq!(engine.composition().cursor(), 3);
 

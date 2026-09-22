@@ -42,6 +42,8 @@ fn emoji_follow_their_word_and_consume_its_syllables() {
         3
     );
     let emoji = items[kaifa + 1].clone();
-    assert_eq!(engine.commit(&emoji), "👨‍💻");
+    // 这段拼音还没选完：emoji 也延迟上屏，先留在 Engine 里
+    assert_eq!(engine.commit(&emoji), "");
+    assert_eq!(engine.pending_text(), "👨‍💻");
     assert_eq!(engine.composition().text(), "zhe");
 }

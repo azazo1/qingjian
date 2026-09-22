@@ -64,7 +64,17 @@ fn forget(engine: &mut Engine, last: Option<&Query>, index: usize) {
 fn commit(engine: &mut Engine, last: Option<Query>, index: usize) {
     match last.and_then(|q| q.candidates.items.into_iter().nth(index.wrapping_sub(1))) {
         Some(candidate) => {
-            println!("上屏: {}", engine.commit(&candidate));
+            let text = engine.commit(&candidate);
+            if text.is_empty() {
+                // 这段拼音还没选完：上屏推迟到组句结束，选中的词先留在 Engine 里（能在 preedit 里看到、退格能拆回）
+                println!(
+                    "选中 {}（延迟上屏，还剩拼音 {}）",
+                    candidate.text,
+                    engine.composition().text()
+                );
+            } else {
+                println!("上屏: {text}");
+            }
         }
         None => println!("没有第 {index} 个候选"),
     }

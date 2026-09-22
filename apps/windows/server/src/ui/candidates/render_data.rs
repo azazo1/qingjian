@@ -95,6 +95,8 @@ impl RenderData {
                         PreeditKind::Rest => PreeditStyle::Rest,
                         PreeditKind::Corrected => PreeditStyle::Struck,
                         PreeditKind::AuxCode => PreeditStyle::AuxCode,
+                        // 已经选中、还没交给应用的词是正经文字，不是拼音，用正文色
+                        PreeditKind::Pending => PreeditStyle::Committed,
                     },
                 })
                 .collect(),

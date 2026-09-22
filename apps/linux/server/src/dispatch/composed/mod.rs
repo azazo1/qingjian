@@ -36,9 +36,8 @@ impl Router {
                 }
             }
             None => {
-                let composition = self.engine.composition();
-                let text = composition.text().to_owned();
-                let cursor = text[..composition.cursor()].chars().count();
+                // 查询失败时退回显示原始字母；还没交给应用的已选词排在前面
+                let (text, cursor) = self.engine.plain_preedit();
                 Composed::Raw { text, cursor }
             }
         });
@@ -115,7 +114,9 @@ impl Router {
 
     pub(super) fn commit_index(&mut self, index: usize) -> Option<String> {
         let candidate = self.layout_candidate(index)?;
-        Some(self.engine.commit(&candidate))
+        // 这段拼音还没选完时 Engine 返回空串：选中的词留在那边等组句结束，这次不上屏
+        let text = self.engine.commit(&candidate);
+        (!text.is_empty()).then_some(text)
     }
 
     /// 按当前状态生成一帧：翻译评审优先；没在组句给空帧；否则给高亮所在的那一页。

@@ -80,6 +80,8 @@ impl Renderer {
                 PreeditStyle::Rest => m.annotation_style(m.theme.colors.pos),
                 PreeditStyle::Struck => m.annotation_style(m.theme.colors.pos).struck(),
                 PreeditStyle::AuxCode => m.annotation_style(m.theme.colors.pos).underlined(),
+                // 已经选中、还没交给应用的词是正经文字，不是拼音，用正文色
+                PreeditStyle::Committed => m.annotation_style(m.theme.colors.text),
             };
             cursor_x += self.draw_text(canvas, &segment.text, &style, cursor_x, top);
         }

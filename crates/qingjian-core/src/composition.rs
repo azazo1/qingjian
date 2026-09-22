@@ -194,6 +194,19 @@ impl Composition {
         let len = self.scope().len();
         self.drain_prefix(len);
     }
+
+    /// 把上屏时吃掉的键还回缓冲区开头, 光标随之后移同样多 (组句里退格拆回已选词用, 见 `Engine::backspace`).
+    /// 吃掉的键总是作用域的前缀, 所以还原的位置就是缓冲区最前面.
+    pub fn prepend(&mut self, prefix: &str) {
+        if prefix.is_empty() {
+            return;
+        }
+        self.buffer.insert_str(0, prefix);
+        let added = prefix.chars().count();
+        self.shifted
+            .splice(0..0, std::iter::repeat(false).take(added));
+        self.cursor += prefix.len();
+    }
 }
 
 #[cfg(test)]

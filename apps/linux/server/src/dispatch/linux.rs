@@ -46,8 +46,10 @@ impl Router {
                     self.discard_session(session);
                 } else {
                     self.ensure_focus(session);
-                    let text =
-                        (!self.engine.composition().is_empty()).then(|| self.engine.take_raw());
+                    // 缓冲区空了但还有没交给应用的已选词时也要交出去
+                    let text = (self.engine.has_pending() || !self.engine.composition().is_empty())
+                        .then(|| self.engine.take_raw())
+                        .filter(|text| !text.is_empty());
                     if !(focus_out && client_preedit) {
                         commit = text;
                     }
@@ -78,8 +80,10 @@ impl Router {
                     if shift && info.shift_pending {
                         info.shift_pending = false;
                         info.english = !info.english;
-                        commit =
-                            (!self.engine.composition().is_empty()).then(|| self.engine.take_raw());
+                        commit = (self.engine.has_pending()
+                            || !self.engine.composition().is_empty())
+                        .then(|| self.engine.take_raw())
+                        .filter(|text| !text.is_empty());
                         self.reset_composition();
                         outcome = KeyOutcome::Consumed;
                     }
@@ -94,11 +98,18 @@ impl Router {
                     match effect {
                         Effect::Changed(text) => {
                             self.recompose();
-                            commit = text;
+                            // 空串（这段拼音还没选完，选中的词留在 Engine 里）不当上屏文本发
+                            commit = text.filter(|text| !text.is_empty());
                             outcome = KeyOutcome::Consumed;
                         }
                         Effect::Navigated => outcome = KeyOutcome::Consumed,
-                        Effect::Passthrough => {}
+                        // 这一键归应用：文本流越过了这段组句，还没交给应用的已选词先交出去
+                        Effect::Passthrough => {
+                            let pending = self.engine.take_pending();
+                            if !pending.is_empty() {
+                                commit = Some(pending);
+                            }
+                        }
                     }
                 }
             }
@@ -119,6 +130,8 @@ impl Router {
                 }
             }
         }
+        // 组句已经结束（删空拼音、Esc 之外的清空路径）却还有没交给应用的已选词：补上屏
+        let commit = self.settle_pending(commit);
         let frame = if self.focused == Some(session) && !self.sessions[&session].disabled {
             self.current_frame()
         } else {
@@ -130,6 +143,20 @@ impl Router {
             commit,
             frame,
         })
+    }
+
+    /// 组句已经结束却还有没交给应用的已选词时，把它们接在本次上屏文本前面一起交出去。
+    /// 组句还在时不动（词留在 Engine 里等组句结束，退格能拆回）。
+    pub(super) fn settle_pending(&mut self, commit: Option<String>) -> Option<String> {
+        if !self.engine.composition().is_empty() {
+            return commit;
+        }
+        let pending = self.engine.take_pending();
+        match (pending.is_empty(), commit) {
+            (true, commit) => commit,
+            (false, None) => Some(pending),
+            (false, Some(commit)) => Some(format!("{pending}{commit}")),
+        }
     }
 
     pub(super) fn valid_panel_event(&self, session: SessionId, identity: &DisplayIdentity) -> bool {

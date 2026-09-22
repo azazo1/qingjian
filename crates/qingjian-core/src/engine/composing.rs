@@ -58,7 +58,9 @@ impl Engine {
 
     /// 壳告知光标离开了刚才上屏的位置（切换应用、点了别处、停用输入法）：之后上屏的词按句首记。
     /// 上次断开之后有过上屏才往输入日志记一条 `break`，连着失焦几次只记一次。
-    pub fn break_chain(&mut self) {
+    /// 返回还没交给应用的已选词 (壳负责上屏, 见 [`pending`](super::pending)).
+    pub fn break_chain(&mut self) -> String {
+        let pending = self.take_pending();
         self.chain.reset();
         self.recent_commits.clear();
         self.flush_passthrough();
@@ -68,6 +70,7 @@ impl Engine {
                 app: self.application.clone(),
             });
         }
+        pending
     }
 
     /// 壳告知正在输入的应用（macOS bundle identifier / Windows exe 名），写进输入日志；不知道就给 `None`。
@@ -186,9 +189,12 @@ impl Engine {
         }
     }
 
-    /// 退格。辅码态里删的是码段：删掉最后一个码字母；删空时按「码删空后留在辅码态」开关分岔——
-    /// 开（缺省）停在辅码态（`;` 仍在、无码词也回来），关则回拼音态。码段本来就空（刚触发，或删空停住）
-    /// 时按退格 = 退出辅码态、拼音一个字符都不动。每次退格候选都当场重筛。
+    /// 退格. 辅码态里删的是码段: 删掉最后一个码字母; 删空时按 "码删空后留在辅码态" 开关分岔,
+    /// 开 (缺省) 停在辅码态 (`;` 仍在, 无码词也回来), 关则回拼音态. 码段本来就空 (刚触发, 或删空停住)
+    /// 时按退格 = 退出辅码态, 拼音一个字符都不动. 每次退格候选都当场重筛.
+    ///
+    /// 拼音态里按后进先出: 这段拼音里已经选中, 还没交给应用的词先拆回一个 (键还回缓冲区, 候选重新按整段拼音算),
+    /// 没有可拆的才删光标前一个字符 (见 [`pending`](super::pending)).
     pub fn backspace(&mut self) -> bool {
         if let Some(code) = self.aux_code.take() {
             if code.len() > 1 {
@@ -199,10 +205,16 @@ impl Engine {
             return true;
         }
         self.note_edit();
+        if self.undo_pending() {
+            return true;
+        }
         self.composition.backspace()
     }
 
-    pub fn clear(&mut self) {
+    /// 清掉这一段组句. 返回还没交给应用的已选词 (壳负责上屏, 见 [`pending`](super::pending)): 取消组句时
+    /// 已经选中的字不该跟着消失.
+    pub fn clear(&mut self) -> String {
+        let pending = self.take_pending();
         self.composition.clear();
         self.aux_code = None;
         self.chain.leave_buffer();
@@ -212,6 +224,7 @@ impl Engine {
         self.composition_started = None;
         self.page_turns = 0;
         self.traditional_map.borrow_mut().clear();
+        pending
     }
 
     pub fn delete_forward(&mut self) -> bool {
@@ -310,6 +323,16 @@ impl Engine {
             && shortcut::could_be_unicode(self.modes().question_body(text, self.zhuyin))
     }
 
+    /// 应用侧显示的组句文本与光标位置 (按字符算): 延迟上屏的已选词接上缓冲区里原样的拼音.
+    /// 查询失败 (整段切不动) 时壳拿它显示, 与 [`Self::query`] 给出的 preedit 顺序一致.
+    pub fn plain_preedit(&self) -> (String, usize) {
+        let pending = self.pending_text();
+        let mut text = pending.clone();
+        text.push_str(self.composition.text());
+        let cursor = pending.chars().count() + self.composition.cursor();
+        (text, cursor)
+    }
+
     /// 缓冲区里只有一个 `?`：还没决定是问字还是标点。壳在确认标点时调用 [`Self::restore_bare_question`]。
     pub fn bare_question(&self) -> bool {
         self.composition.text() == QUESTION_PREFIX.to_string()
@@ -330,7 +353,9 @@ impl Engine {
     }
 
     /// 用一段完整拼音替换当前缓冲区，供 CLI 和测试一次性喂入。
+    /// 上一段延迟上屏的已选词一并丢弃：真实壳不会这样换段，这里只是把状态摆成「刚敲完这段拼音」。
     pub fn set_input(&mut self, input: &str) {
+        self.pending.clear();
         self.composition.clear();
         for c in input.chars() {
             self.push(c);
@@ -338,7 +363,10 @@ impl Engine {
     }
 
     /// 放弃当前拼音，原样返回给壳（通常是用户按回车要上屏字母本身）。
+    /// 这段组句里已经选中, 还没交给应用的词接在前面一起交出去 (见 [`pending`](super::pending)).
     pub fn take_raw(&mut self) -> String {
+        // 这段组句到此结束: 先取下延迟的已选词, 它们排在原样上屏的字母前面
+        let pending = self.take_pending();
         // 回车原样上屏拼音段：码段（没上屏的码）到此结束
         self.aux_code = None;
         // 纠错生效时用户仍按了回车：这个串就是要原样打的，记下来以后不再纠它
@@ -353,7 +381,7 @@ impl Engine {
             // 壳在回车 / 失焦时不管有没有在组句都会来一趟：空的不记日志、不计统计
             self.clear();
             self.chain.reset();
-            return raw;
+            return pending;
         }
         self.log_commit(&raw, &raw, InputSource::Raw);
         // 原样上屏的是个英文词（`gist`）：记进个人英文词表，下次直接出候选。
@@ -370,7 +398,9 @@ impl Engine {
         self.punctuation.note_committed(&raw);
         self.history.record(&raw);
         self.chain.reset();
-        raw
+        let mut text = pending;
+        text.push_str(&raw);
+        text
     }
 }
 

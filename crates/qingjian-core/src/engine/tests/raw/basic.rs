@@ -59,7 +59,9 @@ fn raw_preedit_only_contains_the_uncommitted_remainder() {
         .into_iter()
         .find(|c| c.text == "开发" && c.kind == CandidateKind::Chinese)
         .unwrap();
-    assert_eq!(engine.commit(&candidate), "开发");
+    // 选中的词延迟上屏（这段拼音还剩 zhe），但原样显示的 preedit 照旧只有还没确认的那部分
+    assert_eq!(engine.commit(&candidate), "");
+    assert_eq!(engine.pending_text(), "开发");
     assert_raw(&mut engine, "zhe", 3);
 }
 

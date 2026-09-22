@@ -72,6 +72,8 @@ impl Router {
             info.engine.discard_input();
         }
     }
+    /// 清掉组句与展示状态。还没交给应用的已选词在这里丢掉：
+    /// 失焦那一路（`LinuxEvent::Deactivate`）已经先 `take_raw` 交出去了。
     pub(super) fn reset_composition(&mut self) {
         self.engine.break_chain();
         self.engine.clear();

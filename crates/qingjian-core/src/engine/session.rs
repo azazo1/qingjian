@@ -20,6 +20,9 @@ pub struct EngineSession {
     /// 最近上屏记录，供撤销错误学习。
     recent_commits: Vec<LastCommit>,
 
+    /// 这段组句里已经选中、还没交给应用的词（延迟上屏，见 `super::pending`）。
+    pending: Vec<super::pending::PendingWord>,
+
     /// 本次上屏记录的词转移。
     recording: Vec<Transition>,
 
@@ -61,6 +64,7 @@ impl Engine {
         std::mem::swap(&mut self.english_mode, &mut session.english_mode);
         std::mem::swap(&mut self.punctuation, &mut session.punctuation);
         std::mem::swap(&mut self.recent_commits, &mut session.recent_commits);
+        std::mem::swap(&mut self.pending, &mut session.pending);
         std::mem::swap(&mut self.recording, &mut session.recording);
         std::mem::swap(&mut self.retype_snapshot, &mut session.retype_snapshot);
         std::mem::swap(
@@ -89,6 +93,7 @@ impl Engine {
 impl EngineSession {
     /// 丢弃本上下文的输入状态，不写日志、不学习，也不把私密文本带到下一次普通输入。
     pub fn discard_input(&mut self) {
+        self.pending.clear();
         self.composition.clear();
         self.english_mode = false;
         self.punctuation = Punctuation::default();
@@ -110,6 +115,7 @@ impl Engine {
     /// 在组句第一帧后报告隐私状态时意外清掉新输入。
     pub fn discard_input(&mut self) {
         self.cancel_prediction();
+        self.pending.clear();
         self.composition.clear();
         self.english_mode = false;
         self.punctuation = Punctuation::default();
