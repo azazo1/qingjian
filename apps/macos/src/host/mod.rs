@@ -30,9 +30,10 @@ use qingjian_learning::{FrequencyLearner, InputLog, UsageStats, VocabularyBook};
 use qingjian_lm::BigramModel;
 use qingjian_platform::extra_dictionaries;
 use qingjian_platform::{
-    AppsConfig, CandidateRenderer, DEFAULT_ENGLISH_CANDIDATES_OFF, DictionariesConfig,
-    GeneralConfig, KeyCombo, LEARNING_LANGUAGE_OFF, LayoutMode, LocalModelConfig, LogLevel,
-    Modifiers, PAGE_KEY_OPTIONS, PreeditMode, Scheme, ShortcutConfig, ThemeMode,
+    AppsConfig, CandidateRenderer, DEFAULT_ENGLISH_CANDIDATES_OFF, DecisionConfig,
+    DictionariesConfig, GeneralConfig, KeyCombo, LEARNING_LANGUAGE_OFF, LayoutMode,
+    LocalModelConfig, LogLevel, Modifiers, PAGE_KEY_OPTIONS, PreeditMode, Scheme, ShortcutConfig,
+    ThemeMode,
 };
 use qingjian_predict::{
     CloudGlossFiller, CloudPredictor, ConnectionTest, PredictConfig, PredictError,
@@ -173,6 +174,9 @@ pub struct Host {
 
     /// 上次套用的 `[model]`，变了才重载 / 卸载。
     applied_model: Option<LocalModelConfig>,
+
+    /// 上次套用的 `[decision]`，变了才重建决策后端。
+    applied_decision: Option<DecisionConfig>,
 
     /// 当前会话的候选、高亮、页码、preedit。
     pub session: Session,

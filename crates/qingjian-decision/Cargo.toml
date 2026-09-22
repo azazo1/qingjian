@@ -1,6 +1,6 @@
 [package]
-name = "qingjian-platform"
-description = "平台相关但不依赖系统 API 的部分：配置文件读写"
+name = "qingjian-decision"
+description = "整句重排的第二个来源：jev / laya 这类 typed decision 模型（choice 题型），只走 HTTP 不内嵌推理"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -11,12 +11,9 @@ workspace = true
 
 [dependencies]
 qingjian-core.workspace = true
-qingjian-decision.workspace = true
-qingjian-dictionary.workspace = true
-qingjian-predict.workspace = true
+reqwest = { workspace = true, features = ["json", "native-tls"] }
 serde.workspace = true
 serde_json.workspace = true
 thiserror.workspace = true
-toml.workspace = true
-toml_edit.workspace = true
+tokio = { workspace = true, features = ["net"] }
 tracing.workspace = true

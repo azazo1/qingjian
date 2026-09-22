@@ -18,6 +18,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `crates/qingjian-predict`：云联想 `CloudPredictor`（OpenAI 兼容接口）与释义兜底 `CloudGlossFiller`；`PredictConfig` 是 `[predict]` 分节。
 - `crates/qingjian-lm`：整句转换的 bigram 语言模型 `BigramModel`。
 - `crates/qingjian-neural`：字级 Transformer 本地推理 `CharScorer`（candle），给整句前几条路径重打分。
+- `crates/qingjian-decision`：决策模型接入（jev 云端 / laya 本地服务），把 typed decision 模型接成整句重排的第二个来源；`DecisionConfig` 是 `[decision]` 分节，只走 HTTP 不内嵌推理，见 `docs/design/decision-models.md`。
 - `crates/qingjian-format`：`.qj` 数据容器（mmap 读、零拷贝视图、写入器、哈希索引）。
 - `crates/qingjian-platform`：平台层共用：`Config`（TOML 配置）、`extra_dictionaries`、Windows Server ↔ DLL 的 `protocol` 类型。
 - `crates/qingjian-render`：自绘渲染器（spike 中，分支 renderer-spike）：候选窗一帧 + 主题 → 位图，各平台只贴图。见 `docs/design/rendering.md`。

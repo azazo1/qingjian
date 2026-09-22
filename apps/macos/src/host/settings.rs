@@ -3,6 +3,7 @@
 use super::diagnostics::{copy_to_pasteboard, open_with_system};
 use super::*;
 use crate::preferences::DEFAULT_FONT_LABEL;
+use qingjian_decision::BackendKind;
 use qingjian_platform::ShiftLetter;
 
 impl Host {
@@ -339,6 +340,47 @@ impl Host {
             }
             (Setting::LocalModelEnabled, SettingValue::Bool(on)) => {
                 self.settings.set_bool("model", "enabled", on);
+            }
+            (Setting::DecisionEnabled, SettingValue::Bool(on)) => {
+                self.settings.set_bool("decision", "enabled", on);
+            }
+            // 弹出菜单按 BackendKind::ALL 的顺序
+            (Setting::DecisionBackend, SettingValue::Index(index)) => {
+                let key = BackendKind::ALL
+                    .get(index)
+                    .map_or(BackendKind::Laya.key(), |kind| kind.key());
+                self.settings.set_value("decision", "backend", key);
+            }
+            (Setting::DecisionEndpoint, SettingValue::Text(text)) => {
+                let text = text.trim();
+                if text != config.decision.endpoint {
+                    self.settings.set_value("decision", "endpoint", text);
+                }
+            }
+            // 决策模型的密钥与云联想的走同一套：写进配置目录的 .env，不进 config.toml
+            (Setting::DecisionApiKey, SettingValue::Text(text)) => {
+                let text = text.trim();
+                if text.chars().any(|c| !c.is_ascii_graphic()) {
+                    self.preferences.set_status(
+                        "密钥没有保存：里面有空格或非英文字符，多半是粘贴时多带了别的内容",
+                    );
+                    return;
+                }
+                if text.is_empty() {
+                    return;
+                }
+                if self
+                    .settings
+                    .set_env_var(&config.decision.api_key_env, text)
+                {
+                    // 密钥换了必须重建决策后端
+                    self.apply_config(true);
+                    self.preferences.set_status("密钥已保存");
+                } else {
+                    self.preferences
+                        .set_status("密钥没有保存：写不进配置目录的 .env，详情见日志");
+                }
+                return;
             }
             (Setting::CloudSlots, SettingValue::Index(index)) => {
                 self.settings.set_value("predict", "slots", index as i64);

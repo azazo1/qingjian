@@ -2,9 +2,13 @@
 //!
 //! 按键回调里永远只跑词级模型；模型的意见在停键 80 毫秒后请求、二三十毫秒后到，只换候选窗口里的整句候选，
 //! 用户翻过页或动过高亮就不打扰。前文优先用应用里光标前的文字（`refresh` 每次查询前给 Engine），应用给不出退回本会话历史。
+//!
+//! 占 Engine 里「整句重排的第二打分来源」这个位置的有两个：本地字级模型（`[model]`）与决策模型（`[decision]`，
+//! jev / laya）。两者互斥，由 [`Host::apply_rescorer`] 按配置挑一个接上。
 
 use std::sync::mpsc::{TryRecvError, channel};
 
+use qingjian_decision::DecisionScorer;
 use qingjian_neural::{CharScorer, NeuralError};
 
 mod rescore_monitor;
@@ -108,6 +112,31 @@ impl Host {
         self.engine.set_async_sentence_scorer(None);
         self.rescore.stop_watching();
         self.rescore.stop();
+    }
+
+    /// 装配整句重排的来源：`[decision]` 开着就用决策模型，否则 `[model]` 开着就用本地整句模型，都没开就不重排。
+    /// 两者占 Engine 里同一个位置，所以先卸掉再装。决策模型只建 HTTP 客户端与运行时，构造很快，不用另起线程；
+    /// 它起不来（没密钥、地址不合法）时改用本地模型，别让用户两头落空。
+    pub(super) fn apply_rescorer(&mut self, config: &qingjian_platform::Config) {
+        self.unload_local_model();
+        if config.decision.enabled {
+            match DecisionScorer::new(&config.decision) {
+                Ok(scorer) => {
+                    tracing::info!(
+                        backend = config.decision.backend.key(),
+                        endpoint = config.decision.endpoint(),
+                        "决策模型接上整句重排"
+                    );
+                    self.engine.set_async_sentence_scorer(Some(Box::new(scorer)));
+                    self.rescore_current_round();
+                    return;
+                }
+                Err(error) => tracing::warn!(%error, "决策模型起不来，改用本地整句模型"),
+            }
+        }
+        if config.model.enabled {
+            self.load_local_model();
+        }
     }
 
     /// 每次查询之后：有整句路径等着打分就起防抖计时。

@@ -108,9 +108,21 @@ TSV 解析、查询与生成工具把 `lue` / `nue` 统一成 `lve` / `nve`。
 同一段前文只算一次，每个候选只算自己那几个字（64 字前文 × 8 条 28 ms，Metal）。features `accelerate` / `metal` 换后端，壳用 `metal`。
 
 Engine 侧在 `engine/rescoring/`：接了打分器就取 Viterbi 前 `RESCORE_PATHS` = 6 条路径按 `路径分 + λ·(神经分 − 静态二元分)` 重排（λ `NEURAL_WEIGHT` 0.5，
-个人 n-gram / 用户加分 / 代价不动），分走「前文 + 文本 → 神经分」缓存 `NeuralCache`；同步打分器（`with_sentence_scorer`，CLI 评测）当场补分，
+个人 n-gram / 用户加分 / 代价不动；打分器 `form()` 报 `ScoreForm::Relative` 时（决策模型）改成按这一批的均值居中后 `路径分 + λ·(分 − 批内均值)`，
+量纲不同不能顶掉静态二元那部分），分走「前文 + 文本 → 神经分」缓存 `NeuralCache`；同步打分器（`with_sentence_scorer`，CLI 评测）当场补分，
 异步的（`with_async_sentence_scorer`，后台线程 `RescoreWorker`）查询不等模型：缺分的记下来，壳停键后 `request_rescoring`、`poll_rescoring` 到了再 `query` 一次。
 前文优先用壳给的应用光标前文（`set_rescoring_context`），没有用本会话最近 64 个上屏字符。CLI `--neural <导出目录>`（`--neural-weight` / `--neural-context` / `--neural-async`）。
+
+## crates/qingjian-decision
+
+`DecisionScorer`，Core `sentence::SentenceScorer` 的另一个实现：把 jev / laya 这类 typed decision 模型接成整句重排的第二来源
+（配置 `[decision]`，`DecisionConfig`）。一次 `score` 把这一批候选放进同一个 `choice` 题（问句与 id 定在 `scorer.rs`），
+拿各候选的概率乘 `[decision] span`（缺省 4.0 nat）作为决策分；给的是同一批之间的相对优劣，所以 `form()` 是 `ScoreForm::Relative`。
+只走 HTTP：`LayaBackend` 打本地服务 `POST /api/predict`（`{"state", "questions": [...]}`，`criteria` 是选项数组），
+`JevBackend` 打 `https://api.typesafe.ai/v1/systemone`（`questions` 按 id 索引、`criteria` 是「选项名 → 说明」对象、Bearer 鉴权），
+两者响应形状一致，解析共用 `backend/response.rs`。web 请求在 `backend/http.rs` 的一个 current_thread 运行时里 `block_on`：
+它只在重排后台线程里被调，那里没有异步上下文。`is_remote()` 按后端回答（jev 为真），私密输入期间 Core 不让它参与重排。
+设计见 `docs/design/decision-models.md`。
 
 ## crates/qingjian-lm
 
@@ -133,6 +145,7 @@ Engine 侧在 `engine/rescoring/`：接了打分器就取 Viterbi 前 `RESCORE_P
 
 `Config`（TOML 配置文件，`[general]` / `[shortcut]` / `[fuzzy]` / `[dictionaries]` / `[apps]` / `[predict]` 分节，首次运行写模板，
 `set_value` 用 toml_edit 原地改键保留注释；`[model] enabled` 本地整句模型开关，`LocalModelConfig`；
+`[decision]` 决策模型（整句重排的第二个来源，与 `[model]` 互斥），`DecisionConfig`；
 中英模式两项：`[shortcut] switch_mode`（`SwitchKey`：shift / control / none，单击切换键）与 `[general] english_mode`（内置英文模式总开关））；
 `extra_dictionaries` 列出 / 加载随包领域词库与用户 `dicts/`
 （mac 壳与 Windows Server 共用，同名 `.qj` 优先于 `.tsv`）；`code_tables` 同构地列出 / 加载随包根 `codes/` 与用户 `codes/` 的码表
@@ -201,6 +214,8 @@ IMK 输入法，源码按 `app / host / imk / candidates / menubar / preferences
 - 本地整句模型：`bundle.sh` 把 `data/model/`（或 `QINGJIAN_MODEL_DIR`）三件套打进 `Resources/model/`，用户目录 `model/` 优先；`host/model/mod.rs` 在后台线程加载并预热（首次 Metal 编译）后
   `set_async_sentence_scorer` 接上，`refresh` 每键先读应用光标前 64 字给 Engine 当前文、查询后 `schedule_rescoring`，`RescoreMonitor` 停键 80 ms 请求、20 ms 轮询，
   结果到了重查一次只重画当前页（翻过页 / 动过高亮不动）；「云服务」页有开关（`[model] enabled`）。
+- 决策模型：`Host::apply_rescorer` 按 `[decision]` 挑整句重排的来源（决策模型优先，起不来退回本地整句模型，两者都没有就不重排），
+  `DecisionScorer` 只在主线程构造（建 HTTP 客户端与运行时），接上与本地模型同一条重排链路；「云服务」页有开关、后端、接口地址与密钥框。
 - 端到端验证可用 `osascript` 的 System Events 往 TextEdit 发按键再读回文本（终端需要辅助功能权限；输入法得在中文模式）。
 
 ## apps/windows

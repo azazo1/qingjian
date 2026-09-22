@@ -1,4 +1,5 @@
-//! 神经重打分：整句转换的前几条路径交给字级模型（[`SentenceScorer`]）再排一次。
+//! 神经重打分：整句转换的前几条路径交给第二打分来源（[`SentenceScorer`]）再排一次。字级语言模型给整句 log 概率，
+//! 决策模型（`qingjian-decision`）给同一批候选之间的相对优劣，两种量纲在 [`Engine::rescore_paths`] 里分别处理。
 //!
 //! 打分有两种接法：同步的（[`Engine::with_sentence_scorer`]，查询里当场打，CLI 评测用）和异步的
 //! （[`Engine::with_async_sentence_scorer`]，后台线程；壳里用）。两种都经过一张「前文 + 文本 → 神经分」的缓存
@@ -36,6 +37,12 @@ impl Engine {
         }
     }
 
+    /// 私密输入期间不让「会把前文发到本机之外」的打分器（云端决策模型）干活：一个字都不出去，
+    /// 这一轮也不重排。本地模型不受影响（`is_remote` 为假）。
+    fn privacy_blocks_rescoring(&self) -> bool {
+        self.private && self.scorer_remote
+    }
+
     /// 壳告知应用里光标前的文本（每次查询前给；应用给不出就 `None`，退回本会话历史）。
     pub fn set_rescoring_context(&mut self, before: Option<String>) {
         self.rescoring_before = before;
@@ -44,7 +51,7 @@ impl Engine {
     /// 把几条整句路径按「路径分 + λ·(神经分 − 静态分)」重排。缓存里缺分的：同步打分器当场补，异步的先记下等壳来取；
     /// 有任何一条没分就不动顺序（半截重排比不重排还糟）。
     pub(super) fn rescore_paths(&self, paths: &mut [Conversion]) {
-        if paths.len() < 2 || !self.has_sentence_scorer() {
+        if paths.len() < 2 || !self.has_sentence_scorer() || self.privacy_blocks_rescoring() {
             return;
         }
         let context = self.rescoring_context();
@@ -77,9 +84,24 @@ impl Engine {
             }
         }
         let lambda = self.neural_weight;
+        // 相对分（决策模型这类只判「哪条更顺」的打分器）只有同一批候选之间可比，先按批内均值居中再叠加；
+        // 绝对分（字级语言模型的整句 log 概率）与静态模型同量纲，直接替换掉它。
+        let mean = match self.scorer_form {
+            ScoreForm::Absolute => 0.0,
+            ScoreForm::Relative => {
+                let sum: f64 = paths
+                    .iter()
+                    .map(|path| cache.get(&path.text).expect("filled above"))
+                    .sum();
+                sum / paths.len() as f64
+            }
+        };
         for path in paths.iter_mut() {
             let neural = cache.get(&path.text).expect("filled above");
-            path.score += lambda * (neural - path.static_score);
+            path.score += match self.scorer_form {
+                ScoreForm::Absolute => lambda * (neural - path.static_score),
+                ScoreForm::Relative => lambda * (neural - mean),
+            };
         }
         paths.sort_by(|a, b| {
             b.score
@@ -96,6 +118,9 @@ impl Engine {
 
     /// 把攒着的文本送去后台打分。没接异步打分器或没什么要打的返回 `false`。
     pub fn request_rescoring(&mut self) -> bool {
+        if self.privacy_blocks_rescoring() {
+            return false;
+        }
         let Some(worker) = &self.rescorer else {
             return false;
         };

@@ -56,6 +56,18 @@ pub enum Setting {
     /// `[model] enabled`。
     LocalModelEnabled,
 
+    /// `[decision] enabled`。
+    DecisionEnabled,
+
+    /// `[decision] backend`，弹出菜单：本地服务 (laya) / 云端 (jev)。
+    DecisionBackend,
+
+    /// `[decision] endpoint`。
+    DecisionEndpoint,
+
+    /// `[decision] api_key_env` 那个环境变量，密钥写到 `.env`。
+    DecisionApiKey,
+
     /// 默认中文标点模式。
     FullWidthPunctuation,
 
@@ -229,6 +241,10 @@ impl Setting {
             Self::OpenWebsite => 30,
             Self::OpenRepository => 31,
             Self::LocalModelEnabled => 32,
+            Self::DecisionEnabled => 52,
+            Self::DecisionBackend => 53,
+            Self::DecisionEndpoint => 54,
+            Self::DecisionApiKey => 55,
             Self::FullWidthPunctuation => 33,
             Self::SelectPhrase => 34,
             Self::PhraseDraft => 35,
@@ -292,6 +308,10 @@ impl Setting {
             30 => Self::OpenWebsite,
             31 => Self::OpenRepository,
             32 => Self::LocalModelEnabled,
+            52 => Self::DecisionEnabled,
+            53 => Self::DecisionBackend,
+            54 => Self::DecisionEndpoint,
+            55 => Self::DecisionApiKey,
             33 => Self::FullWidthPunctuation,
             34 => Self::SelectPhrase,
             35 => Self::PhraseDraft,
@@ -334,6 +354,10 @@ mod tests {
             Setting::QuestionKey,
             Setting::CloudEnabled,
             Setting::LocalModelEnabled,
+            Setting::DecisionEnabled,
+            Setting::DecisionBackend,
+            Setting::DecisionEndpoint,
+            Setting::DecisionApiKey,
             Setting::BaseUrl,
             Setting::Model,
             Setting::ApiKey,
