@@ -258,9 +258,10 @@ impl QingjianInputController {
         if host::with(|h| h.translation.is_some()).unwrap_or(false) {
             return self.handle_translation_review(key, client);
         }
-        // 翻译快捷键（不在组句中）：读应用里的选区，交给云端
-        let combo = host::with(|h| h.translate_keys).unwrap_or_default();
-        if pressed == combo.modifiers
+        // 翻译快捷键（不在组句中）：读应用里的选区，交给云端；配成 none 时就没有这个键
+        let combo = host::with(|h| h.translate_keys).flatten();
+        if let Some(combo) = combo
+            && pressed == combo.modifiers
             && typed.as_deref().and_then(|t| t.chars().next()) == Some(combo.key)
             && !host::with(|h| !h.engine.composition().is_empty()).unwrap_or(false)
         {
@@ -278,13 +279,13 @@ impl QingjianInputController {
             && let Some(digit) = digit_key(key)
         {
             let (first, second) = host::with(|h| h.translation_keys).unwrap_or_default();
-            if pressed == first {
+            if first == Some(pressed) {
                 return self.handle_translation_key(digit, 0, client);
             }
-            if pressed == second {
+            if second == Some(pressed) {
                 return self.handle_translation_key(digit, 1, client);
             }
-            if pressed == host::with(|h| h.delete_keys).unwrap_or_default() {
+            if host::with(|h| h.delete_keys).unwrap_or_default() == Some(pressed) {
                 return self.handle_delete_key(digit, client);
             }
         }

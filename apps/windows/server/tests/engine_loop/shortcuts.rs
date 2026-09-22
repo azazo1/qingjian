@@ -43,10 +43,10 @@ fn shift_digit_forgets_candidate_and_requeries() {
 fn unconfigured_modifier_digit_is_not_a_selection() {
     // 删候选改成 Ctrl+Shift：Shift+4 就是普通的 `$`；Win+1 没配到快捷键，归应用。
     let mut router = router_with(RouterConfig {
-        delete_keys: KeyModifiers {
+        delete_keys: Some(KeyModifiers {
             shift: true,
             ..CTRL
-        },
+        }),
         ..RouterConfig::default()
     });
     type_letters(&mut router, "nihao");

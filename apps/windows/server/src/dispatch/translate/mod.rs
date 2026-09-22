@@ -14,9 +14,11 @@ use super::Router;
 use super::key::{ESCAPE, RETURN};
 
 impl Router {
-    /// 修饰键比物理组合（去掉 Caps / 中英模式两个状态位）。
+    /// 修饰键比物理组合（去掉 Caps / 中英模式两个状态位）; 配置里配成 `none` 时这个键不存在, 恒不命中.
     pub(super) fn matches_translate_combo(&self, event: &KeyEvent) -> bool {
-        let combo = self.config.translate_selection;
+        let Some(combo) = self.config.translate_selection else {
+            return false;
+        };
         event.character == Some(combo.key)
             && event.modifiers.chord() == KeyModifiers::from(combo.modifiers)
     }

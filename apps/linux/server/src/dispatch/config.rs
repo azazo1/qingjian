@@ -38,11 +38,12 @@ pub struct RouterConfig {
     /// 按应用的设置（`[apps]`），按宿主 exe 名认。
     pub apps: AppsConfig,
 
-    /// 上屏第一 / 第二个译词的修饰键（`[shortcut] translation` / `translation_second`）。
-    pub translation_keys: (KeyModifiers, KeyModifiers),
+    /// 上屏第一 / 第二个译词的修饰键（`[shortcut] translation` / `translation_second`）;
+    /// `None` 是那一组配成 `none` 关掉了.
+    pub translation_keys: (Option<KeyModifiers>, Option<KeyModifiers>),
 
-    /// 删候选的修饰键（`[shortcut] delete_candidate`）。
-    pub delete_keys: KeyModifiers,
+    /// 删候选的修饰键（`[shortcut] delete_candidate`）; `None` 是关掉了.
+    pub delete_keys: Option<KeyModifiers>,
 }
 
 impl RouterConfig {
@@ -68,9 +69,12 @@ impl From<&Config> for RouterConfig {
             apps: config.apps.clone(),
             translation_keys: {
                 let (first, second) = config.shortcut.translation_keys();
-                (first.into(), second.into())
+                (
+                    first.key().map(KeyModifiers::from),
+                    second.key().map(KeyModifiers::from),
+                )
             },
-            delete_keys: config.shortcut.delete_keys().into(),
+            delete_keys: config.shortcut.delete_keys().key().map(KeyModifiers::from),
         }
     }
 }

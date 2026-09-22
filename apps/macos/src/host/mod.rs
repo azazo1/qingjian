@@ -116,11 +116,12 @@ pub struct Host {
     /// 翻页键对（上一页、下一页）。
     pub page_keys: (char, char),
 
-    /// 配数字键上屏第一 / 第二个译词的修饰键组合（配置 `[shortcut] translation` / `translation_second`）。
-    pub translation_keys: (Modifiers, Modifiers),
+    /// 配数字键上屏第一 / 第二个译词的修饰键组合（配置 `[shortcut] translation` / `translation_second`）;
+    /// `None` 是那一组写成 `none` 关掉了.
+    pub translation_keys: (Option<Modifiers>, Option<Modifiers>),
 
-    /// 配数字键删候选的修饰键（配置 `[shortcut] delete_candidate`）。
-    pub delete_keys: Modifiers,
+    /// 配数字键删候选的修饰键（配置 `[shortcut] delete_candidate`）; `None` 是关掉了.
+    pub delete_keys: Option<Modifiers>,
 
     /// 候选窗口顶行显示的一句临时状态（删了什么词），下一次查询就没了。
     pub status: Option<String>,
@@ -128,8 +129,8 @@ pub struct Host {
     /// 输入日志是否在记（配置 `[general] input_log`），换了才重开文件。
     input_log_enabled: Option<bool>,
 
-    /// 翻译选中文字的快捷键（配置 `[shortcut] translate_selection`）。
-    pub translate_keys: KeyCombo,
+    /// 翻译选中文字的快捷键（配置 `[shortcut] translate_selection`）; `None` 是关掉了.
+    pub translate_keys: Option<KeyCombo>,
 
     /// 进行中的「翻译选中文字」；有它时候选窗口显示的是译文（或「翻译中…」），按键先归它处理。
     pub translation: Option<TranslationJob>,

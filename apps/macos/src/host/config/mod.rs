@@ -26,9 +26,10 @@ impl Host {
         self.apply_scheme(config.general.scheme(), config.general.wubi());
         self.engine.set_learning(config.general.learning);
         logging::set_level(config.general.log_level);
-        self.translation_keys = config.shortcut.translation_keys();
-        self.delete_keys = config.shortcut.delete_keys();
-        self.translate_keys = config.shortcut.translate_selection;
+        let (translation, translation_second) = config.shortcut.translation_keys();
+        self.translation_keys = (translation.key(), translation_second.key());
+        self.delete_keys = config.shortcut.delete_keys().key();
+        self.translate_keys = config.shortcut.translate_selection.key();
         self.page_size = config.general.page_size();
         self.cloud_slots = config.predict.slots;
         self.page_keys = config.general.page_keys();

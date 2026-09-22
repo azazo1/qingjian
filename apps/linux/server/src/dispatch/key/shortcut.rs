@@ -7,7 +7,7 @@ use super::Effect;
 use crate::dispatch::Router;
 
 impl Router {
-    /// 配到哪组就上屏第一 / 第二个译词或删候选；哪组都不是返回 `None`，按普通键处理。
+    /// 配到哪组就上屏第一 / 第二个译词或删候选; 哪组都不是 (包括配成 `none` 关掉的那组) 返回 `None`, 按普通键处理.
     pub(super) fn apply_digit_shortcut(
         &mut self,
         digit: usize,
@@ -17,11 +17,11 @@ impl Router {
             return None;
         }
         let (first, second) = self.config.translation_keys;
-        let effect = if chord == first {
+        let effect = if Some(chord) == first {
             self.commit_translation_on_page(digit, 0)
-        } else if chord == second {
+        } else if Some(chord) == second {
             self.commit_translation_on_page(digit, 1)
-        } else if chord == self.config.delete_keys {
+        } else if Some(chord) == self.config.delete_keys {
             self.forget_on_page(digit)
         } else {
             return None;

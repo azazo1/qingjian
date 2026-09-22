@@ -206,6 +206,7 @@ IMK 输入法，源码按 `app / host / imk / candidates / menubar / preferences
   `reasoning_effort` 缺省 `none`，DeepSeek V4 默认思考，不关正文为空）；模糊音 `[fuzzy]` 默认都关；`[general]` 学习语言（`off` 不显示译文）/ 每页候选数 / 翻页键 / 外观 / 竖排横排 / 拼音显示位置 /
   英文模式候选开关 / 中文优先 `chinese_first` / 双拼方案 `shuangpin`（小鹤 / 自然码 / 微软 / 搜狗 / 智能ABC / 小浪 / 首道，空为全拼）/ 日志级别 `log_level`（缺省 info 不含敲的内容，debug 逐键记，热切换）/ 输入日志 `input_log`；
   `[shortcut]` 模式键 v / u、`question_mark`（缺省关，开了空缓冲区敲 `?` 进问字）、上屏第一 / 第二个译词的修饰键 `translation` / `translation_second`、删候选 `delete_candidate`（缺省 shift，用户词整删、词库词清学习）、翻译选中文字 `translate_selection`、
+  这四项都是 `KeyBinding`（`config/key_binding.rs`）：配着键或写 `none` 关掉，关掉的那项在壳里是 `None`，不命中也不占着那个组合（macOS 录制按钮按 ⌫ 清空、Windows 设置页有「不使用」一项）、
   中英切换 `switch_mode`（Windows 用）与 `mac_switch_single` / `mac_switch_dual` 两个开关加三个键位（macOS，两个开关可同时开；`mac_caps_lock_switch` 决定 Caps Lock 是否也切，偏好设置「通用」页可录制成带左右的修饰键或组合键）；
   `[apps] english_candidates_off` 按 bundle identifier 列出英文模式不给候选的应用（缺省终端 / 编辑器 / IDE，`*` 前缀匹配）；
   `[dictionaries] domains` 打开随包的领域词库（`Resources/dicts/` 11 本，缺省只开 `idioms`），`disabled` 关掉用户目录 `dicts/` 里的某本导入词库；

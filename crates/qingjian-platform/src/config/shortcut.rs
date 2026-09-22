@@ -1,6 +1,7 @@
 use qingjian_core::ModeKeys;
 use serde::{Deserialize, Serialize};
 
+use super::key_binding::KeyBinding;
 use super::key_combo::KeyCombo;
 use super::mac_switch::{MacSwitchKey, MacSwitchPlan};
 use super::modifiers::Modifiers;
@@ -33,17 +34,17 @@ pub struct ShortcutConfig {
     /// Caps Lock 是否也切中 / 英（缺省 true，与以前一致）；false 时它只当大小写锁，亮着敲字母直接上屏大写。
     pub mac_caps_lock_switch: bool,
 
-    /// 数字键配这些修饰键：上屏候选的第一个译词。
-    pub translation: Modifiers,
+    /// 数字键配这些修饰键: 上屏候选的第一个译词; 写 `none` 就是不用这一组.
+    pub translation: KeyBinding<Modifiers>,
 
-    /// 数字键配这些修饰键：上屏候选的第二个译词（候选右侧有两个译词时）。
-    pub translation_second: Modifiers,
+    /// 数字键配这些修饰键: 上屏候选的第二个译词 (候选右侧有两个译词时); 写 `none` 就是不用.
+    pub translation_second: KeyBinding<Modifiers>,
 
-    /// 把应用里选中的文字译成学习语言（需要云服务开着）。
-    pub translate_selection: KeyCombo,
+    /// 把应用里选中的文字译成学习语言 (需要云服务开着); 写 `none` 就是不用这个快捷键.
+    pub translate_selection: KeyBinding<KeyCombo>,
 
-    /// 数字键配这些修饰键：删掉候选（用户词整个删掉，词库词清掉对它的学习）。
-    pub delete_candidate: Modifiers,
+    /// 数字键配这些修饰键: 删掉候选 (用户词整个删掉, 词库词清掉对它的学习); 写 `none` 就是不用.
+    pub delete_candidate: KeyBinding<Modifiers>,
 }
 
 impl Default for ShortcutConfig {
@@ -62,39 +63,40 @@ impl Default for ShortcutConfig {
             mac_switch_english: MacSwitchKey::DEFAULT_ENGLISH.key_string(),
             mac_switch_chinese: MacSwitchKey::DEFAULT_CHINESE.key_string(),
             mac_caps_lock_switch: true,
-            translation,
-            translation_second,
-            translate_selection: KeyCombo::TRANSLATE_DEFAULT,
-            delete_candidate: Modifiers::SHIFT,
+            translation: KeyBinding::on(translation),
+            translation_second: KeyBinding::on(translation_second),
+            translate_selection: KeyBinding::on(KeyCombo::TRANSLATE_DEFAULT),
+            delete_candidate: KeyBinding::on(Modifiers::SHIFT),
         }
     }
 }
 
 impl ShortcutConfig {
-    /// 删候选的修饰键；为空或与任一组译词键撞了就退回缺省。
-    pub fn delete_keys(&self) -> Modifiers {
+    /// 删候选的修饰键; 写 `none` 就是不用, 与某一组译词键撞了才退回缺省.
+    pub fn delete_keys(&self) -> KeyBinding<Modifiers> {
+        let Some(keys) = self.delete_candidate.key() else {
+            return KeyBinding::Off;
+        };
         let (first, second) = self.translation_keys();
-        if self.delete_candidate.is_empty()
-            || self.delete_candidate == first
-            || self.delete_candidate == second
-        {
-            Self::default().delete_candidate
-        } else {
-            self.delete_candidate
+        if first.key() == Some(keys) || second.key() == Some(keys) {
+            tracing::warn!("删候选的快捷键与译词快捷键相同, 退回缺省");
+            return Self::default().delete_candidate;
         }
+        KeyBinding::on(keys)
     }
 
-    /// 两组译词修饰键；两组相同或有一组为空时整个退回缺省，不做一半。
-    pub fn translation_keys(&self) -> (Modifiers, Modifiers) {
-        if self.translation == self.translation_second
-            || self.translation.is_empty()
-            || self.translation_second.is_empty()
-        {
-            let default = Self::default();
-            (default.translation, default.translation_second)
-        } else {
+    /// 两组译词修饰键; 写 `none` 的那一组就是不用.
+    /// 两组都配着但相同 (配置写重了) 时整对退回缺省, 不做一半; 两组都关着就都关着.
+    pub fn translation_keys(&self) -> (KeyBinding<Modifiers>, KeyBinding<Modifiers>) {
+        if let (KeyBinding::On(first), KeyBinding::On(second)) =
             (self.translation, self.translation_second)
+            && first == second
+        {
+            tracing::warn!("两组译词快捷键相同, 整对退回缺省");
+            let default = Self::default();
+            return (default.translation, default.translation_second);
         }
+        (self.translation, self.translation_second)
     }
 
     /// 单键切换用的那个键；写坏了退回缺省并记一条警告。
@@ -174,7 +176,7 @@ mod tests {
         let swapped: ShortcutConfig =
             toml::from_str("translation = \"control+option\"\ntranslation_second = \"option\"\n")
                 .unwrap();
-        assert_eq!(swapped.translation_keys().1, Modifiers::OPTION);
+        assert_eq!(swapped.translation_keys().1, KeyBinding::on(Modifiers::OPTION));
     }
 
     #[test]
@@ -196,7 +198,28 @@ mod tests {
             .unwrap();
         let custom: ShortcutConfig =
             toml::from_str(&format!("delete_candidate = \"{}\"\n", free.key())).unwrap();
-        assert_eq!(custom.delete_keys(), free);
+        assert_eq!(custom.delete_keys(), KeyBinding::on(free));
+    }
+
+    #[test]
+    fn none_switches_a_shortcut_off() {
+        let off: ShortcutConfig = toml::from_str(
+            "translation = \"none\"\ntranslation_second = \"none\"\n\
+             delete_candidate = \"none\"\ntranslate_selection = \"none\"\n",
+        )
+        .unwrap();
+        let (first, second) = off.translation_keys();
+        assert!(first.is_off() && second.is_off());
+        // 关掉的一项不再被当成「撞车」而退回缺省
+        assert!(off.delete_keys().is_off());
+        assert_eq!(off.translate_selection.key(), None);
+
+        // 只关一组：另一组照旧跟着缺省
+        let default = ShortcutConfig::default();
+        let half: ShortcutConfig = toml::from_str("translation = \"none\"\n").unwrap();
+        let (first, second) = half.translation_keys();
+        assert!(first.is_off());
+        assert_eq!(second, default.translation_second);
     }
 
     #[test]

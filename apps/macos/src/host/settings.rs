@@ -4,7 +4,7 @@ use super::diagnostics::{copy_to_pasteboard, open_with_system};
 use super::*;
 use crate::preferences::DEFAULT_FONT_LABEL;
 use qingjian_decision::BackendKind;
-use qingjian_platform::{MacSwitchKey, ShiftLetter};
+use qingjian_platform::{KeyBinding, MacSwitchKey, ShiftLetter};
 
 impl Host {
     /// 写短语前读取文件；外部规则有变化时同步列表并请用户重新确认。
@@ -239,7 +239,7 @@ impl Host {
             (
                 Setting::TranslationKeys | Setting::TranslationSecondKeys,
                 SettingValue::Text(text),
-            ) => match text.parse::<Modifiers>() {
+            ) => match text.parse::<KeyBinding<Modifiers>>() {
                 Ok(chosen) => {
                     let (first, second) = config.shortcut.translation_keys();
                     let (name, other) = if setting == Setting::TranslationKeys {
@@ -247,35 +247,46 @@ impl Host {
                     } else {
                         ("translation_second", first)
                     };
-                    if chosen == other {
+                    // 两组都关着不算撞车; 只有两边都配着同一个修饰键才拦
+                    let clash = matches!(
+                        (chosen.key(), other.key()),
+                        (Some(chosen), Some(other)) if chosen == other
+                    );
+                    if clash {
                         tracing::warn!("两组译词快捷键不能相同，未改");
                     } else {
-                        self.settings.set_value("shortcut", name, chosen.key());
+                        self.settings.set_value("shortcut", name, chosen.to_string());
                     }
                 }
                 Err(error) => tracing::warn!(%error, "修饰键组合不合法，未改"),
             },
             (Setting::DeleteCandidateKeys, SettingValue::Text(text)) => {
-                match text.parse::<Modifiers>() {
+                match text.parse::<KeyBinding<Modifiers>>() {
                     Ok(chosen) => {
                         let (first, second) = config.shortcut.translation_keys();
-                        if chosen == first || chosen == second {
+                        let clash = chosen.key().is_some_and(|keys| {
+                            first.key() == Some(keys) || second.key() == Some(keys)
+                        });
+                        if clash {
                             tracing::warn!("删候选的快捷键不能与译词快捷键相同，未改");
                         } else {
-                            self.settings
-                                .set_value("shortcut", "delete_candidate", chosen.key());
+                            self.settings.set_value(
+                                "shortcut",
+                                "delete_candidate",
+                                chosen.to_string(),
+                            );
                         }
                     }
                     Err(error) => tracing::warn!(%error, "修饰键组合不合法，未改"),
                 }
             }
             (Setting::TranslateSelectionKeys, SettingValue::Text(text)) => {
-                match text.parse::<KeyCombo>() {
-                    Ok(combo) => {
+                match text.parse::<KeyBinding<KeyCombo>>() {
+                    Ok(chosen) => {
                         self.settings.set_value(
                             "shortcut",
                             "translate_selection",
-                            combo.key_string(),
+                            chosen.to_string(),
                         );
                     }
                     Err(error) => tracing::warn!(%error, "快捷键不合法，未改"),
@@ -322,21 +333,21 @@ impl Host {
                 self.settings
                     .set_bool("shortcut", "question_mark", defaults.mode.question_mark);
                 self.settings
-                    .set_value("shortcut", "translation", defaults.translation.key());
+                    .set_value("shortcut", "translation", defaults.translation.to_string());
                 self.settings.set_value(
                     "shortcut",
                     "translation_second",
-                    defaults.translation_second.key(),
+                    defaults.translation_second.to_string(),
                 );
                 self.settings.set_value(
                     "shortcut",
                     "translate_selection",
-                    defaults.translate_selection.key_string(),
+                    defaults.translate_selection.to_string(),
                 );
                 self.settings.set_value(
                     "shortcut",
                     "delete_candidate",
-                    defaults.delete_candidate.key(),
+                    defaults.delete_candidate.to_string(),
                 );
                 self.settings
                     .set_bool("shortcut", "mac_switch_single", defaults.mac_switch_single);

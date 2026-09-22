@@ -1,8 +1,8 @@
 //! 根组件的 Reactor 生命周期：建状态、按消息落盘、画左侧导航 + 当前页。
 
 use qingjian_platform::{
-    CandidateRenderer, Config, DEFAULT_ENGLISH_CANDIDATES_OFF_WINDOWS, LayoutMode, LogLevel,
-    PreeditMode, ShiftLetter, ThemeMode,
+    CandidateRenderer, Config, DEFAULT_ENGLISH_CANDIDATES_OFF_WINDOWS, KeyCombo, LayoutMode,
+    LogLevel, PreeditMode, ShiftLetter, ThemeMode,
 };
 use windows_reactor::*;
 
@@ -171,9 +171,21 @@ impl Component for Settings {
                 self.save("shortcut", "delete_candidate", shortcut::MODIFIERS[i].1);
             }
             Message::TranslateSelection(Some(i)) if i < shortcut::MODIFIERS.len() => {
-                let key = self.config.shortcut.translate_selection.key;
-                let combo = format!("{}+{key}", shortcut::MODIFIERS[i].1);
-                self.save("shortcut", "translate_selection", combo);
+                let value = match shortcut::MODIFIERS[i].1 {
+                    // 「不使用」直接写 none
+                    "none" => "none".to_owned(),
+                    modifiers => {
+                        // 关着的时候再挑修饰键, 就用缺省字母把这个键重新打开
+                        let key = self
+                            .config
+                            .shortcut
+                            .translate_selection
+                            .key()
+                            .map_or(KeyCombo::TRANSLATE_DEFAULT.key, |combo| combo.key);
+                        format!("{modifiers}+{key}")
+                    }
+                };
+                self.save("shortcut", "translate_selection", value);
             }
 
             // 模糊音页
