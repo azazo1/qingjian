@@ -2501,6 +2501,7 @@ dependencies = [
  "clap",
  "dotenvy",
  "qingjian-core",
+ "qingjian-decision",
  "qingjian-dictionary",
  "qingjian-learning",
  "qingjian-lm",

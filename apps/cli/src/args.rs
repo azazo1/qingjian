@@ -114,6 +114,23 @@ pub struct Args {
     #[arg(long)]
     pub neural_async: bool,
 
+    /// 决策模型重排: 后端 (laya 本地服务 / jev 云端接口). 给了就用它做整句重排, 与 `--neural` 二选一
+    #[arg(long, value_name = "后端")]
+    pub decision: Option<qingjian_decision::BackendKind>,
+
+    /// 决策模型的接口地址 (缺省按后端: laya 是 http://127.0.0.1:8080/api/predict, jev 是 https://api.typesafe.ai/v1/systemone)
+    #[arg(long)]
+    pub decision_endpoint: Option<String>,
+
+    /// 决策模型的单次请求超时 (毫秒, 缺省 5000: 云端一次判断要一两秒)
+    #[arg(long)]
+    pub decision_timeout: Option<u64>,
+
+    /// 决策分的跨度 (nat, 缺省 4.0): 同一批候选里模型最偏好的那条相对批内均值最多加这么多分.
+    /// 权重 λ 仍用 `--neural-weight` (缺省 0.5), 前文长度用 `--neural-context`
+    #[arg(long)]
+    pub decision_span: Option<f64>,
+
     /// 逐键模式：把每个输入当作一键一键敲进去，每个前缀都查一次，打印每键各阶段耗时（性能测试用）
     #[arg(long)]
     pub typing: bool,

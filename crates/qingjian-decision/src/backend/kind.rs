@@ -61,3 +61,12 @@ impl BackendKind {
         }
     }
 }
+
+impl std::str::FromStr for BackendKind {
+    type Err = String;
+
+    /// 配置文件与命令行走同一个写法 (`laya` / `jev`), 认不得的报错给调用方.
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
+        Self::from_key(value).ok_or_else(|| format!("unknown decision backend: {value}"))
+    }
+}

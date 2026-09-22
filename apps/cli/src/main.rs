@@ -230,6 +230,42 @@ fn build_engine(args: &Args) -> Result<Engine, CliError> {
             )
         };
     }
+    if let Some(kind) = args.decision {
+        // 密钥在配置文件同目录的 .env 里 (输入法就是这么读的), 这里也读一次,
+        // 免得评测前还要把密钥 export 到 shell
+        let config_file = args
+            .config
+            .clone()
+            .unwrap_or_else(args::default_config_file);
+        if let Some(dir) = config_file.parent() {
+            let _ = dotenvy::from_path_override(dir.join(".env"));
+        }
+        let decision_config = qingjian_decision::DecisionConfig {
+            enabled: true,
+            backend: kind,
+            endpoint: args.decision_endpoint.clone().unwrap_or_default(),
+            timeout_ms: args.decision_timeout.unwrap_or(5_000),
+            context_chars: args
+                .neural_context
+                .unwrap_or(qingjian_core::RESCORE_CONTEXT_CHARS),
+            span: args.decision_span.unwrap_or(4.0),
+            ..Default::default()
+        };
+        let scorer = qingjian_decision::DecisionScorer::new(&decision_config)?;
+        tracing::info!(
+            backend = kind.key(),
+            endpoint = decision_config.endpoint(),
+            timeout_ms = decision_config.timeout_ms,
+            span = decision_config.span,
+            "决策模型重排已启用"
+        );
+        engine = engine.with_sentence_scorer(
+            Box::new(scorer),
+            args.neural_weight,
+            args.neural_margin,
+            args.neural_context,
+        );
+    }
     let config_path = args
         .config
         .clone()

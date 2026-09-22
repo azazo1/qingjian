@@ -1,3 +1,4 @@
+use qingjian_decision::DecisionError;
 use qingjian_dictionary::DictionaryError;
 use qingjian_learning::LearningError;
 use qingjian_lm::LmError;
@@ -12,6 +13,9 @@ pub enum CliError {
 
     #[error(transparent)]
     Neural(#[from] NeuralError),
+
+    #[error(transparent)]
+    Decision(#[from] DecisionError),
 
     #[error(transparent)]
     Glossary(#[from] GlossaryError),
