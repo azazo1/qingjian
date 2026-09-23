@@ -149,7 +149,7 @@ impl GeneralPage {
         );
         let punctuation_first = checkbox(
             mtm,
-            "打拼音时敲标点先把候选上屏再补标点",
+            "标点符号自动上屏",
             Setting::PunctuationFirst,
             target,
         );

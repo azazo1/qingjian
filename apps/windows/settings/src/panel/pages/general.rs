@@ -120,7 +120,7 @@ pub(crate) fn view(settings: &Settings, context: &mut ViewContext<Settings>) -> 
                 .on_toggled(context.callback(Message::EnglishFullWidthPunctuation)),
         ),
         field(
-            "打拼音时敲标点先把候选上屏再补标点",
+            "标点符号自动上屏",
             "勾上后 nihao, 出「你好，」：不必先按空格再敲标点，标点按上面「中文模式标点转全角」转。\
              不勾（缺省）时组句中敲的标点进英文直输段，中文模式下可以直接打带标点的英文（hello, no-way）。\
              表达式与问字模式、以及配成翻页键的标点不受影响。",
