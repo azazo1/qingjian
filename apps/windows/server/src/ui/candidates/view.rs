@@ -462,6 +462,7 @@ fn tone_color(theme: &Theme, tone: Tone) -> COLORREF {
         Tone::Faint => theme.pos_color,
         Tone::Code => theme.gloss_color,
         Tone::Model => theme.fresh_color,
+        Tone::Frequency => theme.fresh_color,
     }
 }
 

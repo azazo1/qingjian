@@ -61,11 +61,11 @@ pub(crate) fn adjust_key(vk: u32) -> Option<bool> {
 /// 这个虚拟键码是不是调频修饰键的物理键（左右都算）。组句里它的按下 / 抬起要送 Server：
 /// Server 据此开关候选窗口里的频次预览（键本身照旧归应用，Server 回 Passthrough）。
 pub(crate) fn adjust_modifier_key(vk: u32, adjust: KeyModifiers) -> bool {
-    let is = |codes: [VIRTUAL_KEY; 3]| codes.iter().any(|code| u32::from(code.0) == vk);
-    (adjust.ctrl && is([VK_CONTROL, VK_LCONTROL, VK_RCONTROL]))
-        || (adjust.shift && is([VK_SHIFT, VK_LSHIFT, VK_RSHIFT]))
-        || (adjust.alt && is([VK_MENU, VK_LMENU, VK_RMENU]))
-        || (adjust.win && is([VK_LWIN, VK_RWIN]))
+    let key = VIRTUAL_KEY(vk as u16);
+    (adjust.ctrl && matches!(key, VK_CONTROL | VK_LCONTROL | VK_RCONTROL))
+        || (adjust.shift && matches!(key, VK_SHIFT | VK_LSHIFT | VK_RSHIFT))
+        || (adjust.alt && matches!(key, VK_MENU | VK_LMENU | VK_RMENU))
+        || (adjust.win && matches!(key, VK_LWIN | VK_RWIN))
 }
 
 fn current_modifiers(english_mode: bool) -> KeyModifiers {
