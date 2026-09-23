@@ -58,7 +58,8 @@ impl Router {
         let chord = event.modifiers.chord();
         let hit = |combo: Option<KeyCombo>| {
             combo.is_some_and(|combo| {
-                KeyModifiers::from(combo.modifiers) == chord && combo.key.eq_ignore_ascii_case(&typed)
+                KeyModifiers::from(combo.modifiers) == chord
+                    && combo.key.eq_ignore_ascii_case(&typed)
             })
         };
         let delta = if hit(self.config.highlight_down) {

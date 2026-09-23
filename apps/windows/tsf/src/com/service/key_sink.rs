@@ -564,8 +564,18 @@ mod tests {
         let down = Some(KeyCombo::HIGHLIGHT_DOWN);
         let up = Some(KeyCombo::HIGHLIGHT_UP);
         // 组句里: ⌃N / ⌃P 送 Server (那边与 ↓ / ↑ 同义)
-        assert!(eats_highlight(&with_modifiers(0x4E, 'n', ctrl), true, down, up));
-        assert!(eats_highlight(&with_modifiers(0x50, 'p', ctrl), true, down, up));
+        assert!(eats_highlight(
+            &with_modifiers(0x4E, 'n', ctrl),
+            true,
+            down,
+            up
+        ));
+        assert!(eats_highlight(
+            &with_modifiers(0x50, 'p', ctrl),
+            true,
+            down,
+            up
+        ));
         // 没在组句: 这两个键一个都不碰 (终端里 ⌃N 是下一行)
         assert!(!eats_highlight(
             &with_modifiers(0x4E, 'n', ctrl),

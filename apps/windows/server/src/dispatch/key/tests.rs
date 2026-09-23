@@ -160,7 +160,10 @@ fn highlight_keys_move_the_highlight_only_in_composition() {
     assert_eq!(key(&mut router, 0x4E, Some('n'), ctrl).2.highlight, 1);
     assert_eq!(key(&mut router, 0x4E, Some('n'), ctrl).2.highlight, 2);
     assert_eq!(key(&mut router, 0x50, Some('p'), ctrl).2.highlight, 1);
-    assert_eq!(key(&mut router, 0x50, Some('p'), ctrl).0, KeyOutcome::Consumed);
+    assert_eq!(
+        key(&mut router, 0x50, Some('p'), ctrl).0,
+        KeyOutcome::Consumed
+    );
     // 修饰键对不上 (⌃⇧N) 与别的字母 (⌃C) 照旧归应用
     assert_eq!(
         key(&mut router, 0x4E, Some('n'), shift_ctrl).0,

@@ -390,7 +390,8 @@ mod tests {
 
         // 两边写重了整个退回缺省, 不做一半
         let same: ShortcutConfig =
-            toml::from_str("highlight_down = \"control+n\"\nhighlight_up = \"control+n\"\n").unwrap();
+            toml::from_str("highlight_down = \"control+n\"\nhighlight_up = \"control+n\"\n")
+                .unwrap();
         assert_eq!(
             same.highlight_keys(),
             (default.highlight_down, default.highlight_up)
