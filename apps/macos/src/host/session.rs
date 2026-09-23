@@ -103,6 +103,17 @@ impl Session {
         true
     }
 
+    /// 把高亮落到文本是 `text` 的那个候选（重新查询之后用来把它留在原来那个词上，比如调频）。
+    /// 找不到、或本来就落在它上面都返回 `false`。
+    pub fn highlight_text(&mut self, text: &str) -> bool {
+        let index = (0..self.layout.len())
+            .find(|&index| self.layout.candidate(index).is_some_and(|c| c.text == text));
+        match index {
+            Some(index) if index != self.highlighted => self.land(Some(index)),
+            _ => false,
+        }
+    }
+
     /// 第 `index` 格的候选。
     pub fn candidate(&self, index: usize) -> Option<Candidate> {
         self.layout.candidate(index).cloned()
@@ -229,6 +240,21 @@ mod tests {
         assert!(session.move_rows(-1));
         let (cells, _) = session.grid_cells().unwrap();
         assert_eq!(cells.len(), 5);
+    }
+
+    #[test]
+    fn highlight_text_lands_on_the_named_candidate_and_follows_the_page() {
+        let mut session = Session::default();
+        session.reset(None, candidates(12), 5, 0);
+        assert_eq!((session.highlighted, session.page), (0, 0));
+        // 按文本落到第 8 个候选（第 2 页）：页码跟着走
+        assert!(session.highlight_text("本7"));
+        assert_eq!((session.highlighted, session.page), (7, 1));
+        // 同一个词再落一次：位置没变
+        assert!(!session.highlight_text("本7"));
+        // 不在这一批候选里的文本：不动
+        assert!(!session.highlight_text("没有这个词"));
+        assert_eq!((session.highlighted, session.page), (7, 1));
     }
 
     #[test]
