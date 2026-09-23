@@ -1,8 +1,8 @@
 //! 手动录入词组: 反查拼音, 解析拼音, 效果等同于选一次.
 
 use super::*;
-use crate::engine::learning::phrase::MAX_PHRASE_CHARS;
 use crate::engine::LearnPhraseError;
+use crate::engine::learning::phrase::MAX_PHRASE_CHARS;
 use crate::sentence::LanguageModel;
 
 const READINGS: &str = "\

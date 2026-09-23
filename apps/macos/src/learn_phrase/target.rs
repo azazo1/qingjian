@@ -6,7 +6,7 @@ use objc2_foundation::{NSNotification, NSObject, NSObjectProtocol};
 
 use crate::host;
 
-use super::window::{PINYIN_TAG, PHRASE_TAG};
+use super::window::{PHRASE_TAG, PINYIN_TAG};
 
 define_class!(
     // SAFETY: NSObject 没有子类化要求; 没有实现 Drop. 回调只转发到 Host.

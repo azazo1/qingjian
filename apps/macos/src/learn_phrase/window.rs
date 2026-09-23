@@ -52,10 +52,8 @@ pub struct LearnPhraseWindow {
 impl LearnPhraseWindow {
     pub fn new(mtm: MainThreadMarker) -> Self {
         let target = LearnPhraseTarget::new(mtm);
-        let panel = LearnPhrasePanel::new(
-            mtm,
-            NSRect::new(NSPoint::ZERO, NSSize::new(WIDTH, HEIGHT)),
-        );
+        let panel =
+            LearnPhrasePanel::new(mtm, NSRect::new(NSPoint::ZERO, NSSize::new(WIDTH, HEIGHT)));
         panel.setTitle(&NSString::from_str("录入词组"));
 
         let content = NSView::initWithFrame(
@@ -184,11 +182,7 @@ fn y_from_top(top: f64) -> f64 {
     HEIGHT - PAD - ROW - top
 }
 
-fn field(
-    mtm: MainThreadMarker,
-    tag: isize,
-    target: &LearnPhraseTarget,
-) -> Retained<NSTextField> {
+fn field(mtm: MainThreadMarker, tag: isize, target: &LearnPhraseTarget) -> Retained<NSTextField> {
     let field = NSTextField::initWithFrame(mtm.alloc(), NSRect::ZERO);
     field.setBezeled(true);
     field.setEditable(true);
@@ -219,19 +213,10 @@ fn button(
     }
 }
 
-fn place_row(
-    content: &NSView,
-    mtm: MainThreadMarker,
-    title: &str,
-    field: &NSTextField,
-    y: f64,
-) {
+fn place_row(content: &NSView, mtm: MainThreadMarker, title: &str, field: &NSTextField, y: f64) {
     let label = NSTextField::labelWithString(&NSString::from_str(title), mtm);
     label.setAlignment(NSTextAlignment::Right);
-    label.setFrame(NSRect::new(
-        NSPoint::new(PAD, y),
-        NSSize::new(LABEL_W, ROW),
-    ));
+    label.setFrame(NSRect::new(NSPoint::new(PAD, y), NSSize::new(LABEL_W, ROW)));
     let field_x = PAD + LABEL_W + 8.0;
     field.setFrame(NSRect::new(
         NSPoint::new(field_x, y),

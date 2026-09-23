@@ -14,8 +14,8 @@ pub(crate) mod phrase;
 
 pub use forgotten::Forgotten;
 pub use learner::{Learner, NoLearner};
-pub use phrase::LearnPhraseError;
 pub(super) use muted::MutedLearner;
+pub use phrase::LearnPhraseError;
 
 impl Engine {
     /// 取回释义兜底写好的释义，记进译者（个人释义表）；返回学了几条。壳定时调，不阻塞。

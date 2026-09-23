@@ -46,10 +46,7 @@ impl Engine {
     }
 
     /// 解析用户填的拼音 (空格 / `'` / 无分隔全拼), 校验每个都是完整音节且个数等于字数.
-    pub fn parse_phrase_pinyin(
-        text: &str,
-        pinyin: &str,
-    ) -> Result<Vec<String>, LearnPhraseError> {
+    pub fn parse_phrase_pinyin(text: &str, pinyin: &str) -> Result<Vec<String>, LearnPhraseError> {
         let chars = phrase_char_count(text)?;
         parse_syllables(pinyin, chars)
     }
@@ -118,7 +115,9 @@ impl Engine {
                 }
             }
         }
-        best.into_iter().map(|(text, (syllables, _))| (text, syllables)).collect()
+        best.into_iter()
+            .map(|(text, (syllables, _))| (text, syllables))
+            .collect()
     }
 }
 
