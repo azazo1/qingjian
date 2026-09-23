@@ -72,6 +72,10 @@ pub struct Router {
     /// 删候选后的屏幕提示，随下一帧下发、下一次按键清。
     notice: Option<String>,
 
+    /// 调频键（`[shortcut] adjust_frequency`，缺省 Ctrl）正按着：自绘候选窗在每行前面显示频次。
+    /// 只在组句里认，由 [`crate::dispatch::key::shortcut`] 里的修饰键事件开关。
+    preview_frequency: bool,
+
     /// 当前高亮候选在布局里的下标（跨页）。
     highlight: usize,
 
@@ -135,6 +139,7 @@ impl Router {
             selection_seq: 0,
             sentence: None,
             notice: None,
+            preview_frequency: false,
             highlight: 0,
             navigated: false,
             last_flush: Instant::now(),
@@ -160,6 +165,7 @@ impl Router {
             switch_mode: self.config.switch_mode,
             english_mode: self.config.english_mode,
             shift_letter_compose: self.config.shift_letter_compose,
+            adjust_frequency: self.config.adjust_keys,
         }
     }
 

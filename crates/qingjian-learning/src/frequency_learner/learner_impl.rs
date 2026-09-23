@@ -206,6 +206,31 @@ impl Learner for FrequencyLearner {
         true
     }
 
+    /// 手动调频就是「又选了一次」/「撤销一次选择」：走的是与上屏记账同一对表，所以与选择次数、
+    /// 按输入串记的选择始终一致。降到底（两个计数都已经是 0）什么都不改，返回来的还是 0。
+    fn adjust_frequency(&mut self, input: &str, text: &str, up: bool) -> (u32, u32) {
+        if text.is_empty() {
+            return (0, 0);
+        }
+        if up {
+            *self.counts.entry(text.to_owned()).or_default() += 1;
+            self.dirty = true;
+            self.record_choice(input, text);
+        } else {
+            if let Some(count) = self.counts.get_mut(text) {
+                *count = count.saturating_sub(1);
+                if *count == 0 {
+                    self.counts.remove(text);
+                }
+                self.dirty = true;
+            }
+            self.unrecord_choice(input, text);
+        }
+        let adjusted = (self.weight(text), self.choice_weight(input, text));
+        tracing::debug!(input, text, up, total = adjusted.0, selected = adjusted.1, "手动调整词频");
+        adjusted
+    }
+
     fn flush(&mut self) {
         let Some(path) = self.path.clone() else {
             return;

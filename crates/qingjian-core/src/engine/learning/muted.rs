@@ -157,6 +157,11 @@ impl Learner for MutedLearner {
         self.inner.forget_english(word)
     }
 
+    // 调频与删词同类，照做
+    fn adjust_frequency(&mut self, input: &str, text: &str, up: bool) -> (u32, u32) {
+        self.inner.adjust_frequency(input, text, up)
+    }
+
     fn flush(&mut self) {
         self.inner.flush();
     }

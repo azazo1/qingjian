@@ -59,6 +59,8 @@ pub(crate) enum Message {
     Translation(Option<usize>),
     TranslationSecond(Option<usize>),
     DeleteCandidate(Option<usize>),
+    /// 调频修饰键（组句里按住看频次，配 J / K 升降当前候选）。
+    AdjustFrequency(Option<usize>),
     /// 只换修饰键，字母键固定用当前的。
     TranslateSelection(Option<usize>),
 

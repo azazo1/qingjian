@@ -1,8 +1,9 @@
 //! 把 TSF 送来的虚拟键码翻成协议的 [`KeyEvent`]，以及「组句中哪些键要吃」的判定。
 
 use windows::Win32::UI::Input::KeyboardAndMouse::{
-    GetKeyState, VIRTUAL_KEY, VK_BACK, VK_CAPITAL, VK_CONTROL, VK_ESCAPE, VK_LWIN, VK_MENU,
-    VK_RETURN, VK_RWIN, VK_SHIFT, VK_SPACE, VK_TAB,
+    GetKeyState, VIRTUAL_KEY, VK_BACK, VK_CAPITAL, VK_CONTROL, VK_ESCAPE, VK_LCONTROL, VK_LMENU,
+    VK_LSHIFT, VK_LWIN, VK_MENU, VK_RCONTROL, VK_RETURN, VK_RMENU, VK_RSHIFT, VK_RWIN, VK_SHIFT,
+    VK_SPACE, VK_TAB,
 };
 
 use qingjian_platform::protocol::{KeyEvent, KeyModifiers};
@@ -46,6 +47,25 @@ fn is_digit(vk: u32) -> bool {
 /// 主键盘区 1–9（修饰键 + 数字的快捷键按这个认）。
 pub(crate) fn digit_key(vk: u32) -> bool {
     (0x31..=0x39).contains(&vk)
+}
+
+/// 主键盘区的 J / K：调频键配的两个字母（vim 键位），`true` 是升、`false` 是降。
+pub(crate) fn adjust_key(vk: u32) -> Option<bool> {
+    match vk {
+        0x4B => Some(true),
+        0x4A => Some(false),
+        _ => None,
+    }
+}
+
+/// 这个虚拟键码是不是调频修饰键的物理键（左右都算）。组句里它的按下 / 抬起要送 Server：
+/// Server 据此开关候选窗口里的频次预览（键本身照旧归应用，Server 回 Passthrough）。
+pub(crate) fn adjust_modifier_key(vk: u32, adjust: KeyModifiers) -> bool {
+    let is = |codes: [VIRTUAL_KEY; 3]| codes.iter().any(|code| u32::from(code.0) == vk);
+    (adjust.ctrl && is([VK_CONTROL, VK_LCONTROL, VK_RCONTROL]))
+        || (adjust.shift && is([VK_SHIFT, VK_LSHIFT, VK_RSHIFT]))
+        || (adjust.alt && is([VK_MENU, VK_LMENU, VK_RMENU]))
+        || (adjust.win && is([VK_LWIN, VK_RWIN]))
 }
 
 fn current_modifiers(english_mode: bool) -> KeyModifiers {

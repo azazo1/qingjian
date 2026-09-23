@@ -44,7 +44,7 @@ pub use input_log::{
     CommitEntry, INPUT_LOG_VERSION, InputLogEntry, InputLogger, InputSource, LOGGED_CANDIDATES,
     NoInputLogger,
 };
-pub use learning::{Forgotten, LearnPhraseError, Learner, NoLearner};
+pub use learning::{Forgotten, FrequencyChange, LearnPhraseError, Learner, NoLearner, WordFrequency};
 pub use marked::{AuxSegment, MarkedKind, MarkedSegment};
 pub use mode_keys::{ModeKeys, QUESTION_PREFIX};
 pub use prediction::{

@@ -18,6 +18,7 @@
 - 组句里的上屏改成延迟: 一段拼音还没选完时 (例如双拼 `bilw` 先选了 `避`, 还剩 `lw`), 选中的词先留在 preedit 里 (`避lw`), 等这段拼音选完、回车原样上屏、取消组句或失焦时才真正交给应用. 退格按后进先出先把这个词拆回候选 (键还回缓冲区, 候选重新按整段拼音算), 拆完再删拼音字符, 与 Rime 的退格手感一致; 见 `docs/notes/crate-notes.md` 的 Engine 一节.
 - 候选旁的模型标注: 被整句打分器重排过的候选, macOS 壳在其后标一个小字, 决策模型是 `AI 76% ↑2` (模型给这条的概率, 以及名次被抬了几位), 本地字级模型只标 `AI ↑2` (它的整句 log 概率不是概率, 折成百分比是假精度). Core 侧由 `Engine::model_hint` 给出 `ModelHint` (位移 + 置信度), 见 `docs/design/decision-models.md` 的模型标注一节.
 - macOS 候选窗 / 模式徽标的 NSPanel 层级从 `kCGPopUpMenuWindowLevel` (101) 抬到 `CGShieldingWindowLevel()`, 截屏软件标注界面里也能看到拼音行和候选 (popup menu 会被截屏覆盖层压住).
+- 候选词频次可调: 组句时按住调频键 (配置 `[shortcut] adjust_frequency`, 缺省 Ctrl) 时候选右侧显示每个词被选过的次数 (`频 全局/本串`), 同时按 K 升, 按 J 降当前高亮的候选, 每次升降等价于又选一次 / 撤销一次选择 (`Learner::adjust_frequency`), 降到底就停. 不在组句时这几个键一个都不拦 (终端里 Ctrl+J 仍是换行). macOS 壳在自己渲染时现算, Windows Server 的自绘候选窗与 Linux 的 fcitx5 面板走帧里的 `Frame::frequencies`. 见 `docs/user/getting-started/keys.md`.
 
 青简（Qingjian）是一个使用 **Rust** 开发的跨平台输入法。
 

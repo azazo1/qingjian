@@ -1,4 +1,4 @@
-//! 「快捷键」页：翻页键、模式键、译词上屏 / 删候选 / 翻译选中文字的组合键。
+//! 「快捷键」页: 翻页键, 模式键, 译词上屏 / 删候选 / 调频 / 翻译选中文字的组合键.
 
 use objc2::MainThreadMarker;
 use objc2::rc::Retained;
@@ -36,6 +36,9 @@ pub struct ShortcutsPage {
 
     /// 删除候选的修饰键。
     delete_candidate: Retained<KeyRecorder>,
+
+    /// 调频的修饰键（按住看频次，配 J / K 升降当前高亮的候选）。
+    adjust_frequency: Retained<KeyRecorder>,
 
     /// 翻译选中文字的组合键。
     translate_selection: Retained<KeyRecorder>,
@@ -131,6 +134,20 @@ impl ShortcutsPage {
             "按住修饰键再按候选序号：自己造的词、云端选过的词整个删掉；词库里的词清掉对它的学习记录，回到原来的排序。组句中要打感叹号先把词上屏。",
         );
         layout.space(GROUP_GAP);
+        let adjust_frequency = row_recorder(
+            layout,
+            mtm,
+            "调整候选词频",
+            Setting::AdjustFrequencyKeys,
+            RecorderKind::ModifiersOnly,
+            target,
+        );
+        note(
+            layout,
+            mtm,
+            "组句时按住这个修饰键, 候选右侧显示每个词被选过的次数 (全局 / 这个输入串下各多少次), 同时按 K 升, 按 J 降当前高亮的候选. 每次升降相当于又选一次 / 撤销一次选择. 不在组句时这几个键一律不拦.",
+        );
+        layout.space(GROUP_GAP);
         let translate_selection = row_recorder(
             layout,
             mtm,
@@ -169,6 +186,7 @@ impl ShortcutsPage {
             translation,
             translation_second,
             delete_candidate,
+            adjust_frequency,
             translate_selection,
         }
     }
@@ -198,6 +216,7 @@ impl ShortcutsPage {
         show_modifiers(&self.translation, first);
         show_modifiers(&self.translation_second, second);
         show_modifiers(&self.delete_candidate, config.shortcut.delete_keys());
+        show_modifiers(&self.adjust_frequency, config.shortcut.adjust_frequency);
         show_combo(
             &self.translate_selection,
             config.shortcut.translate_selection,

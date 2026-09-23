@@ -1,4 +1,4 @@
-//! 「快捷键」页：翻页键、模式键，译词 / 删候选 / 翻译选中文字的修饰键。
+//! 「快捷键」页: 翻页键, 模式键, 译词 / 删候选 / 调频 / 翻译选中文字的修饰键.
 //! 翻译选中文字只改修饰键，字母键固定用配置里当前的；要换字母直接改 `config.toml`。
 //! 每一项都能选「不使用」: 写进配置是 `none`, 这项键从此不生效.
 
@@ -99,6 +99,14 @@ pub(crate) fn view(settings: &Settings, context: &mut ViewContext<Settings>) -> 
             modifier_combo(
                 s.delete_candidate,
                 context.callback(Message::DeleteCandidate),
+            ),
+        ),
+        field(
+            "调整候选词频",
+            "组句时按住这个修饰键, 候选右侧显示每个词被选过的次数 (全局 / 这个输入串下各多少次), 同时按 K 升, 按 J 降当前高亮的候选. 每次升降相当于又选一次 / 撤销一次选择. 不在组句时这几个键一律不拦.",
+            modifier_combo(
+                s.adjust_frequency,
+                context.callback(Message::AdjustFrequency),
             ),
         ),
         field(

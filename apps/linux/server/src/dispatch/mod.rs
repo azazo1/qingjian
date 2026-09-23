@@ -45,6 +45,10 @@ pub struct Router {
     /// 删除候选等操作提示。
     notice: Option<String>,
 
+    /// 调频键（`[shortcut] adjust_frequency`，缺省 Ctrl）正按着：帧里带上每个候选的频次，面板照它画。
+    /// 只在组句里认，由 [`crate::dispatch::key::shortcut`] 里的修饰键事件开关。
+    preview_frequency: bool,
+
     /// 全服务帧号递增，关闭再开不会复用展示身份。
     display_revision: u64,
 
@@ -66,6 +70,7 @@ impl Router {
             navigated: false,
             sentence: None,
             notice: None,
+            preview_frequency: false,
             display_revision: 0,
             last_flush: Instant::now(),
         }

@@ -109,6 +109,7 @@ impl Metrics<'_> {
             Tone::Faint => self.theme.colors.pos,
             Tone::Code => self.theme.colors.gloss,
             Tone::Model => self.theme.colors.fresh,
+            Tone::Frequency => self.theme.colors.fresh,
         }
     }
 

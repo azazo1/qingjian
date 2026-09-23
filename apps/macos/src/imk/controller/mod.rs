@@ -17,6 +17,7 @@ use crate::candidates::Preedit;
 use crate::host;
 use crate::menubar;
 
+mod adjust;
 mod command;
 mod commit;
 mod display;
@@ -190,6 +191,15 @@ fn digit_key(key_code: u16) -> Option<usize> {
     })
 }
 
+/// 调频键的字母（vim 键位）：K 升、J 降。按的是别的字母就返回 `None`，键照旧归应用。
+fn adjust_key(typed: char) -> Option<bool> {
+    match typed {
+        'k' => Some(true),
+        'j' => Some(false),
+        _ => None,
+    }
+}
+
 impl QingjianInputController {
     /// IMK 送来的事件分发：按键走 [`Self::dispatch_key_down`]，修饰键的按下抬起走 [`Self::dispatch_modifier_change`]，
     /// 其余（鼠标之类，我们没声明）一律放行。
@@ -212,7 +222,8 @@ impl QingjianInputController {
         handled
     }
 
-    /// 修饰键按下 / 抬起（`flagsChanged`）：配置成切换键的修饰键单击一下切中 / 英。
+    /// 修饰键按下 / 抬起（`flagsChanged`）：配置成切换键的修饰键单击一下切中 / 英；
+    /// 调频键（缺省 ⌃）按下 / 松开时重画一次候选窗，把每个词的频次显示出来 / 收起来。
     ///
     /// 始终返回 false 放行：⌘ / ⇧ / ⌥ / ⌃ 是系统与应用都要的状态，输入法只旁听，绝不吞掉。
     fn dispatch_modifier_change(&self, event: &NSEvent, client: TextClient<'_>) -> bool {
@@ -228,6 +239,16 @@ impl QingjianInputController {
             host::with(|h| h.switch_keys.modifier_changed(key, down, &h.mac_switch)).flatten();
         if let Some(action) = action {
             self.apply_switch(action, client);
+        }
+        // 调频预览：组句里按着的修饰键正好是调频键时显示频次，松开就收起来（只在变化那一次重画）
+        let pressed = modifiers::from_flags(event.modifierFlags());
+        let preview_changed = host::with(|h| {
+            let preview = !h.engine.composition().is_empty() && h.adjust_keys == Some(pressed);
+            std::mem::replace(&mut h.preview_frequency, preview) != preview
+        })
+        .unwrap_or(false);
+        if preview_changed {
+            self.render(client);
         }
         false
     }
@@ -250,6 +271,12 @@ impl QingjianInputController {
         };
         // 提示在显示：敲任何键先收掉，键照常处理
         host::with(|h| h.clear_notice());
+        // 调频预览：组句里按着调频键（缺省 ⌃）就把每个候选的频次画出来。每键都按当前修饰键状态同步一次，
+        // 组句结束、窗口收起时由 `Host::render` 复位
+        host::with(|h| {
+            h.preview_frequency =
+                h.adjust_keys == Some(pressed) && !h.engine.composition().is_empty();
+        });
         // 敲的是哪个字符（忽略修饰键的影响：⌥T 仍然是 t），切换键与翻译快捷键都按它认
         let typed = event
             .charactersIgnoringModifiers()
@@ -299,6 +326,18 @@ impl QingjianInputController {
             if host::with(|h| h.delete_keys).unwrap_or_default() == Some(pressed) {
                 return self.handle_delete_key(digit, client);
             }
+        }
+        // 调频键（缺省 ⌃）+ J / K：把当前高亮的候选降 / 升一格。与数字快捷键一样只在组句里认，
+        // 组句外 ⌃J / ⌃K 原样归应用（终端里 ⌃J 是换行，编辑器里 ⌃K 是删到行尾）
+        if composing
+            && !expression
+            && host::with(|h| h.adjust_keys).unwrap_or_default() == Some(pressed)
+            && let Some(up) = typed
+                .as_deref()
+                .and_then(|text| text.chars().next())
+                .and_then(adjust_key)
+        {
+            return self.handle_adjust_key(up, client);
         }
         let selector = match key {
             36 | 76 => Some(sel!(insertNewline:)),

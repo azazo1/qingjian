@@ -7,13 +7,16 @@ use windows::Win32::UI::Input::KeyboardAndMouse::VK_CAPITAL;
 use windows::Win32::UI::TextServices::{ITfContext, ITfKeyEventSink_Impl};
 use windows::core::{BOOL, GUID, Ref, Result};
 
-use qingjian_platform::protocol::{KeyEvent, KeyOutcome};
+use qingjian_platform::protocol::{KeyEvent, KeyModifiers, KeyOutcome};
 
 use super::TextService_Impl;
 use super::next::Next;
 use crate::client::KeyReply;
 use crate::com::composition::preedit_string;
-use crate::com::key::event::{digit_key, is_edit, is_letter, is_mode_letter, is_nav, to_key_event};
+use crate::com::key::event::{
+    adjust_key, adjust_modifier_key, digit_key, is_edit, is_letter, is_mode_letter, is_nav,
+    to_key_event,
+};
 use crate::com::key::preserved;
 use crate::com::log::log;
 
@@ -56,8 +59,10 @@ impl ITfKeyEventSink_Impl for TextService_Impl {
         Ok(FALSE)
     }
 
-    fn OnKeyUp(&self, _pic: Ref<ITfContext>, wparam: WPARAM, _lparam: LPARAM) -> Result<BOOL> {
-        self.note_key_up(wparam.0 as u32);
+    fn OnKeyUp(&self, pic: Ref<ITfContext>, wparam: WPARAM, _lparam: LPARAM) -> Result<BOOL> {
+        let vk = wparam.0 as u32;
+        self.note_key_up(vk);
+        self.forward_adjust_release(pic, vk);
         Ok(FALSE)
     }
 
@@ -127,16 +132,17 @@ impl TextService_Impl {
     /// 组句中功能键 / 方向键 / 可打印字符都吃；没在组句时数字 / 标点也先「测吃」送去转全角（中英各有一份开关），
     /// Server 不转的回 Passthrough 再放行；`?` 是问字前缀。
     fn would_eat(&self, event: &KeyEvent) -> bool {
-        let shift_letter_compose = self
-            .input_settings
-            .get()
-            .is_some_and(|input| input.shift_letter_compose);
-        eats_key(
-            event,
-            self.shared.composing(),
-            self.shared.translating(),
-            shift_letter_compose,
-        )
+        let input = self.input_settings.get();
+        let shift_letter_compose = input.is_some_and(|input| input.shift_letter_compose);
+        let composing = self.shared.composing();
+        // 调频键（缺省 Ctrl）在组句里另算：修饰键本身（开关频次预览）与它配的 J / K（升降候选）都送 Server
+        eats_adjust(event, composing, input.and_then(|input| input.adjust_frequency))
+            || eats_key(
+                event,
+                composing,
+                self.shared.translating(),
+                shift_letter_compose,
+            )
     }
 
     /// 不吃的键绝不碰组句（否则光标一移，组句会把拼音重插到别处）。
@@ -145,6 +151,22 @@ impl TextService_Impl {
             return false;
         }
         self.forward_key(pic, event)
+    }
+
+    /// 组句期间调频修饰键抬起（`OnKeyUp` 里叫）：告诉 Server 收起频次预览。
+    /// 修饰键本身归应用，所以只发一条 `release` 事件、不看回话（Server 一律回 Passthrough）。
+    fn forward_adjust_release(&self, pic: Ref<ITfContext>, vk: u32) {
+        let Some(adjust) = self
+            .input_settings
+            .get()
+            .and_then(|input| input.adjust_frequency)
+        else {
+            return;
+        };
+        if !self.shared.composing() || !adjust_modifier_key(vk, adjust) {
+            return;
+        }
+        let _ = self.forward_key(pic, self.key_event(vk).released());
     }
 
     /// 把按键送给 Server 并按结果更新文档；返回吃不吃。
@@ -286,6 +308,20 @@ fn eats_without_server(event: &KeyEvent) -> bool {
         && !(event.modifiers.caps || event.modifiers.english_mode)
 }
 
+/// 组句里的调频键（配置 `[shortcut] adjust_frequency`，缺省 Ctrl）吃不吃：调频修饰键本身与它配的
+/// J / K 都送 Server（前者开关频次预览，后者升降当前高亮的候选），其余带修饰键的键照旧归应用。
+/// `composing` 是硬条件：不在组句时这几个键一个都不碰（终端里 Ctrl+J 是换行，编辑器里 Ctrl+K 删到行尾）。
+fn eats_adjust(event: &KeyEvent, composing: bool, adjust: Option<KeyModifiers>) -> bool {
+    if !composing {
+        return false;
+    }
+    let Some(adjust) = adjust else {
+        return false;
+    };
+    adjust_modifier_key(event.virtual_key, adjust)
+        || (event.modifiers.chord() == adjust && adjust_key(event.virtual_key).is_some())
+}
+
 /// 这个键吃不吃（[`TextService_Impl::would_eat`] 的纯逻辑，便于单测）。
 ///
 /// - 翻译评审中一律吃，交给 Server 定接受 / 取消；
@@ -329,7 +365,7 @@ fn eats_key(
 mod tests {
     use qingjian_platform::protocol::{KeyEvent, KeyModifiers};
 
-    use super::{eats_key, eats_without_server};
+    use super::{eats_adjust, eats_key, eats_without_server};
     use crate::com::key::event::to_key_event;
 
     /// 中文模式（`caps` / `english_mode` 都灭）。
@@ -441,5 +477,46 @@ mod tests {
             ..combo.modifiers
         };
         assert!(!eats_without_server(&combo));
+    }
+
+    #[test]
+    fn adjust_keys_are_eaten_only_in_composition() {
+        let ctrl = KeyModifiers {
+            ctrl: true,
+            ..KeyModifiers::default()
+        };
+        // 组句里：⌃ 本身（开关频次预览）与它配的 J / K（升降候选）都归我们
+        let modifier = KeyEvent::new(0x11, None, ctrl);
+        assert!(eats_adjust(&modifier, true, Some(ctrl)));
+        assert!(eats_adjust(&with_modifiers(0x4B, 'k', ctrl), true, Some(ctrl)));
+        assert!(eats_adjust(&with_modifiers(0x4A, 'j', ctrl), true, Some(ctrl)));
+        // 没在组句：这几个键一个都不碰（⌃J 是应用的换行）
+        assert!(!eats_adjust(
+            &with_modifiers(0x4A, 'j', ctrl),
+            false,
+            Some(ctrl)
+        ));
+        assert!(!eats_adjust(&modifier, false, Some(ctrl)));
+        // 配成 none / 别的修饰键组合：照旧归应用
+        assert!(!eats_adjust(
+            &with_modifiers(0x4A, 'j', ctrl),
+            true,
+            None
+        ));
+        let ctrl_shift = KeyModifiers {
+            shift: true,
+            ..ctrl
+        };
+        assert!(!eats_adjust(
+            &with_modifiers(0x4A, 'j', ctrl_shift),
+            true,
+            Some(ctrl)
+        ));
+        // 调频键之外的 ⌃ 组合（⌃C）也不吃
+        assert!(!eats_adjust(
+            &with_modifiers(0x43, 'c', ctrl),
+            true,
+            Some(ctrl)
+        ));
     }
 }

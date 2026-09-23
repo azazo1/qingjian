@@ -73,7 +73,11 @@ impl RenderData {
             .items
             .iter()
             .enumerate()
-            .map(|(i, candidate)| row::from_candidate(i, candidate, self.show_code))
+            .map(|(i, candidate)| {
+                // 调频键按住时 Server 会在帧里带上每个候选的频次（与候选逐项平行）
+                let frequency = frame.frequencies.get(i).copied().flatten();
+                row::from_candidate(i, candidate, self.show_code, frequency)
+            })
             .collect();
         self.highlight = frame.highlight;
         self.footer =

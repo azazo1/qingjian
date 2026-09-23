@@ -246,6 +246,30 @@ fn forget_removes_the_user_word_and_every_trace_of_learning() {
 }
 
 #[test]
+fn adjust_frequency_counts_up_and_stops_at_zero() {
+    let mut learner = FrequencyLearner::default();
+    // 升频就是又选了一次：全局计数与当前输入串下的选择一起加
+    assert_eq!(learner.adjust_frequency("kaifa", "开发", true), (1, 1));
+    assert_eq!(learner.adjust_frequency("kaifa", "开发", true), (2, 2));
+    assert_eq!(learner.choice_weight("kf", "开发"), 0, "别的输入串只看到全局计数");
+    // 降频就是撤销一次选择，到 0 把条目清掉，再降还是 0
+    assert_eq!(learner.adjust_frequency("kaifa", "开发", false), (1, 1));
+    assert_eq!(learner.adjust_frequency("kaifa", "开发", false), (0, 0));
+    assert_eq!(learner.adjust_frequency("kaifa", "开发", false), (0, 0));
+    assert!(learner.is_empty());
+    assert_eq!(learner.choice_weight("kaifa", "开发"), 0);
+}
+
+#[test]
+fn adjust_frequency_without_input_only_moves_the_global_count() {
+    let mut learner = FrequencyLearner::default();
+    assert_eq!(learner.adjust_frequency("", "开发", true), (1, 0));
+    assert_eq!(learner.weight("开发"), 1);
+    assert_eq!(learner.adjust_frequency("", "开发", false), (0, 0));
+    assert!(learner.is_empty());
+}
+
+#[test]
 fn user_words_round_trip_through_tsv_and_form_a_dictionary() {
     let dir = std::env::temp_dir().join("qingjian-user-words-test");
     std::fs::create_dir_all(&dir).unwrap();

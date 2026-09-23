@@ -285,6 +285,19 @@ impl Host {
                     Err(error) => tracing::warn!(%error, "修饰键组合不合法，未改"),
                 }
             }
+            (Setting::AdjustFrequencyKeys, SettingValue::Text(text)) => {
+                // 调频键不需要与别的快捷键比：它配的是「按住看频次」与 J / K，不占数字键
+                match text.parse::<KeyBinding<Modifiers>>() {
+                    Ok(chosen) => {
+                        self.settings.set_value(
+                            "shortcut",
+                            "adjust_frequency",
+                            chosen.to_string(),
+                        );
+                    }
+                    Err(error) => tracing::warn!(%error, "修饰键组合不合法，未改"),
+                }
+            }
             (Setting::TranslateSelectionKeys, SettingValue::Text(text)) => {
                 match text.parse::<KeyBinding<KeyCombo>>() {
                     Ok(chosen) => {
@@ -356,6 +369,11 @@ impl Host {
                     "shortcut",
                     "delete_candidate",
                     defaults.delete_candidate.to_string(),
+                );
+                self.settings.set_value(
+                    "shortcut",
+                    "adjust_frequency",
+                    defaults.adjust_frequency.to_string(),
                 );
                 self.settings
                     .set_bool("shortcut", "mac_switch_single", defaults.mac_switch_single);

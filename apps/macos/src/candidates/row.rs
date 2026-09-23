@@ -16,6 +16,9 @@ pub enum Tone {
 
     /// 模型重排的置信度小标 (`AI 87%`), 用强调色.
     Model,
+
+    /// 调频预览的频次 (`频 3/1`, 调频键按住时才有), 用强调色.
+    Frequency,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

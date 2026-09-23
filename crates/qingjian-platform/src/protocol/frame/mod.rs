@@ -6,7 +6,7 @@ pub use preedit::{PreeditKind, PreeditSegment};
 
 use serde::{Deserialize, Serialize};
 
-use qingjian_core::CandidateList;
+use qingjian_core::{CandidateList, WordFrequency};
 
 use crate::{LayoutMode, PreeditMode, ThemeMode};
 
@@ -27,6 +27,12 @@ pub struct Frame {
 
     /// 当前页的候选（已排好序、不带译文由后续 [`super::ServerMessage::Update`] 补）。
     pub candidates: CandidateList,
+
+    /// 调频预览：与 [`candidates`](Self::candidates) 逐项平行的学习计数，按住调频键时才有，空 vec 表示不显示。
+    /// 没有词频可调的候选（整句 / 快捷 / emoji / 自定义规则）那一项是 `None`。字段是后来加的，
+    /// 老 DLL 忽略它、老 Server 不发它，两头都读成「不显示」（macOS 壳不走这条协议，自己按 Engine 现算）。
+    #[serde(default)]
+    pub frequencies: Vec<Option<WordFrequency>>,
 
     /// 当前页里高亮的候选下标（页内，从 0 起）。
     pub highlight: usize,

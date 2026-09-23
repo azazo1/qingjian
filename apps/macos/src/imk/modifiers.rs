@@ -2,7 +2,18 @@
 //! 左右修饰键则从 flagsChanged 事件的键码认。
 
 use objc2_app_kit::{NSEvent, NSEventModifierFlags};
-use qingjian_platform::MacModifier;
+use qingjian_platform::{MacModifier, Modifiers};
+
+/// 事件标志位里的修饰键组合（不算 Caps Lock：它是状态型的大小写锁，不是修饰键）。
+/// 调频预览要拿它与 `[shortcut] adjust_frequency` 比，看调频键是不是正按着。
+pub fn from_flags(flags: NSEventModifierFlags) -> Modifiers {
+    Modifiers {
+        option: flags.contains(NSEventModifierFlags::Option),
+        shift: flags.contains(NSEventModifierFlags::Shift),
+        control: flags.contains(NSEventModifierFlags::Control),
+        command: flags.contains(NSEventModifierFlags::Command),
+    }
+}
 
 /// Caps Lock 亮着。它是**状态型**的：参与中 / 英切换时（见配置 `[shortcut] mac_caps_lock_switch`）
 /// 亮着就是英文模式；不参与时只当大小写锁，亮着敲字母直接上屏大写。

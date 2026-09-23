@@ -15,6 +15,8 @@ impl Router {
         self.navigated = false;
         self.sentence = None;
         if self.engine.composition().is_empty() {
+            // 没在组句就没有候选可调，频次预览跟着归位
+            self.preview_frequency = false;
             self.composed = None;
             return;
         }
@@ -112,6 +114,16 @@ impl Router {
         }
     }
 
+    /// 当前排布里文本是 `text` 的第一个候选下标（跨页）：调频之后把高亮落回原来那个词，
+    /// 连着按 K / J 调的还是同一个候选。
+    pub(super) fn index_of_candidate(&self, text: &str) -> Option<usize> {
+        match &self.composed {
+            Some(Composed::Candidates { layout, .. }) => (0..layout.len())
+                .find(|index| layout.candidate(*index).is_some_and(|c| c.text == text)),
+            _ => None,
+        }
+    }
+
     pub(super) fn commit_index(&mut self, index: usize) -> Option<String> {
         let candidate = self.layout_candidate(index)?;
         // 这段拼音还没选完时 Engine 返回空串：选中的词留在那边等组句结束，这次不上屏
@@ -139,6 +151,7 @@ impl Router {
                 aux_code_show: false,
                 sentence: None,
                 notice: self.notice.clone(),
+                frequencies: Vec::new(),
             },
             Some(Composed::Candidates {
                 preedit,
@@ -165,6 +178,16 @@ impl Router {
                     .collect();
                 let mut candidates = CandidateList { items };
                 self.engine.annotate(&mut candidates);
+                // 调频键按住时把每个候选的频次一起下发（面板照它画），空 vec 表示不显示
+                let frequencies = if self.preview_frequency {
+                    candidates
+                        .items
+                        .iter()
+                        .map(|candidate| self.engine.frequency_of(candidate))
+                        .collect()
+                } else {
+                    Vec::new()
+                };
                 Frame {
                     preedit: preedit.clone(),
                     cursor: *cursor,
@@ -178,6 +201,7 @@ impl Router {
                     aux_code_show: false,
                     sentence: self.sentence.clone(),
                     notice: self.notice.clone(),
+                    frequencies,
                 }
             }
         }

@@ -117,6 +117,22 @@ impl Learner for CountingLearner {
     fn raw_count(&self, input: &str) -> u32 {
         self.0.get(&format!("{input}\t<raw>")).copied().unwrap_or(0)
     }
+
+    /// 手动调频与上屏记账走同一对键，方便断言「等价于又选一次 / 撤销一次」。
+    fn adjust_frequency(&mut self, input: &str, text: &str, up: bool) -> (u32, u32) {
+        let keys = [text.to_owned(), format!("{input}\t{text}")];
+        for key in &keys {
+            if up {
+                *self.0.entry(key.clone()).or_default() += 1;
+            } else if let Some(count) = self.0.get_mut(key) {
+                *count = count.saturating_sub(1);
+                if *count == 0 {
+                    self.0.remove(key);
+                }
+            }
+        }
+        (self.weight(text), self.choice_weight(input, text))
+    }
 }
 
 struct FixedTranslator;

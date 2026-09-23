@@ -128,6 +128,13 @@ pub struct Host {
     /// 配数字键删候选的修饰键（配置 `[shortcut] delete_candidate`）; `None` 是关掉了.
     pub delete_keys: Option<Modifiers>,
 
+    /// 调频的修饰键（配置 `[shortcut] adjust_frequency`）; `None` 是关掉了.
+    /// 组句时按住它, 窗口里显示每个候选的频次, 同时配 K / J 升降当前高亮的那个.
+    pub adjust_keys: Option<Modifiers>,
+
+    /// 调频修饰键正按着: 渲染时候选行多一段频次（只在组句里认, 见 `dispatch_modifier_change`）。
+    pub preview_frequency: bool,
+
     /// 候选窗口顶行显示的一句临时状态（删了什么词），下一次查询就没了。
     pub status: Option<String>,
 

@@ -47,3 +47,23 @@ pub(crate) fn digit_key(virtual_key: u32) -> Option<usize> {
 pub(crate) fn is_keypad(virtual_key: u32) -> bool {
     (0x60..=0x6F).contains(&virtual_key)
 }
+
+/// 主键盘区的 J / K：调频键配的两个字母（vim 键位），`true` 是升、`false` 是降。
+pub(crate) fn adjust_key(virtual_key: u32) -> Option<bool> {
+    match virtual_key {
+        0x4B => Some(true),
+        0x4A => Some(false),
+        _ => None,
+    }
+}
+
+/// 修饰键的物理键码：Windows 的 VK 值，加上 fcitx5 送来的 X11 keysym
+/// （`mapKey` 只把 Shift 映射成了 VK，Ctrl / Alt / Super 仍是 keysym 原值）。
+pub(crate) fn is_modifier_key(virtual_key: u32) -> bool {
+    matches!(
+        virtual_key,
+        0x10 | 0x11 | 0x12 // Shift / Ctrl / Alt（Windows VK）
+            | 0xA0..=0xA5 | 0x5B | 0x5C
+            | 0xFFE1..=0xFFE4 | 0xFFE7..=0xFFEE // X11: Shift / Ctrl, Meta / Alt / Super / Hyper
+    )
+}

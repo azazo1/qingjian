@@ -183,6 +183,9 @@ impl Component for Settings {
             Message::DeleteCandidate(Some(i)) if i < shortcut::MODIFIERS.len() => {
                 self.save("shortcut", "delete_candidate", shortcut::MODIFIERS[i].1);
             }
+            Message::AdjustFrequency(Some(i)) if i < shortcut::MODIFIERS.len() => {
+                self.save("shortcut", "adjust_frequency", shortcut::MODIFIERS[i].1);
+            }
             Message::TranslateSelection(Some(i)) if i < shortcut::MODIFIERS.len() => {
                 let value = match shortcut::MODIFIERS[i].1 {
                     // 「不使用」直接写 none
