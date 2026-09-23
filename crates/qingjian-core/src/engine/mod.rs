@@ -101,7 +101,7 @@ pub struct Engine {
     phrase_readings: std::cell::RefCell<Option<HashMap<String, (String, u32)>>>,
 
     /// 用户词反查, 以及建表时 `user_words()` 的地址. 用户词库一重建地址就变, 下次反查重做这一小份.
-    user_phrase_readings: std::cell::RefCell<Option<(usize, HashMap<String, (String, u32)>)>>,
+    user_phrase_readings: std::cell::RefCell<Option<learning::phrase::UserPhraseReadings>>,
 
     /// 英文候选的释义（英→中），缺省为 [`NoTranslator`]。英文候选的辅助语言是主语言中文，
     /// 与中文候选查学习语言的表分开，仍是「一个候选只显示一种辅助语言」。

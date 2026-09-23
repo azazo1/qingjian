@@ -17,6 +17,12 @@ pub use error::LearnPhraseError;
 /// 手录词组的字数上限. 自动造词另有 4 字上限, 那条管的是上屏接续, 不限制这里.
 pub const MAX_PHRASE_CHARS: usize = 32;
 
+/// 用户词反查缓存. `addr` 是建表时 `user_words()` 的地址, 词库对象换了就整份作废.
+pub(in crate::engine) struct UserPhraseReadings {
+    addr: usize,
+    readings: HashMap<String, (String, u32)>,
+}
+
 impl Engine {
     /// 给一段汉字猜全拼音节: 整词命中 (词频最高的读音) 优先, 否则按语言模型切开再查, 再否则逐字取单字最高频读音.
     /// 任一汉字在词库里没有读音就返回 `None`, 留给用户手填.
@@ -125,7 +131,7 @@ impl Engine {
             .user_phrase_readings
             .borrow()
             .as_ref()
-            .is_some_and(|(cached, _)| *cached == addr)
+            .is_some_and(|cached| cached.addr == addr)
         {
             return;
         }
@@ -133,7 +139,7 @@ impl Engine {
             Some(dictionary) => build_readings(std::slice::from_ref(&dictionary)),
             None => HashMap::new(),
         };
-        *self.user_phrase_readings.borrow_mut() = Some((addr, readings));
+        *self.user_phrase_readings.borrow_mut() = Some(UserPhraseReadings { addr, readings });
     }
 
     /// 同一文本取词频最高的读音. 词频打平留主词库 / 附加词库的, 用户词只有更高才盖过.
@@ -144,7 +150,7 @@ impl Engine {
         let static_hit = static_map.as_ref().and_then(|readings| readings.get(text));
         let user_hit = user_slot
             .as_ref()
-            .and_then(|(_, readings)| readings.get(text));
+            .and_then(|cached| cached.readings.get(text));
         let pinyin = match (static_hit, user_hit) {
             (Some((pinyin, freq)), Some((user_pinyin, user_freq))) if *user_freq > *freq => {
                 user_pinyin.as_str()
