@@ -154,6 +154,30 @@ fn learn_phrase_adds_an_unknown_word_as_a_user_word() {
 }
 
 #[test]
+fn suggest_pinyin_uses_a_word_learned_after_the_index_was_built() {
+    let mut engine = engine().with_learner(Box::new(WordLearner::default()));
+    assert_eq!(engine.suggest_pinyin("青简"), None);
+    engine
+        .learn_phrase("青简", &["qing".into(), "jian".into()])
+        .unwrap();
+    assert_eq!(
+        engine.suggest_pinyin("青简").as_deref(),
+        Some(["qing".to_owned(), "jian".to_owned()].as_slice())
+    );
+}
+
+#[test]
+fn suggest_pinyin_picks_up_a_replaced_extra_dictionary() {
+    let mut engine = reading_engine();
+    assert_eq!(engine.suggest_pinyin("龘"), None);
+    engine.set_extra_dictionaries(vec![Dictionary::parse("龘\tda\t1\n").unwrap()]);
+    assert_eq!(
+        engine.suggest_pinyin("龘").as_deref(),
+        Some(["da".to_owned()].as_slice())
+    );
+}
+
+#[test]
 fn learn_phrase_works_when_learning_is_disabled() {
     let mut engine = engine().with_learner(Box::new(CountingLearner(HashMap::new())));
     engine.set_learning(false);

@@ -96,6 +96,13 @@ pub struct Engine {
     /// 走词频兜底）。壳按用户目录 `dicts/` 与配置 `[dictionaries]` 装配。
     extra_dictionaries: Vec<Dictionary>,
 
+    /// 录入词组用的反查表: 词 -> (空格分隔的拼音, 词频). 主词库加附加词库, 建一次, 附加词库换掉时作废.
+    /// 用户词不放这里, 另存在 `user_phrase_readings`.
+    phrase_readings: std::cell::RefCell<Option<HashMap<String, (String, u32)>>>,
+
+    /// 用户词反查, 以及建表时 `user_words()` 的地址. 用户词库一重建地址就变, 下次反查重做这一小份.
+    user_phrase_readings: std::cell::RefCell<Option<(usize, HashMap<String, (String, u32)>)>>,
+
     /// 英文候选的释义（英→中），缺省为 [`NoTranslator`]。英文候选的辅助语言是主语言中文，
     /// 与中文候选查学习语言的表分开，仍是「一个候选只显示一种辅助语言」。
     english_translator: Box<dyn Translator>,
@@ -386,6 +393,8 @@ impl Engine {
         Self {
             dictionary,
             extra_dictionaries: Vec::new(),
+            phrase_readings: std::cell::RefCell::new(None),
+            user_phrase_readings: std::cell::RefCell::new(None),
             translator: Box::new(NoTranslator),
             english_translator: Box::new(NoTranslator),
             modes: ModeKeys::default(),

@@ -76,7 +76,10 @@ impl Host {
                 );
                 self.preferences.show();
             }
-            MenuAction::LearnPhrase => self.learn_phrase.show(),
+            MenuAction::LearnPhrase => {
+                self.engine.prepare_phrase_readings();
+                self.learn_phrase.show();
+            }
             MenuAction::OpenLogs => {
                 if let Some(dir) = logging::log_dir() {
                     open_with_system(&[&dir.to_string_lossy()]);

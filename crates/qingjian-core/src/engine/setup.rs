@@ -479,6 +479,7 @@ impl Engine {
     pub fn set_extra_dictionaries(&mut self, dictionaries: Vec<Dictionary>) {
         self.extra_dictionaries = dictionaries;
         self.forget_span_cache();
+        *self.phrase_readings.borrow_mut() = None;
     }
 
     pub fn extra_dictionaries(&self) -> &[Dictionary] {

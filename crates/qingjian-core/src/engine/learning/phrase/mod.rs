@@ -24,9 +24,9 @@ impl Engine {
         if text.is_empty() || text.chars().any(char::is_whitespace) {
             return None;
         }
-        let readings = self.readings();
-        if let Some(syllables) = readings.get(text) {
-            return Some(syllables.clone());
+        self.ensure_phrase_readings();
+        if let Some(syllables) = self.reading_of(text) {
+            return Some(syllables);
         }
         let words: Vec<String> = match sentence::segment_text(text, &*self.language_model) {
             Some(clauses) => clauses.into_iter().flatten().collect(),
@@ -34,15 +34,20 @@ impl Engine {
         };
         let mut out = Vec::new();
         for word in words {
-            if let Some(syllables) = readings.get(&word) {
-                out.extend(syllables.iter().cloned());
+            if let Some(syllables) = self.reading_of(&word) {
+                out.extend(syllables);
                 continue;
             }
             for c in word.chars() {
-                out.extend(readings.get(&c.to_string())?.iter().cloned());
+                out.extend(self.reading_of(&c.to_string())?);
             }
         }
         (out.len() == text.chars().count()).then_some(out)
+    }
+
+    /// 打开录入窗口前把反查表建好, 第一个字就不用在按键回调里扫完整本词库.
+    pub fn prepare_phrase_readings(&self) {
+        self.ensure_phrase_readings();
     }
 
     /// 解析用户填的拼音 (空格 / `'` / 无分隔全拼), 校验每个都是完整音节且个数等于字数.
@@ -97,28 +102,83 @@ impl Engine {
         Ok(())
     }
 
-    /// 主词库 + 附加词库 + 用户词: 同一文本取词频最高的读音.
-    fn readings(&self) -> HashMap<String, Vec<String>> {
-        let mut best: HashMap<String, (Vec<String>, u32)> = HashMap::new();
-        for dictionary in self.all_dictionaries() {
-            for entry in dictionary.entries() {
-                let syllables: Vec<String> = entry
-                    .syllables()
-                    .map(|s| canonical_syllable(s).to_owned())
-                    .collect();
-                match best.get_mut(entry.text) {
-                    Some((_, freq)) if *freq >= entry.frequency => {}
-                    Some(slot) => *slot = (syllables, entry.frequency),
-                    None => {
-                        best.insert(entry.text.to_owned(), (syllables, entry.frequency));
-                    }
+    /// 主词库 + 附加词库的反查表, 没有就建. 用户词另查, 见 [`Self::reading_of`].
+    fn ensure_phrase_readings(&self) {
+        if self.phrase_readings.borrow().is_some() {
+            return;
+        }
+        let mut dictionaries = Vec::with_capacity(self.extra_dictionaries.len() + 1);
+        dictionaries.push(&self.dictionary);
+        dictionaries.extend(self.extra_dictionaries.iter());
+        *self.phrase_readings.borrow_mut() = Some(build_readings(&dictionaries));
+    }
+
+    /// 用户词反查. 词库对象换过 (录入或删除重建了 Dictionary) 才重扫.
+    fn ensure_user_readings(&self) {
+        let addr = self
+            .learner
+            .user_words()
+            .map(|dictionary| dictionary as *const _ as usize)
+            .unwrap_or(0);
+        if self
+            .user_phrase_readings
+            .borrow()
+            .as_ref()
+            .is_some_and(|(cached, _)| *cached == addr)
+        {
+            return;
+        }
+        let readings = match self.learner.user_words() {
+            Some(dictionary) => build_readings(std::slice::from_ref(dictionary)),
+            None => HashMap::new(),
+        };
+        *self.user_phrase_readings.borrow_mut() = Some((addr, readings));
+    }
+
+    /// 同一文本取词频最高的读音. 词频打平留主词库 / 附加词库的, 用户词只有更高才盖过.
+    fn reading_of(&self, text: &str) -> Option<Vec<String>> {
+        self.ensure_user_readings();
+        let static_map = self.phrase_readings.borrow();
+        let user_slot = self.user_phrase_readings.borrow();
+        let static_hit = static_map.as_ref().and_then(|readings| readings.get(text));
+        let user_hit = user_slot.as_ref().and_then(|(_, readings)| readings.get(text));
+        let pinyin = match (static_hit, user_hit) {
+            (Some((pinyin, freq)), Some((user_pinyin, user_freq))) if *user_freq > *freq => {
+                user_pinyin.as_str()
+            }
+            (Some((pinyin, _)), _) => pinyin.as_str(),
+            (None, Some((pinyin, _))) => pinyin.as_str(),
+            (None, None) => return None,
+        };
+        Some(split_reading(pinyin))
+    }
+}
+
+/// 同一文本留词频最高的那条拼音. 打平保留先扫到的 (主词库优先于附加词库).
+fn build_readings(
+    dictionaries: &[&qingjian_dictionary::Dictionary],
+) -> HashMap<String, (String, u32)> {
+    let mut best: HashMap<String, (String, u32)> = HashMap::new();
+    for dictionary in dictionaries {
+        for entry in dictionary.entries() {
+            match best.get_mut(entry.text) {
+                Some((_, freq)) if *freq >= entry.frequency => {}
+                Some(slot) => *slot = (entry.pinyin.to_owned(), entry.frequency),
+                None => {
+                    best.insert(entry.text.to_owned(), (entry.pinyin.to_owned(), entry.frequency));
                 }
             }
         }
-        best.into_iter()
-            .map(|(text, (syllables, _))| (text, syllables))
-            .collect()
     }
+    best
+}
+
+fn split_reading(pinyin: &str) -> Vec<String> {
+    pinyin
+        .split(' ')
+        .filter(|syllable| !syllable.is_empty())
+        .map(|syllable| canonical_syllable(syllable).to_owned())
+        .collect()
 }
 
 fn phrase_char_count(text: &str) -> Result<usize, LearnPhraseError> {
