@@ -4,7 +4,7 @@ use super::frame::Frame;
 use super::indicator::IndicatorState;
 use super::key::{KeyModifiers, KeyOutcome};
 use super::session::SessionId;
-use crate::config::{Modifiers, SwitchKeys};
+use crate::config::{KeyCombo, Modifiers, SwitchKeys};
 
 /// Server 下发给 DLL 的「按键行为」设置。
 ///
@@ -29,6 +29,15 @@ pub struct InputSettings {
     /// 按下的调频修饰键与它配的 J / K 送给 Server（按住预览频次、升降当前候选）。
     #[serde(default)]
     pub adjust_frequency: Option<KeyModifiers>,
+
+    /// 组句里把候选高亮往下挪一格的组合键 (`[shortcut] highlight_down`, 缺省 Ctrl+N); `None` 是关掉了.
+    /// DLL 据此决定组句里要不要把这个组合键送给 Server (与 ↓ 同义, 到页边自动翻页).
+    #[serde(default)]
+    pub highlight_down: Option<KeyCombo>,
+
+    /// 往上挪一格 (`[shortcut] highlight_up`, 缺省 Ctrl+P); `None` 是关掉了.
+    #[serde(default)]
+    pub highlight_up: Option<KeyCombo>,
 }
 
 impl Default for InputSettings {
@@ -38,6 +47,8 @@ impl Default for InputSettings {
             english_mode: true,
             shift_letter_compose: false,
             adjust_frequency: Some(KeyModifiers::from(Modifiers::CONTROL)),
+            highlight_down: Some(KeyCombo::HIGHLIGHT_DOWN),
+            highlight_up: Some(KeyCombo::HIGHLIGHT_UP),
         }
     }
 }

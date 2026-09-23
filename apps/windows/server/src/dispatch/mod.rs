@@ -166,6 +166,8 @@ impl Router {
             english_mode: self.config.english_mode,
             shift_letter_compose: self.config.shift_letter_compose,
             adjust_frequency: self.config.adjust_keys,
+            highlight_down: self.config.highlight_down,
+            highlight_up: self.config.highlight_up,
         }
     }
 

@@ -173,7 +173,9 @@ macOS 另有 `[shortcut] mac_switch_single` / `mac_switch_dual` 两个开关 (`M
 v7 同时加任务栏图标右键菜单的 `Indicator`; `Frame.aux_code_show` 随帧下发显示码开关; 协议比 Server 老的 DLL 收到 `AuxCode` / `Pending` 会解析失败, 所以 `downgrade_for_old_dll` 把它们降级成 `Typed`).
 `[shortcut] adjust_frequency` 是调频键 (缺省 `control`, 可写 `none` 关掉), `Frame.frequencies` 是它按住时的逐候选频次
 (与候选逐项平行, 空 vec 表示不显示), `KeyEvent.release` 标记按键抬起 (Windows DLL 在组句里转发调频修饰键的按下抬起, Linux 的 fcitx5 本来就送 `release`);
-后两项都是加字段: 老的一侧忽略未知字段, 所以不升 `PROTOCOL_VERSION`.
+`[shortcut] highlight_down` / `highlight_up` 是组句里上下挪候选高亮的两个组合键 (缺省 `control+n` / `control+p`, 可写 `none` 关掉),
+`InputSettings.highlight_down` / `highlight_up` 随 `SessionOpened` 与每一拍 `ModeSync` 下发, TSF 据此决定组句里吃不吃这两个键;
+以上都是加字段: 老的一侧忽略未知字段, 所以不升 `PROTOCOL_VERSION`.
 
 ## crates/qingjian-render
 

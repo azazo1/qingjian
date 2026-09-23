@@ -1,6 +1,7 @@
 //! 组句中的快捷键：修饰键 + 数字 (上屏译词、删候选) 与调频键 + J / K (升降当前候选)。与 macOS 壳对齐。
 
 use qingjian_core::{Candidate, CandidateList};
+use qingjian_platform::KeyCombo;
 use qingjian_platform::protocol::{KeyEvent, KeyModifiers};
 
 use super::{Effect, codes};
@@ -48,6 +49,27 @@ impl Router {
             tracing::debug!(preview, "频次预览");
         }
         Some(Effect::Noted)
+    }
+
+    /// 高亮上下挪一格 (配置 `[shortcut] highlight_down` / `highlight_up`, 缺省 Ctrl+N / Ctrl+P): 与 ↓ / ↑ 同义,
+    /// 到页边自动翻页. 没配到的那一边返回 `None`, 键照旧按普通键分流.
+    pub(super) fn apply_highlight_shortcut(&mut self, event: &KeyEvent) -> Option<Effect> {
+        let typed = event.character?;
+        let chord = event.modifiers.chord();
+        let hit = |combo: Option<KeyCombo>| {
+            combo.is_some_and(|combo| {
+                KeyModifiers::from(combo.modifiers) == chord && combo.key.eq_ignore_ascii_case(&typed)
+            })
+        };
+        let delta = if hit(self.config.highlight_down) {
+            1
+        } else if hit(self.config.highlight_up) {
+            -1
+        } else {
+            return None;
+        };
+        self.move_highlight(delta);
+        Some(Effect::Navigated)
     }
 
     /// 调频键 + J / K：把当前高亮的候选降 / 升一格。名次可能变，所以自己重新组一次句，

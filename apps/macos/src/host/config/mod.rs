@@ -32,6 +32,9 @@ impl Host {
         self.translation_keys = (translation.key(), translation_second.key());
         self.delete_keys = config.shortcut.delete_keys().key();
         self.adjust_keys = config.shortcut.adjust_frequency.key();
+        let (highlight_down, highlight_up) = config.shortcut.highlight_keys();
+        self.highlight_down = highlight_down.key();
+        self.highlight_up = highlight_up.key();
         self.translate_keys = config.shortcut.translate_selection.key();
         self.page_size = config.general.page_size();
         self.cloud_slots = config.predict.slots;

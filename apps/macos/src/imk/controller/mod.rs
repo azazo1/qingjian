@@ -10,7 +10,7 @@ use objc2_app_kit::{NSEvent, NSEventMask, NSEventModifierFlags, NSEventType, NSM
 use objc2_foundation::NSObjectProtocol;
 use objc2_input_method_kit::{IMKInputController, IMKServer};
 use qingjian_core::{Candidate, QUESTION_PREFIX};
-use qingjian_platform::{MacSwitchAction, Modifiers};
+use qingjian_platform::{KeyCombo, MacSwitchAction, Modifiers};
 
 use super::{TextClient, catch_panic, modifiers, recover_from_panic, secure_input};
 use crate::candidates::Preedit;
@@ -200,6 +200,26 @@ fn adjust_key(typed: char) -> Option<bool> {
     }
 }
 
+/// 这个字符配这组修饰键是不是上下挪高亮的两个键之一: `Some(1)` 往下, `Some(-1)` 往上.
+/// 两项都写 `none` (或都对不上) 就是 `None`, 这个键照旧归应用.
+fn highlight_step(modifiers: Modifiers, typed: char) -> Option<isize> {
+    let hit = |combo: Option<KeyCombo>| {
+        combo.is_some_and(|combo| {
+            combo.modifiers == modifiers && combo.key.eq_ignore_ascii_case(&typed)
+        })
+    };
+    host::with(|h| {
+        if hit(h.highlight_down) {
+            Some(1)
+        } else if hit(h.highlight_up) {
+            Some(-1)
+        } else {
+            None
+        }
+    })
+    .flatten()
+}
+
 impl QingjianInputController {
     /// IMK 送来的事件分发：按键走 [`Self::dispatch_key_down`]，修饰键的按下抬起走 [`Self::dispatch_modifier_change`]，
     /// 其余（鼠标之类，我们没声明）一律放行。
@@ -338,6 +358,18 @@ impl QingjianInputController {
                 .and_then(adjust_key)
         {
             return self.handle_adjust_key(up, client);
+        }
+        // 高亮上下挪一格 (配置 `[shortcut] highlight_down` / `highlight_up`, 缺省 ⌃N / ⌃P): 与 ↓ / ↑ 同义,
+        // 越过页边照样自动翻页. 与数字快捷键一样只在组句里认 (终端里 ⌃N 是下一行, 组句外原样归应用)
+        if composing
+            && !expression
+            && let Some(step) = typed
+                .as_deref()
+                .and_then(|text| text.chars().next())
+                .and_then(|c| highlight_step(pressed, c))
+        {
+            self.move_highlight(step, client);
+            return true;
         }
         let selector = match key {
             36 | 76 => Some(sel!(insertNewline:)),

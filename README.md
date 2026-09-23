@@ -19,6 +19,7 @@
 - macOS 候选窗 / 模式徽标的 NSPanel 层级从 `kCGPopUpMenuWindowLevel` (101) 抬到 `CGShieldingWindowLevel()`, 截屏软件标注界面里也能看到拼音行和候选 (popup menu 会被截屏覆盖层压住).
 - 候选词频次可调: 组句时按住调频键 (配置 `[shortcut] adjust_frequency`, 缺省 Ctrl) 时候选右侧显示每个词被选过的次数 (`频 全局/本串`), 同时按 K 升, 按 J 降当前高亮的候选, 每次升降等价于又选一次 / 撤销一次选择 (`Learner::adjust_frequency`), 降到底就停. 不在组句时这几个键一个都不拦 (终端里 Ctrl+J 仍是换行). macOS 壳在自己渲染时现算, Windows Server 的自绘候选窗与 Linux 的 fcitx5 面板走帧里的 `Frame::frequencies`. 见 `docs/user/getting-started/keys.md`.
 - 组句中标点可先上屏候选: 新增配置 `[general] punctuation_first` (缺省 false, 保持 upstream 的「标点进英文直输段」行为), 打开后拼音打完直接敲 `,` `.` `?` 等先把高亮候选上屏、再按全角设置补上这个标点 (`ni'hao,` 出「你好，」), 不必先按空格; 表达式 / 问字模式、英文直输段、英文模式与配成翻页键的标点不受影响. Core 侧判据是 `Engine::punctuation_commits_candidate`, macOS 与 Windows / Linux 三个壳都接上, 偏好设置 / 设置的通用页各有一项.
+- 候选高亮可用 `⌃P` / `⌃N` 上下挪: 新增 `[shortcut] highlight_down` / `highlight_up` (缺省 `control+n` / `control+p`, 写 `none` 关掉, 两边配成同一个键时整对退回缺省), 组句里与 `↓` / `↑` 完全同义, 到页边自动翻页, 不在组句时这两个键照旧归应用; 与调频的 `⌃J` / `⌃K` 各认各的字母 (配成同一个字母时归调频). 三端都接上: macOS 壳在按键分发里按键, 两个 Server 各加一条快捷键分支, Windows 的 DLL 经 `InputSettings` 的 `highlight_down` / `highlight_up` 拿到这两个组合键, 组句里先吃键再送 Server (协议加的是带缺省的两个字段, `PROTOCOL_VERSION` 不动). 见 `docs/user/getting-started/keys.md`.
 
 青简（Qingjian）是一个使用 **Rust** 开发的跨平台输入法。
 

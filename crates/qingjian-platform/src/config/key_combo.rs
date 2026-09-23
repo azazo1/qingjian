@@ -27,6 +27,18 @@ impl KeyCombo {
         key: 't',
     };
 
+    /// 组句里把候选高亮往下挪一格的缺省键 (emacs 的下一行, 配置 `[shortcut] highlight_down`).
+    pub const HIGHLIGHT_DOWN: Self = Self {
+        modifiers: Modifiers::CONTROL,
+        key: 'n',
+    };
+
+    /// 往上挪一格的缺省键 (配置 `[shortcut] highlight_up`).
+    pub const HIGHLIGHT_UP: Self = Self {
+        modifiers: Modifiers::CONTROL,
+        key: 'p',
+    };
+
     /// 配置文件里的写法。
     pub fn key_string(&self) -> String {
         format!("{}+{}", self.modifiers.key(), self.key)

@@ -62,11 +62,13 @@ impl TextService_Impl {
         }
         self.input_settings.set(Some(input));
         log(&format!(
-            "按键行为设置: 中英切换键 {}, 内置英文模式 {}, Shift 字母进组句 {}, 调频键 {:?}",
+            "按键行为设置: 中英切换键 {}, 内置英文模式 {}, Shift 字母进组句 {}, 调频键 {:?}, 高亮键 {:?} / {:?}",
             input.switch_mode.describe(),
             input.english_mode,
             input.shift_letter_compose,
-            input.adjust_frequency
+            input.adjust_frequency,
+            input.highlight_down,
+            input.highlight_up
         ));
         self.apply_mode_settings(input.english_mode, input.switch_mode);
     }
