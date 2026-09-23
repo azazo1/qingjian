@@ -373,3 +373,30 @@ fn punctuation_without_the_switch_still_enters_the_raw_segment() {
     assert_eq!((outcome, commit), (KeyOutcome::Consumed, None));
     assert_eq!(preedit(&frame), "ni,", "半角标点进缓冲区成为英文直输段");
 }
+
+/// `punctuation_first` 开着、被配成翻页键的标点仍要翻页，不能先上屏候选。
+/// Core 的判据只看「是不是标点」，不知道 `[general] page_keys`，所以这一层排除由壳负责。
+#[test]
+fn punctuation_first_leaves_the_page_keys_paging() {
+    let mut router = router_with(RouterConfig {
+        punctuation_first: true,
+        page_keys: (',', '.'),
+        page_size: 1,
+        ..RouterConfig::default()
+    });
+    let (_, _, frame) = type_letters(&mut router, "ni");
+    let start = frame.page;
+    let (outcome, commit, frame) = press(&mut router, punct('.'));
+    assert_eq!(
+        (outcome, commit),
+        (KeyOutcome::Consumed, None),
+        "翻页不该上屏候选"
+    );
+    assert_ne!(frame.page, start, "`.` 是翻页键时该翻页，而不是当标点用");
+    let (_, commit, frame) = press(&mut router, punct(','));
+    assert_eq!(commit, None, "翻回上一页也不该上屏候选");
+    assert_eq!(frame.page, start, "`,` 是翻页键时应翻回上一页");
+    // 不是翻页键的标点照旧：先上屏高亮候选，再补上标点
+    let (_, commit, _) = press(&mut router, punct(';'));
+    assert_eq!(commit.as_deref(), Some("你；"));
+}
