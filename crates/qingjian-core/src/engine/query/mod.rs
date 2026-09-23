@@ -166,8 +166,6 @@ impl Engine {
                     typed_display: decoded.as_ref().map(|d| d.marked()),
                     correction: None,
                     aux: None,
-                    keys_display: decoded.as_ref().and_then(|d| d.keys_display()),
-                    rest_keys: self.composition.typed_rest(),
                     // 延迟上屏的已选词由 `Engine::query` 统一填，这里先空着
                     pending: String::new(),
                     timings: Timings {
@@ -361,8 +359,6 @@ impl Engine {
             typed_display,
             correction,
             aux: self.aux_segment(),
-            keys_display: decoded.as_ref().and_then(|d| d.keys_display()),
-            rest_keys: self.composition.typed_rest(),
             // 延迟上屏的已选词由 `Engine::query` 统一填，这里先空着
             pending: String::new(),
             timings: Timings {
@@ -399,8 +395,6 @@ impl Engine {
             typed_display: None,
             correction: None,
             aux: None,
-            keys_display: None,
-            rest_keys: String::new(),
             // 延迟上屏的已选词由 `Engine::query` 统一填，这里先空着
             pending: String::new(),
             timings: Timings {
@@ -433,8 +427,6 @@ impl Engine {
             typed_display: None,
             correction: None,
             aux: None,
-            keys_display: None,
-            rest_keys: String::new(),
             // 延迟上屏的已选词由 `Engine::query` 统一填，这里先空着
             pending: String::new(),
             timings: Timings {
@@ -478,8 +470,6 @@ impl Engine {
             typed_display: None,
             correction: None,
             aux: None,
-            keys_display: None,
-            rest_keys: String::new(),
             // 延迟上屏的已选词由 `Engine::query` 统一填，这里先空着
             pending: String::new(),
             timings: Timings {
@@ -526,8 +516,6 @@ impl Engine {
             typed_display: None,
             correction: None,
             aux: None,
-            keys_display: None,
-            rest_keys: String::new(),
             // 延迟上屏的已选词由 `Engine::query` 统一填，这里先空着
             pending: String::new(),
             timings: Timings {

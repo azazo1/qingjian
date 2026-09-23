@@ -35,17 +35,10 @@ impl QingjianInputController {
                 .query()
                 .map(|mut query| {
                     h.engine.annotate(&mut query.candidates);
+                    marked = query.marked_text();
+                    cursor = query.marked_cursor();
                     preedit =
                         Preedit::from_marked(&query.marked_segments(), query.segments_cursor());
-                    // 行内显示敲的键 (双拼下按音节切开) 还是解出的全拼, 见 `[general] shuangpin_raw_preedit`.
-                    // 候选窗口那侧不受它影响
-                    if query.shuangpin_raw_preedit {
-                        marked = query.inline_text();
-                        cursor = query.inline_cursor();
-                    } else {
-                        marked = query.marked_text();
-                        cursor = query.marked_cursor();
-                    }
                     query.candidates.items
                 })
                 .unwrap_or_default();

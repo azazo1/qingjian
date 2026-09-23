@@ -26,32 +26,31 @@ fn shuangpin_decodes_keys_before_lookup_and_shows_full_pinyin() {
 }
 
 #[test]
-fn shuangpin_shows_syllable_keys_inline_and_decoded_pinyin_in_segments() {
+fn shuangpin_shows_raw_keys_in_preedit_and_decoded_pinyin_in_segments() {
     let mut engine = xiaohe();
     engine.set_shuangpin_raw_preedit(true);
     engine.set_input("kdfa");
     let query = engine.query().unwrap();
     assert_eq!(query.candidates.items[0].text, "开发");
-    // 应用输入框按音节显示敲的键, 不是不带分隔的原缓冲
-    assert_eq!(query.inline_text(), "kd'fa");
-    assert_eq!(query.inline_cursor(), 5);
+    // 输入框内 marked_text 显示原始输入按键
+    assert_eq!(query.marked_text(), "kdfa");
+    assert_eq!(query.marked_cursor(), 4);
     assert_eq!(query.text, "kdfa");
-    // 候选窗口顶部拼音行保持显示解码全拼; marked_text 与它相同
+    // 候选窗口顶部拼音行保持显示解码全拼
     let segments_text: String = query
         .marked_segments()
         .iter()
         .map(|s| s.text.as_str())
         .collect();
     assert_eq!(segments_text, "kai'fa");
-    assert_eq!(query.marked_text(), "kai'fa");
     assert_eq!(query.segments_cursor(), 6);
 
     // 移动光标到中间 kd|fa
     engine.move_cursor_left();
     engine.move_cursor_left();
     let query = engine.query().unwrap();
-    assert_eq!(query.inline_text(), "kd'fa");
-    assert_eq!(query.inline_cursor(), 2);
+    assert_eq!(query.marked_text(), "kdfa");
+    assert_eq!(query.marked_cursor(), 2);
     let segments_text: String = query
         .marked_segments()
         .iter()
@@ -60,11 +59,11 @@ fn shuangpin_shows_syllable_keys_inline_and_decoded_pinyin_in_segments() {
     assert_eq!(segments_text, "kai'fa");
     assert_eq!(query.segments_cursor(), 3);
 
-    // k|dfa: 光标插进音节中间时, 窗口里光标后的剩余段保留原始按键, 单独解码会错开
+    // k|dfa：光标后的剩余段保留原始按键，和敲的对得上（双拼光标插进音节中间，单独解码会错开）
     engine.move_cursor_left();
     let query = engine.query().unwrap();
-    assert_eq!(query.inline_text(), "k'dfa");
-    assert_eq!(query.inline_cursor(), 1);
+    assert_eq!(query.marked_text(), "kdfa");
+    assert_eq!(query.marked_cursor(), 1);
     let segments_text: String = query
         .marked_segments()
         .iter()

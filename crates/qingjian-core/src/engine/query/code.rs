@@ -84,8 +84,6 @@ impl Engine {
             typed_display: None,
             correction: None,
             aux: None,
-            keys_display: None,
-            rest_keys: String::new(),
             // 延迟上屏的已选词由 `Engine::query` 统一填，这里先空着
             pending: String::new(),
             timings: Timings {

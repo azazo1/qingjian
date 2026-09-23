@@ -84,14 +84,6 @@ pub struct Query {
     /// [触发键 `Typed`][码段 `AuxCode`] 两段，候选也已经按码段筛过。
     pub aux: Option<AuxSegment>,
 
-    /// 行内 (应用侧 marked text) 显示用的敲键串: 双拼下是按音节切开的键 (`kd'fa've`).
-    /// `None` 表示行内与 [`Self::marked_text`] 相同 (全拼 / 注音 / 形码 / 英文 / 表达式等).
-    /// 候选窗口的拼音行不读它, 仍走 [`Self::marked_segments`].
-    pub keys_display: Option<String>,
-
-    /// 光标停在中间时, 光标之后那部分的原样形式 (敲的键); 只有 [`Self::keys_display`] 有值时才用得上.
-    pub rest_keys: String,
-
     /// 这段组句里已经选中, 还没交给应用的词 (延迟上屏, 见 `Engine::pending_text`):
     /// preedit 里显示在拼音前面, 退格能把它拆回候选.
     pub pending: String,
@@ -118,11 +110,14 @@ impl Query {
         }
     }
 
-    /// 给 marked text (候选窗口拼音行, 以及开关关掉时的应用输入框) 用的显示形式: 最优切分的音节用 `'` 连接,
-    /// 再接未切分尾部, 辅码态接上触发键与码段, 光标后的剩余拼音跟在最后.
-    /// `kaifa` -> `kai'fa`, `kf` -> `k'f`, `ni|hao` -> `ni'hao`, `nihao;rb` -> `ni'hao;rb`.
-    /// 双拼且 `shuangpin_raw_preedit` 开着时, 应用输入框改走 [`Self::inline_text`] (`kd'fa've`), 这里仍是解出的全拼.
+    /// 给 marked text（应用输入框未上屏文本）用的显示形式：最优切分的音节用 `'` 连接，再接未切分尾部，
+    /// 辅码态接上触发键与码段，光标后的剩余拼音跟在最后。
+    /// `kaifa` → `kai'fa`，`kf` → `k'f`，`ni|hao` → `ni'hao`，`nihao;rb` → `ni'hao;rb`。
+    /// 双拼模式且 `shuangpin_raw_preedit` 开启时，返回原始按键（如 `kdfa`）；延迟上屏的已选词仍排在它前面。
     pub fn marked_text(&self) -> String {
+        if self.shuangpin_raw_preedit {
+            return format!("{}{}", self.pending, self.text);
+        }
         self.marked_segments()
             .iter()
             .map(|s| s.text.as_str())
@@ -236,50 +231,15 @@ impl Query {
         self.pending.chars().count()
     }
 
-    /// 行内 (应用侧 marked text) 的文本: 双拼下是敲的键 (按音节切开, `kd'fa've`), 其余方案与
-    /// [`Self::marked_text`] 相同. 候选窗口的拼音行不受影响, 仍走 [`Self::marked_segments`].
-    pub fn inline_text(&self) -> String {
-        let Some(keys) = &self.keys_display else {
-            return self.marked_text();
-        };
-        let mut text = self.pending.clone();
-        text.push_str(keys);
-        if let Some(aux) = &self.aux {
-            text.push(aux.trigger);
-            text.push_str(&aux.code);
-        }
-        if !self.rest_keys.is_empty() {
-            if !text.is_empty() {
-                text.push('\'');
-            }
-            text.push_str(&self.rest_keys);
-        }
-        text
-    }
-
-    /// 光标在 [`Self::inline_text`] 里的字符下标 (平台层传给应用的 selectionRange 按字符算).
-    pub fn inline_cursor(&self) -> usize {
-        if self.keys_display.is_none() {
-            return self.marked_cursor();
-        }
-        let pending = self.pending_chars();
-        // 与 marked_cursor 同一套规则: 解码时光标就在敲的部分末尾, 光标在开头时仍在开头
-        if self.cursor == 0 {
-            return pending;
-        }
-        let keys = self
-            .keys_display
-            .as_ref()
-            .map_or(0, |keys| keys.chars().count());
-        let aux = self.aux.as_ref().map_or(0, |aux| {
-            aux.trigger.to_string().chars().count() + aux.code.chars().count()
-        });
-        pending + keys + aux
-    }
-
-    /// 光标在 [`Self::marked_text`] 里的字符下标, 与 [`Self::segments_cursor`] 相同.
-    /// 双拼开关开着时应用输入框改走 [`Self::inline_cursor`], 不在这里按原始按键换算.
+    /// 光标在 [`Self::marked_text`] 里的字符下标（给平台层传给宿主应用输入框用的，所以按字符算，不是字节）。
+    /// 返回原始按键那一支要把延迟上屏的已选词（[`Self::pending`]）算进去，位置与 [`Self::marked_text`] 对齐。
     pub fn marked_cursor(&self) -> usize {
+        if self.shuangpin_raw_preedit {
+            return self.pending_chars()
+                + self.text[..self.cursor.min(self.text.len())]
+                    .chars()
+                    .count();
+        }
         self.segments_cursor()
     }
 }

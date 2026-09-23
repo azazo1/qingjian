@@ -34,14 +34,6 @@ impl EngineDecoded {
         }
     }
 
-    /// 行内显示用的敲键版 (双拼码); 注音没有 "敲的键" 这一层 (显示的就是符号), 返回 `None` 表示与 [`Self::marked`] 相同.
-    pub fn keys_display(&self) -> Option<String> {
-        match self {
-            Self::Shuangpin(d) => Some(d.marked_keys()),
-            Self::Zhuyin(_) => None,
-        }
-    }
-
     pub fn keys_for(&self, pinyin_len: usize) -> usize {
         match self {
             Self::Shuangpin(d) => d.keys_for(pinyin_len),

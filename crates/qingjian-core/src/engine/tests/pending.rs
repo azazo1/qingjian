@@ -32,6 +32,30 @@ fn a_word_picked_before_the_end_of_the_buffer_waits_in_the_preedit() {
     assert_eq!(query.marked_cursor(), 5);
 }
 
+/// 双拼开着 `shuangpin_raw_preedit` 时 preedit 换成原始按键, 延迟上屏的已选词仍要排在它前面.
+#[test]
+fn raw_preedit_keeps_the_pending_word_in_front() {
+    let mut engine = xiaohe();
+    engine.set_shuangpin_raw_preedit(true);
+    engine.set_input("kdfave");
+    assert_eq!(commit_text(&mut engine, "开发"), "");
+    assert_eq!(engine.pending_text(), "开发");
+    assert_eq!(engine.composition().text(), "ve");
+
+    let query = engine.query().unwrap();
+    // 拼音那半截是原始按键 (`ve`), 已选词照旧在前面, 光标从这里往后算
+    assert_eq!(query.marked_text(), "开发ve");
+    assert_eq!(query.marked_cursor(), 4);
+    // 候选窗口那侧仍是解出的全拼
+    let segments_text: String = query
+        .marked_segments()
+        .iter()
+        .map(|s| s.text.as_str())
+        .collect();
+    assert_eq!(segments_text, "开发zhe");
+    assert_eq!(query.segments_cursor(), 5);
+}
+
 #[test]
 fn backspace_takes_the_selected_word_back_into_the_buffer() {
     let mut engine = engine();

@@ -114,7 +114,7 @@ impl GeneralPage {
         );
         let shuangpin_raw_preedit = checkbox(
             mtm,
-            "双拼在输入框按音节显示敲的键",
+            "双拼在输入框显示原始按键",
             Setting::ShuangpinRawPreedit,
             target,
         );
@@ -122,7 +122,7 @@ impl GeneralPage {
         note(
             layout,
             mtm,
-            "缺省勾上. 双拼时输入框显示敲的键, 音节之间用 ' 分开 (kd'fa've), 回车仍可直接上屏; 候选窗口顶部的拼音行照旧是解出的全拼 (kai'fa'zhe). 全拼与注音下两处一样.",
+            "勾上后双拼模式下输入框（光标处）显示敲击的英文字母，回车可直接上屏；候选窗口顶部的拼音行照旧显示解码全拼。",
         );
         let wubi = checkbox(mtm, "五笔（86 版）", Setting::Wubi, target);
         row_checkbox(layout, &wubi);

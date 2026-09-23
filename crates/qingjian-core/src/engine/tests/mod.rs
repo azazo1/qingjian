@@ -7,7 +7,6 @@ mod correction;
 mod custom;
 mod emoji;
 mod english;
-mod inline;
 mod learning;
 mod lookup;
 mod pending;

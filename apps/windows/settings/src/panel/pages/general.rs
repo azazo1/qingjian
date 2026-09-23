@@ -82,8 +82,8 @@ pub(crate) fn view(settings: &Settings, context: &mut ViewContext<Settings>) -> 
             ),
         ),
         field(
-            "双拼在输入框按音节显示敲的键",
-            "缺省开. 双拼时输入框显示敲的键, 音节之间用 ' 分开 (kd'fa've), 回车仍可直接上屏; 候选窗口顶部的拼音行照旧是解出的全拼 (kai'fa'zhe).",
+            "双拼在输入框显示原始按键",
+            "勾上后双拼模式下输入框（光标处）显示敲击的英文字母，回车可直接上屏；候选窗口顶部的拼音行照旧显示解码全拼。",
             ToggleSwitch::new()
                 .is_on(g.shuangpin_raw_preedit)
                 .is_enabled(g.scheme().is_shuangpin())

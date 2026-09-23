@@ -32,13 +32,9 @@ TSV 解析、查询与生成工具把 `lue` / `nue` 统一成 `lve` / `nve`。
 （码表在 `Engine.aux_codes`，`set_aux_codes` 注入），不命中的隐藏，命中的按「完全匹配码 > 码长降序 > 原词频序」
 重排（stable sort 保住原序），命中码（没在筛码时是词的首条码）写进 `Candidate.aux_code`；码段非空时跳过整句 / 英文 / 快捷 / emoji / 自定义短语
 与云联想。preedit 分段多出 [触发键 `Typed`][码段 `MarkedKind::AuxCode`]，见 `Query::marked_segments`。
-行内 (应用侧 marked text) 那侧另有 `Query::inline_text` / `inline_cursor`: 双拼下按音节显示敲的键 (`kd'fa've`, 由 `shuangpin::Decoded::marked_keys` 经 `Query::keys_display` 传来),
-光标后的键接在末尾 (`Query::rest_keys`), 辅码段照旧拼上; 注音与全拼没有 "敲的键" 这一层, 回落到 `marked_text`.
-候选窗口的拼音行仍走 `marked_segments`; macOS 与 Windows 按 `[general] shuangpin_raw_preedit` (缺省开, 旧键 `inline_keys` 仍能读) 选行内用哪一套, Linux 只拿分段.
-
 组句里的上屏是延迟的 (`engine/pending.rs`): 一段拼音还没选完时 (`commit_with` 里 `buffer_left`), 选中的词进 `Engine.pending`,
 `commit` 返回空串表示这次不交给应用; 词里存上屏文本, 吃掉的拼音键 (`restore_keys`, 不含辅码段), 上屏链快照与这次的学习账 (`LastCommit`).
-preedit 里它作为 `MarkedKind::Pending` 段排在拼音前面 (`Query::pending`, `marked_text` / `marked_cursor` / `inline_text` / `inline_cursor` 都从这里往后算),
+preedit 里它作为 `MarkedKind::Pending` 段排在拼音前面 (`Query::pending`, `marked_text` / `marked_cursor` 都从这里往后算),
 候选窗口的拼音行同样带上它, 三端按正文色画. 这段拼音选完 (缓冲区空), 回车原样上屏 (`take_raw`), 取消组句 (`clear`) 或失焦 (`break_chain`) 时
 `take_pending` 把全文交出去并按上屏顺序补进 `recent_commits`; `set_input` 与 `discard_input` 直接丢弃 (前者是 CLI / 测试换段, 后者是隐私边界).
 退格 (`Engine::backspace`) 先 `undo_pending`: 键还回缓冲区开头 (`Composition::prepend`), 上屏链恢复快照, 这次上屏按「已经删掉」记账

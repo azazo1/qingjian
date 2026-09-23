@@ -91,10 +91,8 @@ pub struct GeneralConfig {
     /// 缺省是空串：文件里没写这一项时要去看旧键，见 [`Self::scheme`]。
     pub scheme: String,
 
-    /// 双拼下应用输入框按音节显示敲的键 (`kd'fa've`), 候选窗口仍是解出的全拼 (`kai'fa'zhe`).
-    /// 缺省开. 旧键 `inline_keys` 仍能读进来; 两个键都写时以这个新键为准是做不到的 (serde 会当成重复字段),
-    /// 所以模板和设置窗口只写这一项.
-    #[serde(alias = "inline_keys")]
+    /// 双拼方案下 preedit 显示原始按键字母（如 `ljse`）还是展开成全拼音节（`lan'se`）。
+    /// 缺省关（展开成全拼音节）；常在双拼中打英文词或需要核对按键的人可打开。
     pub shuangpin_raw_preedit: bool,
 
     /// 形码侧方案：空串为关，`wubi86` 为五笔（86 版）。**与拼音同时开着就是混输**，见 [`Self::mixed`]。
@@ -145,7 +143,7 @@ impl Default for GeneralConfig {
             aux_code_show: false,
             aux_code_keep_empty: true,
             scheme: String::new(),
-            shuangpin_raw_preedit: true,
+            shuangpin_raw_preedit: false,
             wubi: String::new(),
             shuangpin: None,
             zhuyin: None,
@@ -282,17 +280,6 @@ mod tests {
         assert!(!general.horizontal_grid);
         let general: GeneralConfig = toml::from_str("horizontal_grid = true\n").unwrap();
         assert!(general.horizontal_grid);
-    }
-
-    #[test]
-    fn shuangpin_raw_preedit_defaults_on_and_reads_the_old_key() {
-        assert!(GeneralConfig::default().shuangpin_raw_preedit);
-        let general: GeneralConfig = toml::from_str("preedit = \"both\"\n").unwrap();
-        assert!(general.shuangpin_raw_preedit);
-        let general: GeneralConfig = toml::from_str("shuangpin_raw_preedit = false\n").unwrap();
-        assert!(!general.shuangpin_raw_preedit);
-        let general: GeneralConfig = toml::from_str("inline_keys = false\n").unwrap();
-        assert!(!general.shuangpin_raw_preedit);
     }
 
     #[test]

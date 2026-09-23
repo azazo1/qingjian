@@ -251,13 +251,13 @@ impl Router {
     }
 }
 
-/// 一次查询的拼音行分段与光标, 以及输入框另显示敲的键时的那一串 (`kd'fa've`, 不是不带分隔的原缓冲).
-/// 光标用 Core 的映射: 自动补的 `'` 会让显示串比敲的长.
+/// 一次查询的拼音行分段与光标，以及输入框另显示原始按键时的那一串。
+/// 光标用 Core 的映射：自动补的 `'` 会让显示串比敲的长。
 pub(super) fn marked_parts(query: &Query) -> (Vec<PreeditSegment>, usize, Option<TypedKeys>) {
     let preedit = query.marked_segments().iter().map(Into::into).collect();
     let typed_keys = query.shuangpin_raw_preedit.then(|| TypedKeys {
-        text: query.inline_text(),
-        cursor: query.inline_cursor(),
+        text: query.marked_text(),
+        cursor: query.marked_cursor(),
     });
     (preedit, query.segments_cursor(), typed_keys)
 }

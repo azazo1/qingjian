@@ -85,26 +85,6 @@ impl Decoded {
         }
     }
 
-    /// 显示形式 (敲的键版): 各单元的键按敲的顺序连起来, 音节之间插 `'`, 末尾接解不动的尾巴.
-    ///
-    /// 用户自己敲的显式分隔符由音节边界体现, 不会出现连续两个 `'`. `kdfave` → `kd'fa've`.
-    pub fn marked_keys(&self) -> String {
-        let mut text = String::with_capacity(self.pinyin.len());
-        for unit in self.units.iter().filter(|u| !u.is_separator()) {
-            if !text.is_empty() {
-                text.push('\'');
-            }
-            text.push_str(&unit.keys);
-        }
-        if !self.tail.is_empty() {
-            if !text.is_empty() {
-                text.push('\'');
-            }
-            text.push_str(&self.tail);
-        }
-        text
-    }
-
     /// [`Self::pinyin`] 开头 `pinyin_len` 个字节对应多少个键：整单元被盖住才算，紧跟其后的 `'` 一并算上。
     pub fn keys_for(&self, pinyin_len: usize) -> usize {
         let mut keys = 0;
@@ -183,21 +163,4 @@ mod tests {
         assert!(!Scheme::Microsoft.decode("nibl").pending_initial());
     }
 
-    #[test]
-    fn marked_keys_show_the_keys_not_the_pinyin() {
-        let decoded = Scheme::Xiaohe.decode("kdfave");
-        assert_eq!(decoded.marked(), "kai'fa'zhe");
-        assert_eq!(decoded.marked_keys(), "kd'fa've");
-        // 落单的键 (残缺音节) 照原样留着
-        assert_eq!(Scheme::Xiaohe.decode("kdf").marked_keys(), "kd'f");
-        assert_eq!(Scheme::Xiaohe.decode("").marked_keys(), "");
-        // 键一个都不丢: 去掉分隔符后与原输入一致
-        for keys in ["kdfave", "kdf", "xi'an", "bl"] {
-            let decoded = Scheme::Xiaohe.decode(keys);
-            assert_eq!(
-                decoded.marked_keys().replace('\'', ""),
-                keys.replace('\'', "")
-            );
-        }
-    }
 }

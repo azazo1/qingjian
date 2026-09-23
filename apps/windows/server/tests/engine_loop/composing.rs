@@ -331,7 +331,7 @@ fn digit_without_a_slot_joins_the_buffer() {
     assert_eq!(commit, Some(first));
 }
 
-/// 双拼输入框按音节显示敲的键: 发给 DLL 的帧是 `kd'fa`, 自绘窗的拼音行照旧全拼.
+/// 双拼「输入框显示原始按键」：发给 DLL 的帧是敲的键、光标按键数算，自绘窗的拼音行照旧全拼。
 #[test]
 fn shuangpin_raw_preedit_goes_to_the_app_and_full_pinyin_to_the_window() {
     let mut router = router_with(RouterConfig {
@@ -348,7 +348,7 @@ fn shuangpin_raw_preedit_goes_to_the_app_and_full_pinyin_to_the_window() {
     });
     press(&mut router, function_key(0x25));
     let (_, _, frame) = press(&mut router, function_key(0x25));
-    assert_eq!((preedit(&frame).as_str(), frame.cursor), ("kd'fa", 2));
+    assert_eq!((preedit(&frame).as_str(), frame.cursor), ("kdfa", 2));
     let shown = sink.0.lock().unwrap();
     let last = shown.last().expect("自绘窗收到过帧");
     assert_eq!((preedit(last).as_str(), last.cursor), ("kai'fa", 3));
