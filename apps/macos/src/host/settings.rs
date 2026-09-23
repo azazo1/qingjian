@@ -287,11 +287,8 @@ impl Host {
                 // 调频键不需要与别的快捷键比：它配的是「按住看频次」与 J / K，不占数字键
                 match text.parse::<KeyBinding<Modifiers>>() {
                     Ok(chosen) => {
-                        self.settings.set_value(
-                            "shortcut",
-                            "adjust_frequency",
-                            chosen.to_string(),
-                        );
+                        self.settings
+                            .set_value("shortcut", "adjust_frequency", chosen.to_string());
                     }
                     Err(error) => tracing::warn!(%error, "修饰键组合不合法，未改"),
                 }

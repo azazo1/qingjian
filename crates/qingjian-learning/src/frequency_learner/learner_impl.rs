@@ -227,7 +227,14 @@ impl Learner for FrequencyLearner {
             self.unrecord_choice(input, text);
         }
         let adjusted = (self.weight(text), self.choice_weight(input, text));
-        tracing::debug!(input, text, up, total = adjusted.0, selected = adjusted.1, "手动调整词频");
+        tracing::debug!(
+            input,
+            text,
+            up,
+            total = adjusted.0,
+            selected = adjusted.1,
+            "手动调整词频"
+        );
         adjusted
     }
 

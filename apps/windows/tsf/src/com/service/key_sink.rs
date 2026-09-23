@@ -134,13 +134,16 @@ impl TextService_Impl {
         let shift_letter_compose = input.is_some_and(|input| input.shift_letter_compose);
         let composing = self.shared.composing();
         // 调频键（缺省 Ctrl）在组句里另算：修饰键本身（开关频次预览）与它配的 J / K（升降候选）都送 Server
-        eats_adjust(event, composing, input.and_then(|input| input.adjust_frequency))
-            || eats_key(
-                event,
-                composing,
-                self.shared.translating(),
-                shift_letter_compose,
-            )
+        eats_adjust(
+            event,
+            composing,
+            input.and_then(|input| input.adjust_frequency),
+        ) || eats_key(
+            event,
+            composing,
+            self.shared.translating(),
+            shift_letter_compose,
+        )
     }
 
     /// 不吃的键绝不碰组句（否则光标一移，组句会把拼音重插到别处）。
@@ -486,8 +489,16 @@ mod tests {
         // 组句里：⌃ 本身（开关频次预览）与它配的 J / K（升降候选）都归我们
         let modifier = KeyEvent::new(0x11, None, ctrl);
         assert!(eats_adjust(&modifier, true, Some(ctrl)));
-        assert!(eats_adjust(&with_modifiers(0x4B, 'k', ctrl), true, Some(ctrl)));
-        assert!(eats_adjust(&with_modifiers(0x4A, 'j', ctrl), true, Some(ctrl)));
+        assert!(eats_adjust(
+            &with_modifiers(0x4B, 'k', ctrl),
+            true,
+            Some(ctrl)
+        ));
+        assert!(eats_adjust(
+            &with_modifiers(0x4A, 'j', ctrl),
+            true,
+            Some(ctrl)
+        ));
         // 没在组句：这几个键一个都不碰（⌃J 是应用的换行）
         assert!(!eats_adjust(
             &with_modifiers(0x4A, 'j', ctrl),
@@ -496,11 +507,7 @@ mod tests {
         ));
         assert!(!eats_adjust(&modifier, false, Some(ctrl)));
         // 配成 none / 别的修饰键组合：照旧归应用
-        assert!(!eats_adjust(
-            &with_modifiers(0x4A, 'j', ctrl),
-            true,
-            None
-        ));
+        assert!(!eats_adjust(&with_modifiers(0x4A, 'j', ctrl), true, None));
         let ctrl_shift = KeyModifiers {
             shift: true,
             ..ctrl

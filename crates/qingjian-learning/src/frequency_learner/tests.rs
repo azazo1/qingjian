@@ -251,7 +251,11 @@ fn adjust_frequency_counts_up_and_stops_at_zero() {
     // 升频就是又选了一次：全局计数与当前输入串下的选择一起加
     assert_eq!(learner.adjust_frequency("kaifa", "开发", true), (1, 1));
     assert_eq!(learner.adjust_frequency("kaifa", "开发", true), (2, 2));
-    assert_eq!(learner.choice_weight("kf", "开发"), 0, "别的输入串只看到全局计数");
+    assert_eq!(
+        learner.choice_weight("kf", "开发"),
+        0,
+        "别的输入串只看到全局计数"
+    );
     // 降频就是撤销一次选择，到 0 把条目清掉，再降还是 0
     assert_eq!(learner.adjust_frequency("kaifa", "开发", false), (1, 1));
     assert_eq!(learner.adjust_frequency("kaifa", "开发", false), (0, 0));

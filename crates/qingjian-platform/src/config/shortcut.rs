@@ -340,6 +340,9 @@ mod tests {
 
         let custom: ShortcutConfig =
             toml::from_str("adjust_frequency = \"control+shift\"\n").unwrap();
-        assert_eq!(custom.adjust_frequency.key(), Some(Modifiers::SHIFT_CONTROL));
+        assert_eq!(
+            custom.adjust_frequency.key(),
+            Some(Modifiers::SHIFT_CONTROL)
+        );
     }
 }

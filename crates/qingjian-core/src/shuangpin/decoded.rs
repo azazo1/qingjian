@@ -162,5 +162,4 @@ mod tests {
         assert!(!Scheme::Microsoft.decode("").pending_initial());
         assert!(!Scheme::Microsoft.decode("nibl").pending_initial());
     }
-
 }

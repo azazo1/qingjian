@@ -142,6 +142,10 @@ fn adjust_keys_do_nothing_outside_composition() {
     });
     type_letters(&mut off, "nihao");
     let (outcome, _, frame) = press(&mut off, letter_with('k', CTRL));
-    assert_eq!(outcome, KeyOutcome::Passthrough, "关掉调频键后 Ctrl+字母照旧归应用");
+    assert_eq!(
+        outcome,
+        KeyOutcome::Passthrough,
+        "关掉调频键后 Ctrl+字母照旧归应用"
+    );
     assert!(frame.frequencies.is_empty());
 }
