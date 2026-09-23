@@ -67,7 +67,7 @@ computer
 | Windows | Server 进程里 GDI 画到 layered window（`server/src/ui/layered/`） | 避开 WebView2 依赖（水杉 issue #68 就是安装环境缺 WebView2）。原计划改 Direct2D + DirectWrite，已被自绘渲染器取代 |
 | Linux | 自绘窗口（wayland-client / x11rb），不用 IBus / Fcitx 自带面板 | IBus 的 lookup table 没有 comment 字段，Fcitx5 有但样式受面板限制。kime 走的也是自绘 |
 
-macOS 面板的层级与 Space：层级 `kCGPopUpMenuWindowLevel`（101，与系统候选框同级；不能 `setFloatingPanel`，它会把层级改回 3，全屏应用里就看不见），
+macOS 面板的层级与 Space: 层级用 `CGShieldingWindowLevel()` (截屏工具的全屏覆盖层通常在 overlay / screensaver 之上, `kCGPopUpMenuWindowLevel` 101 会被压住, 拼音行和候选都看不见; Squirrel 同级. 不能 `setFloatingPanel`, 它会把层级改回 3, 全屏应用里就看不见),
 collection behavior 是 CanJoinAllSpaces + FullScreenAuxiliary + Stationary。但 macOS 26 上 WindowServer 只把面板绑到它**创建时已有**的 Space：
 登录时建的面板只在桌面 Space 上，之后新开的全屏 Space（Zed 全屏）里没有它，候选框留在桌面、全屏里看不见（2026-09-07 用 CGS `CGSCopySpacesForWindows`
 查实：面板的 Space 列表只有桌面那一个，同样设置新建的面板却是全部 Space；重设 collection behavior、收起再排前都不能让它重算）。

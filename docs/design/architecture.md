@@ -345,7 +345,7 @@ CC-CEDICT 表（`dict-convert cedict`）保留为备用来源，覆盖面广但�
   与 Info.plist 的 `InputMethodServerControllerClass` 一致），只做按键 → Engine、Engine → 窗口；
   `client.rs` 用 `msg_send!` 封装 IMKTextInput（`setMarkedText:` / `insertText:` /
   `attributesForCharacterIndex:lineHeightRectangle:` 取光标矩形）；`modifiers.rs` / `secure_input.rs` 查系统状态；
-  `candidates/`：`window.rs` 是非激活浮动 NSPanel（level 101、CanJoinAllSpaces、忽略鼠标），
+  `candidates/`: `window.rs` 是非激活浮动 NSPanel (`CGShieldingWindowLevel()`, 盖过截屏覆盖层; CanJoinAllSpaces, 忽略鼠标),
   `view.rs` 自绘顶部拼音行与候选（竖排 / 横排两套画法），`theme.rs` 集中字体颜色间距，`row.rs` 把 Candidate 转成展示片段，
   `preedit/`（`mod.rs` / `segment.rs` / `style.rs`）是拼音行的分段模型（由 Core 的 `MarkedSegment` 转来），`frame.rs` 是一帧的数据；
   `menubar/`：`indicator.rs` 是菜单栏的中 / 英 NSStatusItem（输入源图标没法动态换，只能自己放一个），

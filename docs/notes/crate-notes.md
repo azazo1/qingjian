@@ -238,6 +238,7 @@ IMK 输入法, 源码按 `app / host / imk / candidates / menubar / preferences 
 - 模式徽标（`menubar/badge.rs`）：切换的那一刻在光标行旁显示「中」/「英」，一秒后自己收（`[general] mode_badge`，缺省开）。
   它是候选窗口之外的又一块浮动面板，建面板与摆放共用 `candidates::window` 的 `build_float_panel` / `place_at_caret`；
   没有输入会话时（菜单栏那 0.25 s 的轮询发现 Caps Lock 跳变）用 `Host::anchor` 里上次记下的光标位置。
+  两块面板的层级都是 `CGShieldingWindowLevel()` (不再用 `kCGPopUpMenuWindowLevel` 101): 截屏工具的覆盖层通常在 overlay / screensaver 之上, popup menu 会被压住, 拼音行和候选都看不见.
 - 输入法进程由 launchd 拉起，看不到 shell 的环境变量：密钥写进配置同目录的 `.env`（`QINGJIAN_API_KEY=...`，输入法启动时 dotenvy 读入）或 `config.toml` 的 `api_key`。
 - 本地整句模型：`bundle.sh` 把 `data/model/`（或 `QINGJIAN_MODEL_DIR`）三件套打进 `Resources/model/`，用户目录 `model/` 优先；`host/model/mod.rs` 在后台线程加载并预热（首次 Metal 编译）后
   `set_async_sentence_scorer` 接上，`refresh` 每键先读应用光标前 64 字给 Engine 当前文、查询后 `schedule_rescoring`，`RescoreMonitor` 停键 80 ms 请求、20 ms 轮询，

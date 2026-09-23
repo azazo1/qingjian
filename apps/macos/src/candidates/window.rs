@@ -14,8 +14,17 @@ use super::frame::Frame;
 use super::theme::Theme;
 use super::view::CandidateView;
 
-/// `kCGPopUpMenuWindowLevel`：浮在普通窗口和浮动面板之上，与系统输入法候选框同级。
-const POPUP_MENU_LEVEL: NSWindowLevel = 101;
+#[link(name = "CoreGraphics", kind = "framework")]
+unsafe extern "C" {
+    fn CGShieldingWindowLevel() -> i32;
+}
+
+/// 截屏工具的覆盖层通常在 overlay / screensaver (102 / 1000) 之上, popup menu (101) 会被整块压住.
+/// `CGShieldingWindowLevel()` 与 Squirrel 同级, 候选窗和模式徽标才能浮在截屏标注界面上.
+fn shielding_window_level() -> NSWindowLevel {
+    // SAFETY: 无参数查询, CoreGraphics 随 AppKit 一起可用.
+    unsafe { CGShieldingWindowLevel() as NSWindowLevel }
+}
 
 /// 候选窗口与光标行之间的间隙。
 const CARET_GAP: f64 = 4.0;
@@ -194,9 +203,9 @@ pub(crate) fn build_float_panel(mtm: MainThreadMarker, view: &NSView) -> Retaine
     // NSPanel 缺省在应用失活时自动隐藏；输入法进程从来不是前台应用，不能靠这个
     panel.setHidesOnDeactivate(false);
     panel.setCollectionBehavior(collection_behavior());
-    // 不要 setFloatingPanel(true)：它会把层级改回 NSFloatingWindowLevel（3），全屏应用的 Space 里就看不见了；
-    // 层级最后设，别被前面任何一项覆盖
-    panel.setLevel(POPUP_MENU_LEVEL);
+    // 不要 setFloatingPanel(true): 它会把层级改回 NSFloatingWindowLevel (3), 全屏应用的 Space 里就看不见了;
+    // 层级最后设, 别被前面任何一项覆盖
+    panel.setLevel(shielding_window_level());
     panel.setContentView(Some(view));
     panel
 }
