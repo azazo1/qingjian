@@ -23,6 +23,7 @@ qingjian-render.workspace = true
 qingjian-lm.workspace = true
 qingjian-neural = { workspace = true, features = ["metal"] }
 qingjian-translate.workspace = true
+qingjian-update.workspace = true
 thiserror.workspace = true
 tracing.workspace = true
 tracing-appender.workspace = true

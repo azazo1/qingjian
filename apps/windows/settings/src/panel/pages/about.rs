@@ -1,9 +1,14 @@
-//! 「关于」页：版本、许可证、随包数据的来源与署名（第三方许可要求署名在分发物里可见）、隐私与反馈。
+//! 「关于」页：版本、检查更新、许可证、随包数据的来源与署名（第三方许可要求署名在分发物里可见）、隐私与反馈。
 
+use qingjian_platform::UpdateChannel;
+use qingjian_update::Checker;
 use windows_reactor::*;
 
-use crate::panel::controls::{note, page};
+use crate::panel::controls::{field, note, page};
 use crate::panel::{Message, Settings};
+
+/// QINGJIAN_VERSION 由 build.rs 给：-dev 版接 git 短哈希。
+pub(crate) const VERSION: &str = env!("QINGJIAN_VERSION");
 
 pub(crate) const WEBSITE_URL: &str = "https://qingjian.app";
 
@@ -38,23 +43,54 @@ const ATTRIBUTIONS: &[(&str, &str)] = &[
     ),
     (
         "笔画码表",
-        "CNS11643 全字庫筆順資料（中華民國數位發展部，政府資料開放授權條款第 1 版 / OFL-1.1）；大陆笔顺按通用规范字表校正。",
+        "CNS11643 全字庫筆順資料（數位發展部，政府資料開放授權條款第 1 版 / OFL-1.1）；大陆笔顺按通用规范字表校正。",
     ),
 ];
 
-const PRIVACY_NOTE: &str = "青简不上传任何数据。开着云联想时，光标附近的文字与拼音会发给你在「云服务」页填的 AI 服务商（缺省 DeepSeek）的服务器，不经过作者。「高级」页的输入日志只写在本机，可以关掉或清空。";
+const PRIVACY_NOTE: &str = "青简不上传任何数据。开着「自动检查更新」时每天向官网读一次版本列表，请求不带任何标识，上面可以关。开着云联想时，光标附近的文字与拼音会发给你在「云服务」页填的 AI 服务商（缺省 DeepSeek）的服务器，不经过作者。「高级」页的输入日志只写在本机，可以关掉或清空。";
 
 const FEEDBACK_NOTE: &str = "遇到问题点「打包日志到桌面」，把生成的 zip 发给作者即可（含三个进程的日志与配置文件，不含密钥）。缺省日志不含你敲的内容；排查排序问题时作者可能请你在「高级」页临时打开详细日志。";
 
-pub(crate) fn view(_settings: &Settings, context: &mut ViewContext<Settings>) -> View {
+/// 「立即检查」旁边那行字。
+fn update_status(settings: &Settings) -> String {
+    if settings.update_checking {
+        return "正在检查…".to_owned();
+    }
+    if let Some(error) = &settings.update_error {
+        return format!("检查失败：{error}");
+    }
+    let update = &settings.config.update;
+    match Checker::available_in(&settings.update_state, VERSION, update) {
+        Some(found) => format!("有新版本 {}", found.version),
+        None if Checker::is_dev_version(VERSION) => "本地开发版，不检查更新".to_owned(),
+        None if settings.update_state.checked_at > 0 => "已是最新版本".to_owned(),
+        None => String::new(),
+    }
+}
+
+pub(crate) fn view(settings: &Settings, context: &mut ViewContext<Settings>) -> View {
+    let update = &settings.config.update;
+    let available = Checker::available_in(&settings.update_state, VERSION, update).is_some();
+    let mut update_buttons: Vec<View> = vec![
+        Button::new()
+            .on_click(context.message(Message::CheckUpdateNow))
+            .content("立即检查"),
+    ];
+    if available {
+        update_buttons.push(
+            Button::new()
+                .on_click(context.message(Message::OpenDownload))
+                .content("下载新版"),
+        );
+    }
+    update_buttons.push(note(&update_status(settings)));
     let mut attributions: Vec<View> = Vec::with_capacity(ATTRIBUTIONS.len());
     for (name, text) in ATTRIBUTIONS {
         attributions.push(note(&format!("{name}：{text}")));
     }
     let body = StackPanel::new().spacing(12.0).children([
         TextBlock::new()
-            // QINGJIAN_VERSION 由 build.rs 给：-dev 版接 git 短哈希
-            .text(concat!("青简 Windows ", env!("QINGJIAN_VERSION")))
+            .text(format!("青简 Windows {VERSION}"))
             .font_size(16.0)
             .font_weight(FontWeight::SEMI_BOLD)
             .into(),
@@ -84,6 +120,35 @@ pub(crate) fn view(_settings: &Settings, context: &mut ViewContext<Settings>) ->
                     .content("打包日志到桌面"),
             )),
         note(LICENSE_NOTE),
+        field(
+            "自动检查更新",
+            "每天向官网读一次版本列表，有新版在这里提示，不会自动下载安装。",
+            ToggleSwitch::new()
+                .is_on(update.check)
+                .on_toggled(context.callback(Message::UpdateCheck)),
+        ),
+        field(
+            "更新渠道",
+            "测试版渠道还会提示 alpha / beta / rc 版本。",
+            ComboBox::new()
+                .items_source(UpdateChannel::ALL.iter().map(|channel| channel.label()))
+                .selected_index(
+                    UpdateChannel::ALL
+                        .iter()
+                        .position(|channel| *channel == update.channel)
+                        .unwrap_or(0),
+                )
+                .on_selection_changed(context.callback(Message::UpdateChannel)),
+        ),
+        StackPanel::new()
+            .orientation(Orientation::Horizontal)
+            .spacing(12.0)
+            .keyed_children(
+                update_buttons
+                    .into_iter()
+                    .enumerate()
+                    .map(|(index, view)| KeyedView::new(format!("update-{index}"), view)),
+            ),
         TextBlock::new()
             .text("数据来源与署名")
             .font_weight(FontWeight::SEMI_BOLD)

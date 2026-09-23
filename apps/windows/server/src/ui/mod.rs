@@ -24,7 +24,8 @@ use windows::Win32::UI::HiDpi::{
     DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2, SetProcessDpiAwarenessContext,
 };
 use windows::Win32::UI::WindowsAndMessaging::{
-    DispatchMessageW, GetMessageW, MSG, PostThreadMessageW, TranslateMessage, WM_APP,
+    ASFW_ANY, AllowSetForegroundWindow, DispatchMessageW, GetMessageW, MSG, PostThreadMessageW,
+    TranslateMessage, WM_APP,
 };
 use windows::core::{Error, Result};
 
@@ -100,6 +101,30 @@ impl StatusSink for UiHandle {
 
     fn hide_status(&self) {
         self.post(UiCommand::StatusHide);
+    }
+
+    fn open_settings(&self) {
+        open_settings();
+    }
+
+    fn open_download(&self) {
+        let _ = unsafe { AllowSetForegroundWindow(ASFW_ANY) };
+        let opened = std::process::Command::new("explorer")
+            .arg(qingjian_update::DOWNLOAD_URL)
+            .spawn();
+        if let Err(error) = opened {
+            tracing::warn!(%error, "打开下载页失败");
+        }
+    }
+}
+
+/// 起与本 exe 同目录的设置程序。设置程序已开时由新实例把它带到前台，得先把前台权让出去。
+pub(crate) fn open_settings() {
+    let _ = unsafe { AllowSetForegroundWindow(ASFW_ANY) };
+    let exe = std::env::current_exe().map(|exe| exe.with_file_name("qingjian-settings.exe"));
+    let spawned = exe.and_then(|exe| std::process::Command::new(exe).spawn());
+    if let Err(error) = spawned {
+        tracing::warn!(%error, "打开设置程序失败");
     }
 }
 

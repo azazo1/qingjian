@@ -8,6 +8,9 @@
 #   QINGJIAN_NOTARY_KEY          App Store Connect API 密钥 .p8，base64
 #   QINGJIAN_NOTARY_KEY_ID       密钥的 Key ID
 #   QINGJIAN_NOTARY_ISSUER       密钥的 Issuer ID
+# 版本索引的签名（必须，没配门禁直接失败）：
+#   QINGJIAN_INDEX_SIGNING_KEY   releases.json 的 ed25519 私钥（base64 的 32 字节，tools/release-sign keygen 生成），
+#                                公钥在 crates/qingjian-update/src/index/signature.rs；软件内检查更新只认签过名的索引
 # 发版后让官网重新构建（也可选）：
 #   QINGJIAN_WEB_TOKEN           fine-grained PAT，对 qingjian-team/qingjian-web 有 Contents: read and write
 #                                （官网由 Cloudflare 按仓库提交自动构建，tools/release/bump-website.sh 往那边推一个小提交）
@@ -52,7 +55,13 @@ jobs:
           echo "website=${{ secrets.QINGJIAN_WEB_TOKEN != '' }}" >> "$GITHUB_OUTPUT"
 
       - name: Check version matches tag and tag is on main
+        env:
+          INDEX_KEY_SET: ${{ secrets.QINGJIAN_INDEX_SIGNING_KEY != '' }}
         run: |
+          if [[ "$INDEX_KEY_SET" != "true" ]]; then
+            echo "没配 QINGJIAN_INDEX_SIGNING_KEY：releases.json 签不了名，已装的青简都不认这份索引、收不到更新提示（docs/notes/release.md）" >&2
+            exit 1
+          fi
           VERSION="$(sed -n 's/^version = "\(.*\)"/\1/p' apps/macos/Cargo.toml | head -1)"
           TAG="${GITHUB_REF_NAME#macos-v}"
           if [[ "$VERSION" != "$TAG" ]]; then
@@ -145,6 +154,7 @@ jobs:
       - name: Generate releases.json
         env:
           GH_TOKEN: ${{ github.token }}
+          QINGJIAN_INDEX_SIGNING_KEY: ${{ secrets.QINGJIAN_INDEX_SIGNING_KEY }}
         run: tools/release/publish-releases-json.sh "$GITHUB_REF_NAME" target/pkg
 
       - name: Trigger website build
@@ -186,7 +196,13 @@ jobs:
         run: echo "website=${{ secrets.QINGJIAN_WEB_TOKEN != '' }}" >> "$GITHUB_OUTPUT"
 
       - name: Check version matches tag and tag is on main
+        env:
+          INDEX_KEY_SET: ${{ secrets.QINGJIAN_INDEX_SIGNING_KEY != '' }}
         run: |
+          if [[ "$INDEX_KEY_SET" != "true" ]]; then
+            echo "没配 QINGJIAN_INDEX_SIGNING_KEY：releases.json 签不了名，已装的青简都不认这份索引、收不到更新提示（docs/notes/release.md）" >&2
+            exit 1
+          fi
           VERSION="$(sed -n 's/^version = "\(.*\)"/\1/p' apps/windows/server/Cargo.toml | head -1)"
           TAG="${GITHUB_REF_NAME#windows-v}"
           if [[ "$VERSION" != "$TAG" ]]; then
@@ -253,6 +269,7 @@ jobs:
       - name: Generate releases.json
         env:
           GH_TOKEN: ${{ github.token }}
+          QINGJIAN_INDEX_SIGNING_KEY: ${{ secrets.QINGJIAN_INDEX_SIGNING_KEY }}
         run: tools/release/publish-releases-json.sh "$GITHUB_REF_NAME" target/installer
 
       - name: Trigger website build

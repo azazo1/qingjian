@@ -290,6 +290,7 @@ Core 按 `prediction::restates_question` 剔掉：与本地转出的问题相同
 | 模糊音 ▸ 九条（勾选） | 写 `[fuzzy]` 对应键 |
 | 偏好设置… | 打开设置窗口 |
 | 打开日志目录 | 访达打开 `~/Library/Logs/Qingjian/` |
+| 有新版本 x.y.z…（查到新版才出现） | 打开下载页，见 [update.md](update.md) |
 | （配置文件有错误：…） | 只在配置解析失败时出现，灰显；此时沿用上一份能用的配置，不让输入法退出 |
 | 青简 0.1.0 | 版本，灰显 |
 
@@ -314,7 +315,7 @@ Core 按 `prediction::restates_question` 剔掉：与本地转出的问题相同
 
 「关于」页：版本与构建号（`bundle.sh` 打包时把 git 短哈希与日期塞进环境变量 `QINGJIAN_BUILD`，编译期 `option_env!` 读，直接 `cargo build` 的显示「本地构建」）、
 许可说明（与仓库 `LICENSE` 一致）、随包数据的来源与署名（第三方数据的许可证要求署名在分发物里可见，文案在 `preferences/about.rs`，改数据来源时与 `bundle.sh` 的 `pack` 署名一起改）、
-隐私说明（不上传任何数据；云联想 / 翻译发给用户自己在「云服务」页填的 AI 服务商，不经过作者）与反馈方式：「打开日志目录」「复制诊断信息」
+检查更新（开关、渠道、立即检查，见 [update.md](update.md)）、隐私说明（不上传任何数据；云联想 / 翻译发给用户自己在「云服务」页填的 AI 服务商，不经过作者）与反馈方式：「打开日志目录」「复制诊断信息」
 （版本、系统、加载的数据、抹掉密钥的配置原文、日志目录，写进剪贴板）。
 日志缺省 info 级，不含用户敲的内容；`[general] log_level = "debug"`（「高级」页「详细日志」）才逐键记，`tracing_subscriber::reload` 热切换，`RUST_LOG` 环境变量在时以它为准。
 
@@ -322,8 +323,8 @@ Core 按 `prediction::restates_question` 剔掉：与本地转出的问题相同
 
 | 系统 | 切中英 | 英文模式 |
 |---|---|---|
-| macOS | 缺省是 Caps Lock 位置的中/英键：系统层面它切的是 Caps Lock 状态，「Caps Lock 亮着」就是英文模式。也可以在偏好设置「通用」页另配单键切换（一个修饰键或组合键翻转）与双键切换（两个键各切一边），两者可同时开；关掉 Caps Lock 切换后它只当大小写锁 | 默认小写，按住 Shift 大写；标点不转全角。macOS 上 Caps Lock 亮着时按不按 Shift 送来的都是大写，所以按键时读一次 Shift 的硬件状态（`NSEvent.modifierFlags`）决定大小写 |
-| Windows（Phase 5） | 单击切换键切中英，键与开关在「设置 → 通用」：`[shortcut] switch_mode` 取 `shift` / `control` / `none`，`[general] english_mode` 关掉则固定中文、不再登记语言栏按钮；Caps Lock 是真正的大小写锁定 | 默认小写，按住 Shift 大写 |
+| macOS | 缺省是 Caps Lock 位置的中/英键: 系统层面它切的是 Caps Lock 状态, "Caps Lock 亮着" 就是英文模式. 也可以在偏好设置的通用页另配单键切换 (一个修饰键或组合键翻转) 与双键切换 (两个键各切一边), 两者可同时开; 关掉 Caps Lock 切换后它只当大小写锁 | 默认小写, 按住 Shift 大写; 标点不转全角. macOS 上 Caps Lock 亮着时按不按 Shift 送来的都是大写, 所以按键时读一次 Shift 的硬件状态 (`NSEvent.modifierFlags`) 决定大小写 |
+| Windows (Phase 5) | 单击切换键切中英, 键与开关在设置的通用页: `[shortcut] switch_mode` 勾选 `shift` / `control` / `ctrl+alt+space` (可多选), 中英模式所有应用共用一份, `[general] english_mode` 关掉则固定中文, 不再登记语言栏按钮; Caps Lock 是真正的大小写锁定 | 默认小写, 按住 Shift 大写 |
 
 macOS 上如果系统开了「使用大写锁定键切换 ABC 输入法」，按键会直接切到 ABC 输入源，我们收到 deactivate、
 收窗即可，两条路都能得到小写英文。

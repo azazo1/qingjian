@@ -2,7 +2,7 @@
 
 use qingjian_platform::{
     CandidateRenderer, Config, DEFAULT_ENGLISH_CANDIDATES_OFF_WINDOWS, KeyCombo, LayoutMode,
-    LogLevel, PreeditMode, ShiftLetter, ThemeMode,
+    LogLevel, PreeditMode, ShiftLetter, ThemeMode, UpdateChannel,
 };
 use windows_reactor::*;
 
@@ -29,6 +29,11 @@ impl Component for Settings {
             recorder: Recorder::Idle,
             record_box: ElementRef::new(),
             notice: Notice::default(),
+            update_state: Self::update_state_path()
+                .map(|path| qingjian_update::UpdateState::load(&path))
+                .unwrap_or_default(),
+            update_checking: false,
+            update_error: None,
             dictionary_status: String::new(),
             families: qingjian_render::system_fonts::families(),
             font_query: None,
@@ -55,6 +60,7 @@ impl Component for Settings {
             Message::Scheme(Some(i)) if i < general::SCHEMES.len() => {
                 self.save("general", "scheme", general::SCHEMES[i].1);
             }
+            Message::ShuangpinRawPreedit(on) => self.save("general", "shuangpin_raw_preedit", on),
             Message::Wubi(on) => self.save("general", "wubi", if on { "wubi86" } else { "" }),
             Message::Traditional(on) => self.save("general", "traditional", on),
             Message::EnglishCandidates(on) => self.save("general", "english_candidates", on),
@@ -76,8 +82,11 @@ impl Component for Settings {
                 };
                 self.save_array("apps", "english_candidates_off", &list);
             }
-            Message::SwitchMode(Some(i)) if i < general::SWITCH_KEYS.len() => {
-                self.save("shortcut", "switch_mode", general::SWITCH_KEYS[i].1);
+            Message::SwitchKey(key, on) => {
+                let keys = self.config.shortcut.switch_mode.with(key, on);
+                let values: Vec<String> =
+                    keys.config_values().into_iter().map(String::from).collect();
+                self.save_array("shortcut", "switch_mode", &values);
             }
             Message::EnglishMode(on) => self.save("general", "english_mode", on),
 
@@ -293,6 +302,37 @@ impl Component for Settings {
 
             // 关于页
             Message::OpenWebsite => open_with_explorer(about::WEBSITE_URL),
+            Message::OpenDownload => open_with_explorer(qingjian_update::DOWNLOAD_URL),
+
+            // 关于页：检查更新
+            Message::UpdateCheck(on) => self.save("update", "check", on),
+            Message::UpdateChannel(Some(i)) if i < UpdateChannel::ALL.len() => {
+                self.save("update", "channel", UpdateChannel::ALL[i].key());
+            }
+            Message::CheckUpdateNow => {
+                let Some(path) = Self::update_state_path() else {
+                    return;
+                };
+                if self.update_checking {
+                    return;
+                }
+                self.update_checking = true;
+                self.update_error = None;
+                let config = self.config.update.clone();
+                context.spawn_background(move |_cancel| {
+                    let result =
+                        qingjian_update::Checker::check_blocking(&path, about::VERSION, &config);
+                    Message::UpdateChecked(result.map(|r| r.map_err(|error| error.to_string())))
+                });
+            }
+            Message::UpdateChecked(result) => {
+                self.update_checking = false;
+                match result {
+                    Some(Ok(state)) => self.update_state = state,
+                    Some(Err(error)) => self.update_error = Some(error),
+                    None => {}
+                }
+            }
             Message::OpenRepository => open_with_explorer(about::REPOSITORY_URL),
 
             // 下拉被清空 / 越界：不改

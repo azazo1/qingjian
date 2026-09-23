@@ -408,22 +408,30 @@ CC-CEDICT 表（`dict-convert cedict`）保留为备用来源，覆盖面广但�
   失焦 / 停用时 DLL 发 `Commit`，Server 回 `Committed { text }`（缓冲区原样交出，对应 macOS 的 `commitComposition`），
   DLL 用最近收键记下的 `ITfContext` 经编辑会话落进文档；应用强行终止组句（`OnCompositionTerminated`）时拼音已被框架定成普通文本，
   DLL 只记「Server 缓冲过期」，下次说话前先 `Commit` 并丢掉交出的文本，不再插一次。
-  中英模式：**Windows 与 macOS 机制不同**。macOS 的模式是进程里的一份显式状态（`host/mode.rs` 的 `ModeState`）：Caps Lock 的物理跳变
-  （`[shortcut] mac_caps_lock_switch`，缺省开）与两个可配的切换键开关（`mac_switch_single` 一个键翻转 / `mac_switch_dual` 两个键各切一边，
-  键可以写成带左右的修饰键或组合键，两个开关可同时开）都改它；修饰键事件靠覆盖 `recognizedEvents:` 多要一个 `FlagsChanged`（IMK 缺省只给 keyDown），
-  单击判定与 Windows 同一套（按下到抬起之间没插进别的键）。Windows 按本地习惯，单击切换键在中 / 英间翻转，
-  切换键由 `[shortcut] switch_mode` 定（`shift` 缺省 / `control` / `none` 不切换），`[general] english_mode` 关掉则整个内置英文模式停用（issue #81）。
+  中英模式: **Windows 与 macOS 机制不同**. macOS 的模式是进程里的一份显式状态 (`host/mode.rs` 的 `ModeState`): Caps Lock 的物理跳变
+  (`[shortcut] mac_caps_lock_switch`, 缺省开) 与两个可配的切换键开关 (`mac_switch_single` 一个键翻转 / `mac_switch_dual` 两个键各切一边,
+  键可以写成带左右的修饰键或组合键, 两个开关可同时开) 都改它; 修饰键事件靠覆盖 `recognizedEvents:` 多要一个 `FlagsChanged` (IMK 缺省只给 keyDown),
+  单击判定与 Windows 同一套 (按下到抬起之间没插进别的键). Windows 按本地习惯, 单击切换键在中 / 英间翻转,
+  切换键由 `[shortcut] switch_mode` 勾选 (`SwitchKeys`: 单击 `shift` (缺省) / 单击 `control` / `ctrl+alt+space`, 可多选, 空列表 = 不用键切),
+  `[general] english_mode` 关掉则整个内置英文模式停用 (issue #81). **模式全局一份, 存在 Server** (`Router.english`, 与搜狗一致):
+  DLL 里用户切了 (切换键, 语言栏按钮, 右键菜单, 任务栏转换模式) 用 `ModeChanged` 报上去; 激活, 线程得到焦点 (`com/focus.rs` 的
+  `ITfThreadFocusSink`, 切窗口时 `ITfKeyEventSink::OnSetFocus` 不触发) 和每隔几拍的轮询用 `SyncMode` 取回并跟上
+  (`service/mode.rs::adopt_mode`, 不回报); 悬浮状态条上点 "中 / 英" 直接改 Server 那份. 有 DLL 来取模式也就说明青简是当前输入法,
+  状态条据此显示, `ImeSwitched` 收起. 之前模式各应用各记一份, Server 只采纳前台会话的上报, 后台线程激活, 新应用继承都会让
+  各处对不上, 改成全局后这些都不存在了.
   单击判定在**击键 sink** 里（`com/key/tap.rs`，喂 `OnTestKeyDown` / `OnTestKeyUp`：按下切换键到抬起之间没有别的键插进来就是一次单击；
   微软 SampleIME 的 `OnTestKeyDown` 同样处理 VK_SHIFT，sink 收得到独立修饰键）。之前用线程级 `WH_KEYBOARD` 钩子判定，但钩子**看不到被 TSF 吃掉的键**
   （msctf 在队列层把它们改成 WM_NULL），Shift + 数字（删候选 / 第二译词）会被误判成单击而切换模式，2026-09-11 真机确认 sink 收得到 Shift 后钩子已删。
   切换键、英文模式开关与「Shift 字母进组句」由 **Server 读配置、经协议下发**（`protocol::InputSettings`：`OpenSession` 的回包
   `SessionOpened` 带一次，之后每拍 `SyncMode` 跟着走，值变了就地应用，**设置窗口改完约 320 ms 内生效**，不必切走再切回输入法）；
   DLL 不读配置文件——它跑在每个应用进程里，AppContainer 里的商店应用连 `%APPDATA%` 都读不到。
-  切换键选 `ctrl+space` 时它是组合键、属系统键不经击键 sink，与翻译快捷键一样登记成 TSF 保留键
-  （`com/key/preserved.rs` 的 `GUID_SWITCH_MODE`）；但 Windows 缺省把「输入法/非输入法切换」
-  （`IME_CHOTKEY_IME_NONIME_TOGGLE`，注册表 `Hot Keys\00000010`）也绑在它上面，系统会先截走，而且系统那条路
-  会把转换模式翻成「非原生」、我们又按 compartment 同步成英文——两边各切一次互相抵消。所以注册前先读那个热键，
-  被占着就不登记自己的、把切换交给系统那条路（`service/mode.rs::sync_switch_preserved_key`）。
+  `ctrl+alt+space` 是组合键、属系统键不经击键 sink，与翻译快捷键一样登记成 TSF 保留键（`com/key/preserved.rs` 的 `GUID_SWITCH_MODE`）。
+  勾选项里没有 Ctrl + Space：中文 Windows 把它绑成系统的「输入法/非输入法切换」（`IME_CHOTKEY_IME_NONIME_TOGGLE`），系统先截走、保留键收不到。
+  但我们**适配**这条系统热键（与微软拼音一致，不进勾选项）：它翻的是「输入法开 / 关」compartment（`GUID_COMPARTMENT_KEYBOARD_OPENCLOSE`），
+  `com/mode/sink.rs` 监听它（`sync_from_keyboard_open`）：关 = 英文、开 = 中文，照样报给 Server 成为全局模式。反向由 `refresh_mode_indicator`
+  每次把开关写成与模式一致（中文开、英文关；新线程里它缺省是关），系统热键下一次按下才总是真的切换、不白按；关着时按键照样送到 TIP（真机日志验过）。
+  它的 Space 被系统截走，击键 sink 只看到 Ctrl 按下又抬起，会被当成单击 Ctrl，所以开关一变就作废正按着的单击（`KeyTap::cancel`）。
+  装了别的键盘布局 / 输入法时 Windows 可能改用这条热键换输入法，那由系统决定。
   **四条切换入口**——单击切换键、语言栏按钮、悬浮状态条、任务栏转换模式 compartment——都汇到 `com/service/mode.rs::set_english_mode`，
   内置英文模式关着时在那里一并拦住（Server 侧状态条点击按同一项拦，免得两边显示不一致），此时连语言栏的「中 / 英」按钮都不登记。
   「翻译选中文字」的快捷键（缺省 Ctrl+Alt+T）**登记成 TSF 保留键**（`com/key/preserved.rs`，`ITfKeystrokeMgr::PreserveKey` → `OnPreservedKey`）：
@@ -432,11 +440,11 @@ CC-CEDICT 表（`dict-convert cedict`）保留为备用来源，覆盖面广但�
   DLL 记 `english_mode` 持久状态；任务栏的中 / 英指示器靠 `GUID_LBI_INPUTMODE` 语言栏按钮渲染
   （`com/mode/button.rs`，图标是设计稿 SVG 预栅格化的四档 alpha 蒙版，`mode/icon.rs` 按系统 DPI 挑档、按任务栏 `SystemUsesLightTheme` 填黑或白，Caps Lock 亮着显示「A」；第三方 TIP 单写转换模式 compartment 不出这个指示器），另外顺带写一份转换模式 compartment
   （`GUID_COMPARTMENT_KEYBOARD_INPUTMODE_CONVERSION` 的 `TF_CONVERSIONMODE_NATIVE` 位，`com/mode/mod.rs`）。这条 compartment 还**反向同步**：激活时对它挂
-  `ITfCompartmentEventSink`（`com/mode/conversion.rs`），用户点任务栏中 / 英（或别的输入指示器途径）改了转换模式时 `OnChange` 读回 `NATIVE` 位、与当前
-  `english_mode` 不同才翻转（相同即我们自己写的那次，忽略以防回环），翻转顺带走 `update_mode_indicator` → 悬浮状态条也一起同步；
+  `ITfCompartmentEventSink`（`com/mode/sink.rs`，与「输入法开 / 关」共用一个 sink），用户点任务栏中 / 英（或别的输入指示器途径）改了转换模式时 `OnChange` 读回 `NATIVE` 位、与当前
+  `english_mode` 不同才翻转（相同即我们自己写的那次，忽略以防回环），翻转只刷语言栏按钮与悬浮状态条、**不回写 compartment**
+  （`follow_system_mode`：在它自己的 `OnChange` 里写它会被拒、报 0x8000FFFF，要写的值也本来就等于当前值）；
   **激活后的最初一瞬除外**（`service/mode.rs` 的 `CONVERSION_RESTORE_GUARD`，约 1.2 s）：msctf 会在 TIP 激活后 200–300 ms 把 profile 存的
-  转换模式（缺省「非原生」= 关掉输入法）写回 compartment，采纳它会让每个应用一激活就是英文模式——表现是「Ctrl + Space 好像不能用」，
-  其实只是每次都被打回英文。Caps Lock 只管大小写，
+  转换模式写回 compartment，那不是用户操作，采纳了会被当成用户切换、改掉全局模式。Caps Lock 只管大小写，
   亮着无论中英模式都直接出大写英文（微软拼音式）。`KeyModifiers` 因此带 `caps`（大小写）与 `english_mode`（持久模式）两个非物理位，
   字母大小写按 `shift XOR caps`。Router（`dispatch/key/input.rs`）里 `english = caps || english_mode`、候选只在 `english_mode && !caps && 应用允许` 时给，
   `[general] english_candidates` 关着就是纯直通。macOS 的「先上屏、再把这个键交给应用」在 Windows 上会乱序
@@ -463,7 +471,7 @@ CC-CEDICT 表（`dict-convert cedict`）保留为备用来源，覆盖面广但�
 - **Server 进程**：`apps/windows/server`（package `qingjian-windows-server`，bin `qingjian-server`）。`dispatch::Router` 按 `SessionId` 分派多会话（Windows 一个 Server 服务多个应用进程，
   每会话各持组句状态，不同于 macOS 的进程级单例）。会话开 / 关、按键与上屏、Engine 装配、命名管道传输（`\\.\pipe\qingjian`）都已跑通，Windows 上端到端测过。
 - **候选窗口（Server 进程自绘 + uiAccess）**：候选窗从前在**应用进程内的 DLL** 自绘，普通置顶窗被微软商店 / 任务栏搜索这些**更高 z-band** 的宿主盖住。现改由 **Server 进程**自绘（`server/src/ui/`：一条专用 UI 线程注册窗口类 + 建 GDI 分层窗 + 跑消息循环，HWND 只在该线程碰；工人线程经 `Sender<UiCommand>` + `PostThreadMessageW(WM_APP)` 把「显示(`Frame`+屏幕矩形) / 隐藏」marshal 过去；进程级 `SetProcessDpiAwarenessContext(PER_MONITOR_AWARE_V2)` 按物理像素对齐应用报来的矩形）。DLL 只量光标屏幕矩形（`GetTextExt`，退鼠标）发 `PositionCandidates{rect}`，并在组句于 DLL 侧结束（应用终止组句 / 断线，`OnCompositionTerminated` 这条 Server 无从知晓）时发 `HideCandidates`；Server 握着 `Frame` 直接自绘，云端异步更新也直接刷自己的窗、不回传 DLL（渲染代码——词性 + 译文 + 分页 + 柔和阴影，对齐 macOS——整块从 DLL 搬到 Server）。**盖过高 z-band 宿主**靠 Server exe 的 `uiAccess="true"` manifest（`server/build.rs` 用 embed-manifest 嵌）+ 代码签名 + 装 Program Files 三者齐备（`SetWindowPos(HWND_TOPMOST)` 才自动升进 UIAccess 高带）：开发自签 + 本机受信任根（`installer/sign-local.ps1`），发版换 Certum 开源代码签名证书；uiAccess exe 不能 CreateProcess 拉起（报 740），装完 / 登录都走 ShellExecute（安装器完成页 `ShellExecAsOriginalUser` + `{commonstartup}` 启动快捷方式由 Explorer 拉起才授 uiAccess，故不用计划任务）。候选窗每显示一页，Server 调 `Engine::note_displayed`（收窗传空）告知当前页——生词「看到轮次」据此推进、橙色标记满 `FRESH_UNTIL` 轮才毕业，对齐 macOS 壳的 `render`。
-- **悬浮状态条（Server 进程自绘，可拖动 / 记位置）**：桌面上常驻的小浮窗，显示当前中 / 英（开着双拼时附方案名），与任务栏的中 / 英指示器（语言栏按钮）并存。跟候选窗**同一条 UI 线程**、复用同一套分层窗口合成器（`server/src/ui/layered/`：圆角背景 + 四周柔和阴影，从候选窗的 `surface.rs` 抽出来两边共用）与主题（字体 / 配色 / DPI / 深浅）；自己一个窗口类与窗口过程（`server/src/ui/status/`）：三格 `[中 / 英][，。/ ,.][⚙]`：按下鼠标先 `DragDetect`，挪出阈值就交给系统移动循环（`WM_NCLBUTTONDOWN` + `HTCAPTION`，结束时 `WM_EXITSIZEMOVE` 报新位置），没挪就是点击、按 x 落进哪格；`WM_MOUSEACTIVATE` 回 `MA_NOACTIVATE` 点它不抢应用焦点；窗口过程按 HWND 从 thread_local 表查到对象。点格 / 拖动结束经 `StatusEvent`（`dispatch/status/`）投回工人线程（工人循环收的是 `ipc::Work`：DLL 消息或状态条事件），Router 写回配置（`[status_bar] x/y`、`[general] full_width_punctuation`，热加载再读回）；齿轮由 UI 线程直接起设置程序。中英模式只在 DLL 侧（单击 Shift 翻转），DLL 在切换 / 激活 / 获焦时用 `ClientMessage::ModeChanged { english }` 把当前会话的模式推来（`com/service/mode.rs::refresh_mode_indicator` 的单一咽喉点）；状态条上点「中 / 英」时 Server 只能记下目标模式（`pending_mode`）等 DLL 来取：DLL 的轮询定时器在没组句、本线程前台时每几拍发 `SyncMode`，`ModeSync { english: Some(_) }` 就切并回报 `ModeChanged`。状态条**常驻桌面**，只跟「当前输入法是不是青简」走：第一次 `ModeChanged` 显示，DLL 挂 `ITfActiveLanguageProfileNotifySink`（`com/profile.rs`）在别的 TIP 被激活时用一条临时连接发 `ImeSwitched` 收起（此时自己已被停用、会话连接已关），应用退出（`CloseSession`）不收。双拼方案 Server 从自己的 `[general] shuangpin` 配置知道，不必带。开关与记住的位置在 `[status_bar]`（`enabled` / `x` / `y`），热加载即时生效；uiAccess 高 z-band 与候选窗同进程天然继承。参考微软水杉的 FTB 形态（`~/Desktop/MSIME-Windows`，它用 D2D + DirectComposition 且不记位置），落地时选沿用本项目已有的 GDI 分层窗那套以保持视觉语言一致、并加了位置持久化。
+- **悬浮状态条（Server 进程自绘，可拖动 / 记位置）**：桌面上常驻的小浮窗，显示当前中 / 英（开着双拼时附方案名），与任务栏的中 / 英指示器（语言栏按钮）并存。跟候选窗**同一条 UI 线程**、复用同一套分层窗口合成器（`server/src/ui/layered/`：圆角背景 + 四周柔和阴影，从候选窗的 `surface.rs` 抽出来两边共用）与主题（字体 / 配色 / DPI / 深浅）；自己一个窗口类与窗口过程（`server/src/ui/status/`）：三格 `[中 / 英][，。/ ,.][⚙]`：按下鼠标先 `DragDetect`，挪出阈值就交给系统移动循环（`WM_NCLBUTTONDOWN` + `HTCAPTION`，结束时 `WM_EXITSIZEMOVE` 报新位置），没挪就是点击、按 x 落进哪格；`WM_MOUSEACTIVATE` 回 `MA_NOACTIVATE` 点它不抢应用焦点；窗口过程按 HWND 从 thread_local 表查到对象。点格 / 拖动结束经 `StatusEvent`（`dispatch/status/`）投回工人线程（工人循环收的是 `ipc::Work`：DLL 消息或状态条事件），Router 写回配置（`[status_bar] x/y`、`[general] full_width_punctuation`，热加载再读回）；齿轮由 UI 线程直接起设置程序。中英模式全局一份、存在 Server（见上文「中英模式」）：DLL 里用户切了用 `ModeChanged` 报来，状态条上点「中 / 英」直接改 Server 那份，各 DLL 激活、得到焦点时和轮询定时器（没组句、本线程前台时每几拍）用 `SyncMode` 取走跟上；有 DLL 来取模式就说明青简是当前输入法，状态条据此显示。会话号用线程 id（`com::session_id`）——TSF 的 client id 各进程都是同样那几个值，拿它当会话号会撞。前台线程没连着 Server 时（登录后 Server 起得比第一个应用晚、Server 重启过）轮询那一拍顺带补连，连上报一次当前模式（重启过的 Server 不知道）。状态条**常驻桌面**，只跟「当前输入法是不是青简」走：第一次 `ModeChanged` 显示，DLL 挂 `ITfActiveLanguageProfileNotifySink`（`com/profile.rs`）在别的 TIP 被激活时用一条临时连接发 `ImeSwitched` 收起（此时自己已被停用、会话连接已关），应用退出（`CloseSession`）不收。双拼方案 Server 从自己的 `[general] shuangpin` 配置知道，不必带。开关与记住的位置在 `[status_bar]`（`enabled` / `x` / `y`），热加载即时生效；uiAccess 高 z-band 与候选窗同进程天然继承。参考微软水杉的 FTB 形态（`~/Desktop/MSIME-Windows`，它用 D2D + DirectComposition 且不记位置），落地时选沿用本项目已有的 GDI 分层窗那套以保持视觉语言一致、并加了位置持久化。
 - **帧编解码**：长度前缀 JSON 帧的 `read_message` / `write_message` 与缺省管道名放在 `qingjian-platform::protocol`，Server 与 DLL 共用（DLL 不必依赖整个 Server 库）。
 - **TSF DLL**：`apps/windows/tsf`（package `qingjian-windows-tsf`，`cdylib`，产物 `qingjian_tsf.dll`，依赖官方 `windows` crate 的 COM `implement` 宏）。「引擎层」不是 Engine 而是连 Server 的**管道客户端** `EngineClient`（平台无关、可端到端测）；
   连不上 Server 时 DLL 自己把它拉起来（`com/service/launch.rs`）：Server 只在登录时由「启动」文件夹的快捷方式拉起，中途挂了以前只能等下次登录、期间静默吞键。

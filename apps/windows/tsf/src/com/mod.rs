@@ -2,7 +2,7 @@
 //! 注册表 / TSF profile 在 [`registry`]。
 //!
 //! - [`key`]：按键翻译、单击中英切换键判定、翻译快捷键的保留键。
-//! - [`mode`]：中 / 英模式的指示（转换模式 compartment、语言栏按钮）与反向同步。
+//! - [`mode`]：中 / 英模式的指示（转换模式 compartment、语言栏按钮）与反向同步（任务栏点选、系统热键关掉输入法）。
 //! - [`edit`]：编辑会话（写组句 / 读选区 / 读前文与输入范围）与候选窗口锚点；[`context`]：上下文的键盘禁用开关（密码框）。
 //! - [`composition`]：组句 preedit；[`display_attribute`]：组句内联下划线；[`poll`]：轮询定时器。
 #![allow(non_snake_case)] // 导出的 Dll* 入口按 COM 约定命名
@@ -12,6 +12,7 @@ pub(crate) mod context;
 pub(crate) mod display_attribute;
 pub(crate) mod edit;
 pub(crate) mod factory;
+pub(crate) mod focus;
 pub(crate) mod key;
 pub(crate) mod log;
 pub(crate) mod mode;
@@ -31,7 +32,10 @@ use windows::Win32::Foundation::{
 use windows::Win32::System::Com::IClassFactory;
 use windows::Win32::System::LibraryLoader::GetModuleFileNameW;
 use windows::Win32::System::SystemServices::DLL_PROCESS_ATTACH;
+use windows::Win32::System::Threading::GetCurrentThreadId;
 use windows::core::{BOOL, GUID, HRESULT, HSTRING, Interface};
+
+use qingjian_platform::protocol::SessionId;
 
 /// 文本服务的 CLSID。注册表 InprocServer32、TSF profile、[`DllGetClassObject`] 都认它。
 pub(crate) const CLSID_QINGJIAN: GUID = GUID::from_u128(0x4fdca82d_e923_49bf_9e75_bb906b93b8bb);
@@ -76,6 +80,11 @@ pub(crate) fn module_path() -> windows::core::Result<HSTRING> {
         return Err(E_FAIL.into());
     }
     Ok(HSTRING::from_wide(&buf[..len]))
+}
+
+/// 本线程的会话号：线程 id，全系统唯一（TSF 的 client id 各进程都是同样那几个值，会撞号）。
+pub(crate) fn session_id() -> SessionId {
+    SessionId(u64::from(unsafe { GetCurrentThreadId() }))
 }
 
 /// 宿主应用的 exe 文件名（`Code.exe`），开会话时报给 Server（对应 macOS 端的 bundle identifier）。

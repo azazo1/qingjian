@@ -19,7 +19,7 @@ use self::loader::Loaded;
 pub(crate) use self::loader::ModelLoader;
 pub(crate) use self::state::RescoreState;
 use super::Router;
-use super::composed::Composed;
+use super::composed::{Composed, marked_parts};
 
 /// 找模型（`.qjm` 单文件，或开发时的三件套目录）：用户目录 `model/` 优先（用户自己的模型），否则随包 `data/model/`；都没有为 `None`。
 pub fn find_model(user_dir: Option<&Path>, bundled_root: &Path) -> Option<PathBuf> {
@@ -189,6 +189,7 @@ impl Router {
         let Some(Composed::Candidates {
             preedit,
             cursor,
+            typed_keys,
             layout,
         }) = self.composed.as_mut()
         else {
@@ -204,8 +205,7 @@ impl Router {
             rebuilt.set_cloud(cloud);
         }
         *layout = rebuilt;
-        *preedit = query.marked_segments().iter().map(Into::into).collect();
-        *cursor = query.marked_cursor();
+        (*preedit, *cursor, *typed_keys) = marked_parts(&query);
         let frame = self.self_drawn_frame();
         self.reconcile_candidates(&frame);
         // 前文在结果回来之前换过（Surrounding 晚到）：这次查询又记下了一批要打分的，再来一轮

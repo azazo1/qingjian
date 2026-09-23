@@ -24,6 +24,7 @@ qingjian-platform.workspace = true
 qingjian-predict.workspace = true
 qingjian-render.workspace = true
 qingjian-translate.workspace = true
+qingjian-update.workspace = true
 dotenvy.workspace = true
 thiserror.workspace = true
 tracing.workspace = true

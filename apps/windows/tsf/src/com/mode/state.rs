@@ -5,7 +5,7 @@ use std::rc::Rc;
 
 use windows::Win32::UI::TextServices::{ITfLangBarItemSink, TF_LBI_ICON, TF_LBI_STATUS};
 
-use qingjian_platform::SwitchKey;
+use qingjian_platform::SwitchKeys;
 
 /// 当前中英模式 + 语言栏更新回调，文本服务与语言栏按钮共享（STA 单线程）。
 pub(crate) struct ModeState {
@@ -15,8 +15,8 @@ pub(crate) struct ModeState {
     /// 内置英文模式开关（`[general] english_mode`）：关掉后谁都不许切到英文。
     enabled: Cell<bool>,
 
-    /// 中英切换键（`[shortcut] switch_mode`），单击判定与语言栏提示用。
-    switch_key: Cell<SwitchKey>,
+    /// 勾着的中英切换键（`[shortcut] switch_mode`），单击判定与语言栏提示用。
+    switch_keys: Cell<SwitchKeys>,
 
     /// 系统登记进来的语言栏更新回调；由 [`super::ModeButton`] 的 `ITfSource` 登记 / 撤销。
     pub(super) sink: RefCell<Option<ITfLangBarItemSink>>,
@@ -27,7 +27,7 @@ impl ModeState {
         Rc::new(Self {
             english: Cell::new(false),
             enabled: Cell::new(true),
-            switch_key: Cell::new(SwitchKey::default()),
+            switch_keys: Cell::new(SwitchKeys::default()),
             sink: RefCell::new(None),
         })
     }
@@ -45,14 +45,14 @@ impl ModeState {
         self.enabled.get()
     }
 
-    pub(crate) fn switch_key(&self) -> SwitchKey {
-        self.switch_key.get()
+    pub(crate) fn switch_keys(&self) -> SwitchKeys {
+        self.switch_keys.get()
     }
 
     /// 激活时按配置设一次。
-    pub(crate) fn set_settings(&self, enabled: bool, switch_key: SwitchKey) {
+    pub(crate) fn set_settings(&self, enabled: bool, switch_keys: SwitchKeys) {
         self.enabled.set(enabled);
-        self.switch_key.set(switch_key);
+        self.switch_keys.set(switch_keys);
     }
 
     /// 通知系统重取图标 / 文字。

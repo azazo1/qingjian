@@ -1,8 +1,8 @@
 use std::io::{Read, Write};
 
 use qingjian_platform::protocol::{
-    ClientMessage, Frame, InputSettings, KeyEvent, PROTOCOL_VERSION, ScreenRect, ServerMessage,
-    SessionId, read_message, write_message,
+    ClientMessage, Frame, IndicatorCommand, InputSettings, KeyEvent, PROTOCOL_VERSION, ScreenRect,
+    ServerMessage, SessionId, read_message, write_message,
 };
 
 use super::{KeyReply, KeyResponse, ModeSyncReply};
@@ -168,7 +168,16 @@ impl<S: Read + Write> EngineClient<S> {
         match self.call(&ClientMessage::SyncMode {
             session: self.session,
         })? {
-            ServerMessage::ModeSync { english, input, .. } => Ok(ModeSyncReply { english, input }),
+            ServerMessage::ModeSync {
+                english,
+                input,
+                indicator,
+                ..
+            } => Ok(ModeSyncReply {
+                english,
+                input,
+                indicator,
+            }),
             _ => Err(ClientError::Unexpected("expected mode sync")),
         }
     }
@@ -178,6 +187,14 @@ impl<S: Read + Write> EngineClient<S> {
         self.send(&ClientMessage::ModeChanged {
             session: self.session,
             english,
+        })
+    }
+
+    /// 任务栏图标右键菜单里点的项交给 Server。不回话。
+    pub fn indicator(&mut self, command: IndicatorCommand) -> Result<(), ClientError> {
+        self.send(&ClientMessage::Indicator {
+            session: self.session,
+            command,
         })
     }
 

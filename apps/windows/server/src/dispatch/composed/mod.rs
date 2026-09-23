@@ -2,10 +2,10 @@
 
 mod state;
 
-use qingjian_core::{Candidate, CandidateLayout, CandidateList, CloudWord};
+use qingjian_core::{Candidate, CandidateLayout, CandidateList, CloudWord, Query};
 use qingjian_platform::protocol::{Frame, PROTOCOL_VERSION, PreeditKind, PreeditSegment};
 
-pub(super) use self::state::Composed;
+pub(super) use self::state::{Composed, TypedKeys};
 use super::Router;
 
 impl Router {
@@ -22,14 +22,11 @@ impl Router {
         }
         self.attach_loaded_model();
         let built = self.engine.query().ok().map(|query| {
-            let items = query.candidates.items.clone();
-            let preedit: Vec<PreeditSegment> =
-                query.marked_segments().iter().map(Into::into).collect();
-            // 光标用 Core 的映射：自动补的 `'` 会让显示串比敲的长。
-            (items, preedit, query.marked_cursor())
+            let (preedit, cursor, typed_keys) = marked_parts(&query);
+            (query.candidates.items.clone(), preedit, cursor, typed_keys)
         });
         self.composed = Some(match built {
-            Some((items, preedit, cursor)) => {
+            Some((items, preedit, cursor, typed_keys)) => {
                 let layout =
                     CandidateLayout::new(items, self.config.page_size, self.config.cloud_slots);
                 if self.engine.prediction_enabled() {
@@ -38,6 +35,7 @@ impl Router {
                 Composed::Candidates {
                     preedit,
                     cursor,
+                    typed_keys,
                     layout,
                 }
             }
@@ -146,8 +144,28 @@ impl Router {
     /// 焦点会话的 DLL 比 Server 老时按老协议降级（见 [`Self::downgrade_for_old_dll`]）。
     pub(super) fn current_frame(&self) -> Frame {
         let mut frame = self.raw_frame();
+        self.show_typed_keys(&mut frame);
         self.downgrade_for_old_dll(&mut frame);
         frame
+    }
+
+    /// 给 DLL 的帧只管应用输入框：双拼「输入框显示原始按键」开着时换成敲的键，拼音行由 Server 自绘照旧全拼。
+    fn show_typed_keys(&self, frame: &mut Frame) {
+        if self.translation.is_some() {
+            return;
+        }
+        let Some(Composed::Candidates {
+            typed_keys: Some(keys),
+            ..
+        }) = &self.composed
+        else {
+            return;
+        };
+        frame.preedit = vec![PreeditSegment {
+            text: keys.text.clone(),
+            kind: PreeditKind::Typed,
+        }];
+        frame.cursor = keys.cursor;
     }
 
     /// 自绘候选窗用的帧：不做老 DLL 降级，码段照常画。
@@ -202,6 +220,7 @@ impl Router {
                 preedit,
                 cursor,
                 layout,
+                ..
             }) => {
                 let page_size = self.config.page_size;
                 let highlight = self.highlight.min(layout.len().saturating_sub(1));
@@ -230,4 +249,15 @@ impl Router {
             }
         }
     }
+}
+
+/// 一次查询的拼音行分段与光标, 以及输入框另显示敲的键时的那一串 (`kd'fa've`, 不是不带分隔的原缓冲).
+/// 光标用 Core 的映射: 自动补的 `'` 会让显示串比敲的长.
+pub(super) fn marked_parts(query: &Query) -> (Vec<PreeditSegment>, usize, Option<TypedKeys>) {
+    let preedit = query.marked_segments().iter().map(Into::into).collect();
+    let typed_keys = query.shuangpin_raw_preedit.then(|| TypedKeys {
+        text: query.inline_text(),
+        cursor: query.inline_cursor(),
+    });
+    (preedit, query.segments_cursor(), typed_keys)
 }

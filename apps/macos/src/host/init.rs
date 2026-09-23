@@ -156,7 +156,6 @@ pub fn init(mtm: MainThreadMarker, info: &BundleInfo) -> Result<(), HostError> {
             translation: None,
             notice: None,
             preedit_mode: PreeditMode::default(),
-            inline_keys: true,
             layout: LayoutMode::default(),
             horizontal_grid: false,
             english_candidates: true,
@@ -175,6 +174,9 @@ pub fn init(mtm: MainThreadMarker, info: &BundleInfo) -> Result<(), HostError> {
             model_loader: None,
             applied_model: None,
             applied_decision: None,
+            updates: paths::user_data_dir()
+                .map(|dir| qingjian_update::Checker::new(dir.join(UPDATE_STATE_FILE), version)),
+            update_status: UpdateStatus::default(),
             session: Session::default(),
             sentence: None,
             anchor: NSRect::ZERO,

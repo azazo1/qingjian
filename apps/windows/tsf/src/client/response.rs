@@ -1,4 +1,4 @@
-use qingjian_platform::protocol::{Frame, InputSettings, KeyOutcome};
+use qingjian_platform::protocol::{Frame, IndicatorState, InputSettings, KeyOutcome};
 
 /// Server 对一次「同步中英模式」轮询的答复。
 pub struct ModeSyncReply {
@@ -8,6 +8,9 @@ pub struct ModeSyncReply {
     /// 当前的按键行为设置（切换键、内置英文模式）。每一拍都带，配置改了靠它生效——
     /// DLL 不读配置文件，`%APPDATA%\Qingjian` 对 AppContainer 里的商店应用本来也读不到。
     pub input: InputSettings,
+
+    /// 右键菜单打勾用的开关状态，同样每一拍都带。
+    pub indicator: IndicatorState,
 }
 
 /// Server 对一次按键的处理结果。

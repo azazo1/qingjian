@@ -6,9 +6,14 @@
 mod log;
 #[cfg(windows)]
 mod panel;
+#[cfg(windows)]
+mod single_instance;
 
 #[cfg(windows)]
 fn main() {
+    if !single_instance::acquire() {
+        return;
+    }
     if let Err(error) = windows_reactor::App::run_component::<panel::Settings>(()) {
         // GUI 子系统没有控制台：记文件日志，再弹个框让用户知道发生了什么（最常见是运行库文件缺失）。
         log::error(format!("设置界面启动失败: {error:?}"));

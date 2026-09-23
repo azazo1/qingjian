@@ -25,6 +25,9 @@ pub(super) struct Placement {
     /// 上次画出的各格右边界（内容坐标）与动作，从左到右；点击按 x 落进哪格。
     pub(super) cells: RefCell<Vec<(i32, StatusAction)>>,
 
+    /// 前台全屏、暂时收起了（见 [`super::fullscreen`]）。
+    pub(super) fullscreen_hidden: Cell<bool>,
+
     /// 点格 / 拖动结束回给 Router。
     events: StatusEvents,
 }
@@ -36,6 +39,7 @@ impl Placement {
             margin: Cell::new(margin),
             pos: Cell::new(None),
             cells: RefCell::new(Vec::new()),
+            fullscreen_hidden: Cell::new(false),
             events,
         }
     }
@@ -66,17 +70,8 @@ impl Placement {
             Some(StatusAction::TogglePunctuation) => {
                 (self.events)(StatusEvent::TogglePunctuation);
             }
-            Some(StatusAction::OpenSettings) => open_settings(),
+            Some(StatusAction::OpenSettings) => crate::ui::open_settings(),
             None => {}
         }
-    }
-}
-
-/// 起与本 exe 同目录的设置程序。
-fn open_settings() {
-    let exe = std::env::current_exe().map(|exe| exe.with_file_name("qingjian-settings.exe"));
-    let spawned = exe.and_then(|exe| std::process::Command::new(exe).spawn());
-    if let Err(error) = spawned {
-        tracing::warn!(%error, "打开设置程序失败");
     }
 }

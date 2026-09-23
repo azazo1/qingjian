@@ -46,7 +46,7 @@ cargo run --release -p qingjian-dict-convert -- pack codes
 ```
 
 按设计文档的取码规则算码（单字「前 4 笔 + 末笔」、词组每字首笔，缺字的词跳过并计入统计）；元数据缺省写明
-名称「笔画」、许可 `OFL-1.1`、署名「CNS11643 全字庫筆順資料（中華民國數位發展部）」与数据集页来源，
+名称「笔画」、许可 `OFL-1.1`、署名「CNS11643 全字庫筆順資料（數位發展部）」与数据集页来源，
 可用 `--name` / `--license` / `--attribution` / `--source` / `--data-version` 覆盖（数据版本缺省取笔画表日期）。
 产物随包只带生成结果，原始 zip 与对照源都不入库。
 
@@ -114,6 +114,6 @@ cargo run --release -p qingjian-dict-convert -- pack codes
 
 - 数据目录与「关于」页署名：**資料來源「CNS11643 中文標準交換碼全字庫」（數位發展部）**，并声明本表为派生
   （筆順資料表格 → 笔画码表）与修改内容（大陆序覆盖表）；
-- 随包数据目录放 `LICENSE-CNS11643`（政府資料開放授權條款第 1 版全文，或改选 OFL-1.1 全文——数据集允许二选一）。
+- 随包数据目录放 `LICENSE-CNS11643.txt`（本目录，OFL-1.1 全文，与码表元数据的许可一致；数据集允许与政府資料開放授權條款第 1 版二选一），Windows 装在 `codes\` 旁。
 
 *来源：wayfinder 票 t17（stroke 工具与笔画表生成）与 spec 卷 I 第 8 章的 stroke 契约（在仓库外的 .wayfinder 工作区）。*

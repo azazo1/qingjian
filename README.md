@@ -7,7 +7,7 @@
 这是自用 fork, `upstream` 指向 [qingjian-team/qingjian](https://github.com/qingjian-team/qingjian). 相对上游的改动都记在这里, 便于日后 merge upstream 时对照.
 
 - macOS 输入法菜单「录入词组…」: 填一个词, 拼音按词库自动生成且可改, 确认后效果等同于打这段全拼并选一次该词 (词库没有则记成用户词). 见 `docs/user/settings/preferences.md`.
-- 双拼下行内拼音显示敲的键: 输入框里的拼音行按音节显示双拼码 (`kd'fa've`), 候选窗口里仍是解出的全拼 (`kai'fa'zhe`). 配置项 `[general] inline_keys` 缺省开, 偏好设置「候选窗口」页可改.
+- 双拼下行内拼音显示敲的键: 输入框里的拼音行按音节显示双拼码 (`kd'fa've`), 候选窗口里仍是解出的全拼 (`kai'fa'zhe`). 配置项沿用 upstream 的 `[general] shuangpin_raw_preedit` (缺省开, 旧键 `inline_keys` 仍能读), 偏好设置的通用页可改; 不采用 upstream 那种不带分隔的 `kdfa`.
 - CI 在 push main 与手动触发时, 除原有检查外还各打一份未签名的测试包传成 Actions artifact (macOS 的 pkg 两个架构、Windows 的 Inno 安装包), PR 只跑检查不打包. 见 `docs/notes/release.md`.
 - 决策模型接入: 新增 `crates/qingjian-decision` 与配置 `[decision]`, 把 jev (云端接口) 与 laya (本地服务) 这类 typed decision 模型接成整句重排的第二个来源 (与 `[model]` 的本地字级模型互斥, 只走 HTTP 不内嵌推理栈); macOS 壳与偏好设置 "云服务" 页已接上, 见 `docs/design/decision-models.md` 与 `docs/user/input/decision-model.md`.
 - macOS 的中 / 英切换可配: `[shortcut] mac_switch_single` (单键切换, 键在 `mac_switch_toggle`) 与 `mac_switch_dual` (双键切换, 键在 `mac_switch_english` / `mac_switch_chinese`) 两个开关可同时开, 键可以是带左右的修饰键 (`left-command` / `right-command` 等) 或组合键 (`control+option+z`), 例如左 ⌘ 切英文、右 ⌘ 切中文; `[shortcut] mac_caps_lock_switch` 决定 Caps Lock 是否也切 (`false` 时它只当大小写锁), `[general] english_mode` 关掉后 macOS 也固定中文模式. 实现照 Rime 的 Squirrel: 在 `recognizedEvents:` 里多要一个 flagsChanged, 单击判定与 Windows 的 `KeyTap` 同一套. 见 `docs/user/input/english-mode.md`.
@@ -146,6 +146,7 @@ Linux    → IBus / Fcitx
 ## 隐私
 
 **青简不上传任何数据。** 拼音转换、词库、学习、释义全部在本机完成，没有账号，没有统计上报。
+检查更新每天向官网读一次版本列表，请求不带任何标识，可在设置的「关于」页关掉。
 云联想（缺省关闭）打开后，请求直接从你的电脑发到你自己填写的 AI 服务商，不经过作者；输入日志只写在本机，可以随时关闭和清空。
 细节见文档 [数据与日志](https://qingjian.app/docs/help/data-and-logs)。
 

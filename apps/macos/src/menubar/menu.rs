@@ -22,6 +22,9 @@ pub struct InputMenu {
     /// 配置文件解析失败时显示的提示行，平时隐藏。
     error: Retained<NSMenuItem>,
 
+    /// 「有新版本 x.y.z…」，点了打开下载页；没有新版时隐藏。
+    update: Retained<NSMenuItem>,
+
     /// 所有条目的 target，要和菜单活得一样久。
     _target: Retained<MenuTarget>,
 }
@@ -75,6 +78,10 @@ impl InputMenu {
             Some(MenuAction::OpenLogs),
             &target,
         ));
+        // 可点的条目只能放在这一组：放到下面两个纯展示条目之间，IMK 会在每次按键后停用再新建会话，打不了字
+        let update = action_item(mtm, "", Some(MenuAction::OpenDownload), &target);
+        update.setHidden(true);
+        menu.addItem(&update);
         menu.addItem(&NSMenuItem::separatorItem(mtm));
 
         let error = action_item(mtm, "", None, &target);
@@ -90,7 +97,20 @@ impl InputMenu {
             cloud,
             fuzzy,
             error,
+            update,
             _target: target,
+        }
+    }
+
+    /// 查到新版本就露出「有新版本」那一行，没有就藏起来。
+    pub fn sync_update(&self, available: Option<&str>) {
+        match available {
+            Some(version) => {
+                self.update
+                    .setTitle(&NSString::from_str(&format!("有新版本 {version}…")));
+                self.update.setHidden(false);
+            }
+            None => self.update.setHidden(true),
         }
     }
 

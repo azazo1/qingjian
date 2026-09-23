@@ -5,6 +5,7 @@ use windows::Win32::Graphics::Gdi::{
     GetMonitorInfoW, MONITOR_DEFAULTTONEAREST, MONITOR_DEFAULTTOPRIMARY, MONITOR_FROM_FLAGS,
     MONITORINFO, MonitorFromPoint,
 };
+use windows::Win32::UI::HiDpi::{GetDpiForMonitor, MDT_EFFECTIVE_DPI};
 
 /// `point` 所在（最近）显示器的工作区。
 pub(super) fn work_area_near(point: POINT) -> RECT {
@@ -36,4 +37,14 @@ fn work_area(point: POINT, flags: MONITOR_FROM_FLAGS) -> RECT {
             bottom: i32::MAX,
         }
     }
+}
+
+/// `point` 所在（最近）显示器的有效 DPI；取不到为 `None`。
+pub(super) fn dpi_near(point: POINT) -> Option<u32> {
+    let (mut x, mut y) = (0, 0);
+    unsafe {
+        let monitor = MonitorFromPoint(point, MONITOR_DEFAULTTONEAREST);
+        GetDpiForMonitor(monitor, MDT_EFFECTIVE_DPI, &mut x, &mut y).ok()?;
+    }
+    Some(x)
 }

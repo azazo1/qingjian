@@ -10,6 +10,7 @@ pub(crate) enum Message {
     LearningLanguage(Option<usize>),
     PageSize(Option<f64>),
     Scheme(Option<usize>),
+    ShuangpinRawPreedit(bool),
     Wubi(bool),
     Traditional(bool),
     EnglishCandidates(bool),
@@ -20,8 +21,8 @@ pub(crate) enum Message {
     EnglishFullWidthPunctuation(bool),
     /// 开=写入平台默认名单，关=清空。
     EnglishOffInApps(bool),
-    /// 中英切换键（[`qingjian_platform::SwitchKey`] 的下标）。
-    SwitchMode(Option<usize>),
+    /// 勾上 / 去掉一个中英切换键。
+    SwitchKey(qingjian_platform::SwitchKey, bool),
     /// 内置英文模式总开关。
     EnglishMode(bool),
 
@@ -107,5 +108,12 @@ pub(crate) enum Message {
 
     // 关于页
     OpenWebsite,
+
+    // 关于页：检查更新（`UpdateChecked` 的 `None` = 本地开发版没查）
+    UpdateCheck(bool),
+    UpdateChannel(Option<usize>),
+    CheckUpdateNow,
+    UpdateChecked(Option<Result<qingjian_update::UpdateState, String>>),
+    OpenDownload,
     OpenRepository,
 }

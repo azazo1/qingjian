@@ -24,6 +24,8 @@ impl Host {
         self.engine
             .set_shift_letter_compose(config.general.shift_letter.compose());
         self.apply_scheme(config.general.scheme(), config.general.wubi());
+        self.engine
+            .set_shuangpin_raw_preedit(config.general.shuangpin_raw_preedit);
         self.engine.set_learning(config.general.learning);
         logging::set_level(config.general.log_level);
         let (translation, translation_second) = config.shortcut.translation_keys();
@@ -34,7 +36,6 @@ impl Host {
         self.cloud_slots = config.predict.slots;
         self.page_keys = config.general.page_keys();
         self.preedit_mode = config.general.preedit;
-        self.inline_keys = config.general.inline_keys;
         self.english_candidates = config.general.english_candidates;
         self.english_mode = config.general.english_mode;
         self.mode_badge = config.general.mode_badge;
@@ -120,7 +121,9 @@ impl Host {
             decision_key_present,
             self.settings.error(),
             &self.dictionary_list,
+            &self.update_status,
         );
+        self.sync_update();
     }
 
     /// 配置里的自定义短语，`[general] system_text_replacements` 开着时再并上系统的文本替换，一起推给 Engine。
@@ -204,6 +207,29 @@ impl Host {
         if self.last_flush.elapsed() >= LEARNING_FLUSH_INTERVAL {
             self.engine.flush_learning();
             self.last_flush = std::time::Instant::now();
+        }
+        if let Some(updates) = &self.updates {
+            updates.poll(&self.settings.config().update);
+        }
+        self.sync_update();
+    }
+
+    /// 检查更新的状态变了就刷菜单里的「有新版本」与「关于」页；没变什么都不做。
+    pub fn sync_update(&mut self) {
+        let Some(updates) = &self.updates else {
+            return;
+        };
+        let config = self.settings.config();
+        let status = UpdateStatus {
+            available: updates.available(&config.update).map(|found| found.version),
+            checking: updates.checking(),
+            checked: updates.checked_at() > 0,
+            dev_build: updates.is_dev_build(),
+        };
+        if status != self.update_status {
+            self.menu.sync_update(status.available.as_deref());
+            self.preferences.sync_update(config, &status);
+            self.update_status = status;
         }
     }
 

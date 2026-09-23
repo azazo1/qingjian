@@ -12,8 +12,9 @@ mod phrases;
 mod shortcuts;
 mod usage;
 
+pub(super) use about::AboutPage;
 pub(super) use about::build as build_about;
-pub use about::{REPOSITORY_URL, WEBSITE_URL};
+pub use about::{REPOSITORY_URL, UpdateStatus, WEBSITE_URL};
 pub(super) use advanced::AdvancedPage;
 pub(super) use candidates::CandidatesPage;
 pub(super) use cloud::CloudPage;

@@ -18,16 +18,14 @@ use crate::com::key::preserved;
 use crate::com::log::log;
 
 impl ITfKeyEventSink_Impl for TextService_Impl {
-    /// 获焦：补一次连接（Server 起晚了 / 重启过），并刷指示器（系统会在切换焦点时重置它）。
-    /// 失焦：把敲了一半的拼音原样落定（对应 macOS 的 `commitComposition`）。
+    /// 失焦：把敲了一半的拼音原样落定（对应 macOS 的 `commitComposition`）。焦点本身交给
+    /// [`TextService_Impl::set_thread_focus`]；切窗口时这条回调不触发，靠的是 [`crate::com::focus`]。
     fn OnSetFocus(&self, fforeground: BOOL) -> Result<()> {
-        self.shared.set_foreground(fforeground.as_bool());
-        if fforeground.as_bool() {
-            self.ensure_connected();
-            self.refresh_mode_indicator();
-        } else {
+        let foreground = fforeground.as_bool();
+        if !foreground {
             self.commit_pending();
         }
+        self.set_thread_focus(foreground);
         Ok(())
     }
 
@@ -107,14 +105,14 @@ impl TextService_Impl {
 
     fn note_key_down(&self, vk: u32, lparam: LPARAM) {
         self.key_tap
-            .key_down(vk, lparam, self.mode_state.switch_key());
+            .key_down(vk, lparam, self.mode_state.switch_keys());
     }
 
     fn note_key_up(&self, vk: u32) {
         if vk == u32::from(VK_CAPITAL.0) {
             self.mode_state.notify();
         }
-        if self.key_tap.key_up(vk, self.mode_state.switch_key()) {
+        if self.key_tap.key_up(vk, self.mode_state.switch_keys()) {
             self.set_english_mode(!self.mode_state.english());
         }
     }

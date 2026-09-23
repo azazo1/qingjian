@@ -1,9 +1,10 @@
 use serde::{Deserialize, Serialize};
 
 use super::frame::Frame;
+use super::indicator::IndicatorState;
 use super::key::KeyOutcome;
 use super::session::SessionId;
-use crate::config::SwitchKey;
+use crate::config::SwitchKeys;
 
 /// Server 下发给 DLL 的「按键行为」设置。
 ///
@@ -14,7 +15,7 @@ use crate::config::SwitchKey;
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub struct InputSettings {
     /// 中英切换键（`[shortcut] switch_mode`）。
-    pub switch_mode: SwitchKey,
+    pub switch_mode: SwitchKeys,
 
     /// 内置英文模式总开关（`[general] english_mode`）。
     pub english_mode: bool,
@@ -28,7 +29,7 @@ pub struct InputSettings {
 impl Default for InputSettings {
     fn default() -> Self {
         Self {
-            switch_mode: SwitchKey::default(),
+            switch_mode: SwitchKeys::default(),
             english_mode: true,
             shift_letter_compose: false,
         }
@@ -85,18 +86,22 @@ pub enum ServerMessage {
         frame: Frame,
     },
 
-    /// 对一次 [`super::ClientMessage::SyncMode`] 的答复：状态条上点出来、还没被取走的目标模式，
+    /// 对一次 [`super::ClientMessage::SyncMode`] 的答复：当前的全局中英模式，
     /// 外加当前的按键行为设置（每一拍都带，DLL 那边热加载就靠它）。
     ModeSync {
         /// 会话标识。
         session: SessionId,
 
-        /// `Some(true)` 切英文、`Some(false)` 切中文；`None` 没有待处理的切换。
+        /// 全局模式：`Some(true)` 英文、`Some(false)` 中文，DLL 与自己不同就跟上；`None` 不动（老 Server 没有待切换时）。
         english: Option<bool>,
 
         /// 按键行为设置；老 DLL 不认识这个字段，读到时忽略（serde 默认忽略多余字段）。
         #[serde(default)]
         input: InputSettings,
+
+        /// 右键菜单打勾用的开关状态（v7 起）。
+        #[serde(default)]
+        indicator: IndicatorState,
     },
 
     /// 收到「翻译选中文字」快捷键：请 DLL 在读编辑会话里取当前选区，用

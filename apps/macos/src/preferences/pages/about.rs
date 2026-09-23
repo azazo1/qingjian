@@ -1,13 +1,17 @@
-//! 「关于」页：版本与构建、许可证、随包数据的来源与署名、隐私说明与反馈方式。
+//! 「关于」页：版本与构建、检查更新、许可证、随包数据的来源与署名、隐私说明与反馈方式。
 //!
 //! 文案集中在这里的常量里，改措辞不用碰布局代码。第三方数据的许可证要求署名在分发物里可见，这一页就是放它的地方。
 
 use objc2::MainThreadMarker;
-use objc2_app_kit::NSFont;
-use objc2_app_kit::NSTextField;
+use objc2::rc::Retained;
+use objc2_app_kit::{NSButton, NSFont, NSPopUpButton, NSTextField};
 use objc2_foundation::NSString;
+use qingjian_platform::{Config, UpdateChannel};
 
-use crate::preferences::controls::{GROUP_GAP, button, note_full, small_label};
+use crate::preferences::controls::{
+    GROUP_GAP, button, checkbox, note_full, row_checkbox, row_popup, select, set_checked,
+    small_label,
+};
 use crate::preferences::layout::{Layout, PAGE_PADDING, ROW_HEIGHT};
 use crate::preferences::setting::Setting;
 use crate::preferences::target::PreferencesTarget;
@@ -48,10 +52,70 @@ pub const WEBSITE_URL: &str = "https://qingjian.app";
 pub const REPOSITORY_URL: &str = "https://github.com/qingjian-team";
 
 /// 隐私说明。
-pub const PRIVACY_NOTE: &str = "青简不上传任何数据。开着云联想或翻译时，光标附近的文字与拼音会发给你在「云服务」页填的 AI 服务商（缺省 DeepSeek）的服务器，不经过作者。「高级」页的输入日志只写在这台电脑的数据目录里，可以关掉或清空。";
+pub const PRIVACY_NOTE: &str = "青简不上传任何数据。开着「自动检查更新」时每天向官网读一次版本列表，请求不带任何标识，上面可以关。开着云联想或翻译时，光标附近的文字与拼音会发给你在「云服务」页填的 AI 服务商（缺省 DeepSeek）的服务器，不经过作者。「高级」页的输入日志只写在这台电脑的数据目录里，可以关掉或清空。";
 
 /// 反馈方式。
 pub const FEEDBACK_NOTE: &str = "遇到问题点「打包日志到桌面」，把生成的 zip 发给作者即可（含日志与配置文件，不含密钥），再附上「复制诊断信息」的内容。缺省日志不含你敲的内容；排查排序问题时作者可能请你在「高级」页临时打开详细日志。";
+
+/// 检查更新的说明。
+pub const UPDATE_NOTE: &str = "每天向官网读一次版本列表，有新版在这里和菜单里提示，不会自动下载安装。测试版渠道还会提示 alpha / beta / rc 版本。";
+
+/// 「关于」页上检查更新那一行要显示的状态。
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct UpdateStatus {
+    /// 查到的新版本号。
+    pub available: Option<String>,
+
+    /// 正在查。
+    pub checking: bool,
+
+    /// 查过至少一次。
+    pub checked: bool,
+
+    /// 本地开发包，不检查。
+    pub dev_build: bool,
+}
+
+impl UpdateStatus {
+    fn text(&self) -> String {
+        match (&self.available, self.checking) {
+            (Some(version), _) => format!("有新版本 {version}"),
+            (None, true) => "正在检查…".to_owned(),
+            (None, false) if self.dev_build => "本地开发版，不检查更新".to_owned(),
+            (None, false) if self.checked => "已是最新版本".to_owned(),
+            (None, false) => String::new(),
+        }
+    }
+}
+
+pub struct AboutPage {
+    /// 自动检查更新。
+    check: Retained<NSButton>,
+
+    /// 更新渠道。
+    channel: Retained<NSPopUpButton>,
+
+    /// 「已是最新版本」/「有新版本 x.y.z」。
+    status: Retained<NSTextField>,
+
+    /// 「下载新版」，有新版才显示。
+    download: Retained<NSButton>,
+}
+
+impl AboutPage {
+    pub fn sync(&self, config: &Config, update: &UpdateStatus) {
+        set_checked(&self.check, config.update.check);
+        select(
+            &self.channel,
+            UpdateChannel::ALL
+                .iter()
+                .position(|channel| *channel == config.update.channel),
+        );
+        self.status
+            .setStringValue(&NSString::from_str(&update.text()));
+        self.download.setHidden(update.available.is_none());
+    }
+}
 
 /// 把「关于」页的控件摆进 `layout`。
 pub fn build(
@@ -60,7 +124,7 @@ pub fn build(
     target: &PreferencesTarget,
     version: &str,
     build: &str,
-) {
+) -> AboutPage {
     let title = NSTextField::labelWithString(&NSString::from_str(&format!("青简 {version}")), mtm);
     title.setFont(Some(&NSFont::boldSystemFontOfSize(15.0)));
     layout.place(&title, PAGE_PADDING, layout.inner_width(), ROW_HEIGHT);
@@ -79,6 +143,35 @@ pub fn build(
     layout.place(&repository, PAGE_PADDING + 160.0, 150.0, ROW_HEIGHT + 4.0);
     layout.next_row(ROW_HEIGHT + 4.0);
     note_full(layout, mtm, LICENSE_NOTE);
+    layout.space(GROUP_GAP);
+
+    let check = checkbox(mtm, "自动检查更新", Setting::UpdateCheck, target);
+    row_checkbox(layout, &check);
+    let channels: Vec<String> = UpdateChannel::ALL
+        .iter()
+        .map(|channel| channel.label().to_owned())
+        .collect();
+    let channel = row_popup(
+        layout,
+        mtm,
+        "更新渠道",
+        &channels,
+        Setting::UpdateChannel,
+        target,
+    );
+    let check_now = button(mtm, "立即检查", Setting::CheckUpdateNow, target);
+    let download = button(mtm, "下载新版", Setting::OpenDownload, target);
+    let status = small_label(mtm, "");
+    layout.place(&check_now, PAGE_PADDING, 110.0, ROW_HEIGHT + 4.0);
+    layout.place(&download, PAGE_PADDING + 120.0, 110.0, ROW_HEIGHT + 4.0);
+    layout.place(
+        &status,
+        PAGE_PADDING + 240.0,
+        layout.inner_width() - 240.0,
+        ROW_HEIGHT,
+    );
+    layout.next_row(ROW_HEIGHT + 4.0);
+    note_full(layout, mtm, UPDATE_NOTE);
     layout.space(GROUP_GAP);
 
     let heading = small_label(mtm, "数据来源与署名");
@@ -103,4 +196,10 @@ pub fn build(
     layout.place(&export, PAGE_PADDING + 160.0, 150.0, ROW_HEIGHT + 4.0);
     layout.place(&copy, PAGE_PADDING + 320.0, 150.0, ROW_HEIGHT + 4.0);
     layout.next_row(ROW_HEIGHT + 4.0);
+    AboutPage {
+        check,
+        channel,
+        status,
+        download,
+    }
 }

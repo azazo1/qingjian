@@ -1,6 +1,6 @@
 use qingjian_platform::protocol::KeyModifiers;
 use qingjian_platform::{
-    AppsConfig, CandidateRenderer, Config, KeyCombo, LayoutMode, PreeditMode, Scheme, SwitchKey,
+    AppsConfig, CandidateRenderer, Config, KeyCombo, LayoutMode, PreeditMode, Scheme, SwitchKeys,
     ThemeMode,
 };
 
@@ -45,7 +45,7 @@ pub struct RouterConfig {
     pub english_mode: bool,
 
     /// 中英切换键（`[shortcut] switch_mode`）：由 Server 经协议下发给 DLL，由它认键。
-    pub switch_mode: SwitchKey,
+    pub switch_mode: SwitchKeys,
 
     /// 中文模式下不在组句时的标点转全角（`[general] full_width_punctuation`）；状态条可切。
     pub full_width: bool,

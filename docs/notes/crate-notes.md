@@ -33,8 +33,8 @@ TSV 解析、查询与生成工具把 `lue` / `nue` 统一成 `lve` / `nve`。
 重排（stable sort 保住原序），命中码（没在筛码时是词的首条码）写进 `Candidate.aux_code`；码段非空时跳过整句 / 英文 / 快捷 / emoji / 自定义短语
 与云联想。preedit 分段多出 [触发键 `Typed`][码段 `MarkedKind::AuxCode`]，见 `Query::marked_segments`。
 行内 (应用侧 marked text) 那侧另有 `Query::inline_text` / `inline_cursor`: 双拼下按音节显示敲的键 (`kd'fa've`, 由 `shuangpin::Decoded::marked_keys` 经 `Query::keys_display` 传来),
-光标后的键接在末尾 (`Query::rest_keys`), 辅码段照旧拼上; 注音与全拼没有「敲的键」这一层, 回落到 `marked_text`.
-候选窗口的拼音行仍走 `marked_segments`; macOS 壳按 `[general] inline_keys` (缺省开) 选行内用哪一套, Windows / Linux 只拿分段, 不受影响.
+光标后的键接在末尾 (`Query::rest_keys`), 辅码段照旧拼上; 注音与全拼没有 "敲的键" 这一层, 回落到 `marked_text`.
+候选窗口的拼音行仍走 `marked_segments`; macOS 与 Windows 按 `[general] shuangpin_raw_preedit` (缺省开, 旧键 `inline_keys` 仍能读) 选行内用哪一套, Linux 只拿分段.
 
 组句里的上屏是延迟的 (`engine/pending.rs`): 一段拼音还没选完时 (`commit_with` 里 `buffer_left`), 选中的词进 `Engine.pending`,
 `commit` 返回空串表示这次不交给应用; 词里存上屏文本, 吃掉的拼音键 (`restore_keys`, 不含辅码段), 上屏链快照与这次的学习账 (`LastCommit`).
@@ -159,16 +159,17 @@ Engine 侧在 `engine/rescoring/`: 接了打分器就取 Viterbi 前 `RESCORE_PA
 `Config`（TOML 配置文件，`[general]` / `[shortcut]` / `[fuzzy]` / `[dictionaries]` / `[apps]` / `[predict]` 分节，首次运行写模板，
 `set_value` 用 toml_edit 原地改键保留注释；`[model] enabled` 本地整句模型开关，`LocalModelConfig`；
 `[decision]` 决策模型 (整句重排的第二个来源, 与 `[model]` 互斥), `DecisionConfig`;
-中英模式两项：`[shortcut] switch_mode`（`SwitchKey`：shift / control / none，单击切换键，Windows 用）与 `[general] english_mode`（内置英文模式总开关，两个平台都认）；
-macOS 另有 `[shortcut] mac_switch_single` / `mac_switch_dual` 两个开关（`MacSwitchPlan` 是 `toggle` 与 `dual` 两个 `Option`，两个开关可同时开，同一个键两边都配时双键优先），
-键位写成 `left-command` 这类带左右的修饰键或 `control+option+z` 这类组合键（`MacSwitchKey`，`mac_switch_plan()` 校验，写坏的整组退回缺省）；`mac_caps_lock_switch` 决定 Caps Lock 是否也切）；
+`[update]` 检查更新, `UpdateConfig`;
+中英模式两项: `[shortcut] switch_mode` (`SwitchKeys`: 勾选 shift / control / ctrl+alt+space, 可多选, 老配置的单个字符串照读, Windows 用) 与 `[general] english_mode` (内置英文模式总开关, 两个平台都认);
+macOS 另有 `[shortcut] mac_switch_single` / `mac_switch_dual` 两个开关 (`MacSwitchPlan` 是 `toggle` 与 `dual` 两个 `Option`, 两个开关可同时开, 同一个键两边都配时双键优先),
+键位写成 `left-command` 这类带左右的修饰键或 `control+option+z` 这类组合键 (`MacSwitchKey`, `mac_switch_plan()` 校验, 写坏的整组退回缺省); `mac_caps_lock_switch` 决定 Caps Lock 是否也切;
 `extra_dictionaries` 列出 / 加载随包领域词库与用户 `dicts/`
 （mac 壳与 Windows Server 共用，同名 `.qj` 优先于 `.tsv`）；`code_tables` 同构地列出 / 加载随包根 `codes/` 与用户 `codes/` 的码表
 （`[aux_code] disabled` 是黑名单，`[general] aux_code_key` 缺省 `;` 且校验后退回缺省、`aux_code_show` 是显示码开关）；
 `protocol` 模块是 Windows Server ↔ TSF DLL 的 IPC 协议类型
 （`ClientMessage` / `ServerMessage` / `Frame` / `PreeditSegment`，全 serde，两端共用，见 `docs/design/architecture.md`「Windows：TSF」；
-`PROTOCOL_VERSION` = 7，`PreeditKind::AuxCode` / `PreeditKind::Pending` 对应 Core 的 `MarkedKind::AuxCode` / `MarkedKind::Pending`，
-`Frame.aux_code_show` 随帧下发显示码开关；协议比 Server 老的 DLL 收到这两类段会解析失败，所以 `downgrade_for_old_dll` 把它们降级成 `Typed`）。
+`PROTOCOL_VERSION` = 7, `PreeditKind::AuxCode` / `PreeditKind::Pending` 对应 Core 的 `MarkedKind::AuxCode` / `MarkedKind::Pending`,
+v7 同时加任务栏图标右键菜单的 `Indicator`; `Frame.aux_code_show` 随帧下发显示码开关; 协议比 Server 老的 DLL 收到 `AuxCode` / `Pending` 会解析失败, 所以 `downgrade_for_old_dll` 把它们降级成 `Typed`).
 
 ## crates/qingjian-render
 
@@ -181,6 +182,13 @@ macOS 另有 `[shortcut] mac_switch_single` / `mac_switch_dual` 两个开关（`
 `examples/preview.rs` 出 PNG 与真机截图并排比、`--measure` 与 AppKit 对宽度。mac 壳 `candidates/bitmap/` 贴位图，`[general] renderer = "system"` 切回 AppKit 绘制
 （过渡期退路，偏好设置「候选窗口」页可选）；`[general] font` 是候选窗字族名（空为系统字体，`bitmap/font_files.rs` 用 CoreText 按字族名找文件只加载那几个，没装就回系统字体；
 设置页 `preferences/font_picker/` 是搜索框 + 列表）。设计与验收见 `docs/design/rendering.md`。
+
+## crates/qingjian-update
+
+检查更新（设计见 `docs/design/update.md`）：`index/` 是索引的类型、下载（`fetch.rs`，复用 workspace 的 reqwest + 单线程 tokio，20 秒超时、2 MB 上限）与验签
+（`signature.rs`，`PUBLIC_KEYS` 列表，`verify_strict`）；`checker/` 是调度（`Checker::poll` 由壳的每秒定时器调，到点起一次性线程）、落盘状态 `UpdateState`（`update.json`，先写临时文件再改名）
+与查到的结果 `Available`。`Version` 自己实现语义化版本比较，不引 semver。`[update]` 配置与 `UpdateChannel` 在 `qingjian-platform`。
+`examples/check.rs` 手动走一遍；`tools/release-sign` 是发版侧的 keygen / sign / verify。
 
 ## apps/cli
 
@@ -260,11 +268,12 @@ Server 侧辅码接线：`RouterConfig.aux_code_key` / `aux_code_show`（`apply_
 输入方案由 `[general] scheme` 一处决定，Server 启动与热加载各装配一次；形码的码表用 `dispatch::code::find_code_table` 找
 （用户目录 `wubi/wubi86.tsv` 优先，随包 `assets/wubi/wubi86.tsv` 兜底——走 `assets/` 与 emoji / levels 一致，开发布局也对得上），**路径在启动时定下、热加载不重新找**。
 选了形码却没有码表文件时只警告并按拼音跑——配置说五笔、引擎还在拼音是静默错位，宁可吵。
-中英模式的两项设置（`[shortcut] switch_mode` 切换键：shift / control / ctrl+space / none，`[general] english_mode` 内置英文模式开关）
+中英模式的两项设置（`[shortcut] switch_mode` 切换键：勾选 shift / control / ctrl+alt+space，`[general] english_mode` 内置英文模式开关）
 由 Server 经协议下发给 DLL（`InputSettings`，见下文「按键行为设置」），改完在下一拍（约 320 ms）生效；
-`ctrl+space` 走 TSF 保留键登记（`com/key/preserved.rs` 的 `GUID_SWITCH_MODE`），但先读系统热键
-`Hot Keys\00000010`（「输入法/非输入法切换」，缺省就是 Ctrl+Space）：被系统占着时不重复登记、交给系统那条路
-（它的转换模式变化由 conversion compartment 回调同步成中 / 英），避免两边各切一次互相抵消。四条切换入口都汇到
+`ctrl+alt+space` 走 TSF 保留键登记（`com/key/preserved.rs` 的 `GUID_SWITCH_MODE`）。系统的 Ctrl + Space（「输入法/非输入法切换」）不进勾选项但适配它：
+它翻的「输入法开 / 关」compartment（`com/mode/sink.rs`）关 = 英文、开 = 中文，我们切模式时把开关写成一致；开关一变也作废被截走 Space 的那次「单击 Ctrl」。
+模式全局一份、存在 Server（`Router.english`），DLL 激活 / 得到焦点 / 轮询时 `SyncMode` 取回，用户切了 `ModeChanged` 报上去。会话号用线程 id（`com::session_id`）——TSF 的 client id
+各进程都是同样那几个值，拿它当会话号会在 Server 那边撞号。四条切换入口都汇到
 `service/mode.rs::set_english_mode` 一处拦住；状态条点击在 Server 侧（`dispatch/status/mod.rs`）按同一项拦，
 设置界面在 `settings/src/panel/pages/general.rs`。
 
@@ -332,10 +341,10 @@ DLL 不读文件、不查 mtime。`SessionOpened` 只回过协议版本对得上
 
 ## apps/linux
 
-`qingjian-linux-server` 为独立产品 `0.1.0-dev`，只装配本地 Engine、词库、释义、频率学习、个人 n-gram、词汇记录与可选输入日志。
-不接云服务或神经重排。`dispatch/session` 交换每个上下文的 EngineSession；真正的能力变化丢弃输入，普通焦点切换隔离保存。
+`qingjian-linux-server` 为独立产品 `0.1.0-dev`，装配本地 Engine、词库、释义、频率学习、个人 n-gram、词汇记录与可选输入日志，
+本地整句模型（`data/model/model.qjm`，用户 `~/.local/share/qingjian/model/` 优先）按 `[model] enabled` 在后台加载、停键 80 ms 后重排，节拍与 Windows Server 的 `dispatch/rescore` 相同；不接云服务。`dispatch/session` 交换每个上下文的 EngineSession；真正的能力变化丢弃输入，普通焦点切换隔离保存。
 默认面板插件仅转换事件，Shift 模式、候选点击、分页和失焦提交都由 Server 决定。
 
-Unix socket 用共享长度前缀与 Frame（当前公共版本 6）；插件复用一条连接，每个上下文独立会话。Linux v3 扩展逐会话握手、确认 Sensitive/Password/Disable 后接受按下/释放、焦点和点击事实。
+Unix socket 用共享长度前缀与 Frame（当前公共版本 7，与 `PROTOCOL_VERSION` 同步，Fcitx5 插件里写死在 `qingjian.cpp` 的 OpenSession）；插件复用一条连接，每个上下文独立会话。Linux v3 扩展逐会话握手、确认 Sensitive/Password/Disable 后接受按下/释放、焦点和点击事实。
 候选回报绑定连接代次、上下文和服务端帧序号，仅当前聚焦页的有效释义进入 `note_displayed`，不把生成帧算作已展示。
 `[general] preedit` 使用已有 `both` / `inline` / `window`；没有新增 Linux 自绘配置。详见 [linux-fcitx5.md](linux-fcitx5.md)。

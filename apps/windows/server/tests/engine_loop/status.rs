@@ -3,7 +3,7 @@
 use crate::support::*;
 
 #[test]
-fn status_bar_mode_click_is_handed_to_dll_via_sync_mode() {
+fn status_bar_mode_click_changes_the_global_mode() {
     let config = RouterConfig {
         status_enabled: true,
         ..RouterConfig::default()
@@ -16,25 +16,12 @@ fn status_bar_mode_click_is_handed_to_dll_via_sync_mode() {
         english: false,
     });
 
-    // 点「中」：状态条先翻成「英」，DLL 来取时拿到目标模式，取一次就清。
+    // 点「中」：状态条翻成「英」，之后每个 DLL 来取都拿到英文（全局一份，不是取一次就清）。
     router.handle_status_event(StatusEvent::ToggleMode);
     assert_eq!(recorder.calls().last(), Some(&Some("英".to_owned())));
-    assert_eq!(
-        router.handle(ClientMessage::SyncMode { session: SESSION }),
-        Some(ServerMessage::ModeSync {
-            session: SESSION,
-            english: Some(true),
-            input: InputSettings::default(),
-        })
-    );
-    assert_eq!(
-        router.handle(ClientMessage::SyncMode { session: SESSION }),
-        Some(ServerMessage::ModeSync {
-            session: SESSION,
-            english: None,
-            input: InputSettings::default(),
-        })
-    );
+    assert_eq!(synced_mode(&mut router, SESSION), Some(true));
+    assert_eq!(synced_mode(&mut router, SESSION), Some(true));
+    assert_eq!(synced_mode(&mut router, SessionId(2)), Some(true));
 }
 
 #[test]
@@ -53,20 +40,15 @@ fn status_bar_mode_click_is_ignored_when_builtin_english_is_off() {
     });
     assert_eq!(recorder.calls().last(), Some(&Some("中".to_owned())));
 
-    // 关掉内置英文模式：点「中」不翻成「英」，也不给 DLL 递目标模式（DLL 那边同样会拦）
+    // 关掉内置英文模式：点「中」不翻成「英」，DLL 取到的也是中文（DLL 那边同样会拦）
     router.handle_status_event(StatusEvent::ToggleMode);
     assert_eq!(recorder.calls().last(), Some(&Some("中".to_owned())));
-    assert_eq!(
-        router.handle(ClientMessage::SyncMode { session: SESSION }),
-        Some(ServerMessage::ModeSync {
-            session: SESSION,
-            english: None,
-            input: InputSettings {
-                english_mode: false,
-                ..InputSettings::default()
-            },
-        })
-    );
+    assert_eq!(synced_mode(&mut router, SESSION), Some(false));
+    router.handle(ClientMessage::ModeChanged {
+        session: SESSION,
+        english: true,
+    });
+    assert_eq!(synced_mode(&mut router, SESSION), Some(false));
 }
 
 #[test]
@@ -129,4 +111,61 @@ fn status_bar_stays_hidden_when_disabled() {
     });
 
     assert_eq!(recorder.calls(), vec![None]);
+}
+
+#[test]
+fn indicator_menu_toggles_status_bar() {
+    use qingjian_platform::protocol::IndicatorCommand;
+
+    let mut router = router();
+    let recorder = RecordingStatus::default();
+    router.set_status_sink(Box::new(recorder.clone()));
+    router.handle(ClientMessage::ModeChanged {
+        session: SESSION,
+        english: false,
+    });
+
+    // 任务栏图标菜单里点「悬浮状态条」：关着的打开，再点收起。
+    let toggle = ClientMessage::Indicator {
+        session: SESSION,
+        command: IndicatorCommand::ToggleStatusBar,
+    };
+    router.handle(toggle.clone());
+    assert_eq!(recorder.calls().last(), Some(&Some("中".to_owned())));
+    router.handle(toggle);
+    assert_eq!(recorder.calls().last(), Some(&None));
+}
+
+#[test]
+fn mode_is_shared_by_every_app() {
+    let config = RouterConfig {
+        status_enabled: true,
+        ..RouterConfig::default()
+    };
+    let mut router = router_with(config);
+    let recorder = RecordingStatus::default();
+    router.set_status_sink(Box::new(recorder.clone()));
+    let other_app = SessionId(2);
+
+    // 一个应用里切到英文：别的应用、之后新开的应用来取都是英文。
+    router.handle(ClientMessage::ModeChanged {
+        session: SESSION,
+        english: true,
+    });
+    assert_eq!(synced_mode(&mut router, other_app), Some(true));
+    assert_eq!(synced_mode(&mut router, SessionId(3)), Some(true));
+
+    // 切成别的输入法收起状态条；再有应用来取模式（又切回青简）就重新显示，模式照旧。
+    router.handle(ClientMessage::ImeSwitched { session: SESSION });
+    assert_eq!(recorder.calls().last(), Some(&None));
+    assert_eq!(synced_mode(&mut router, other_app), Some(true));
+    assert_eq!(recorder.calls().last(), Some(&Some("英".to_owned())));
+}
+
+/// 会话取一次 `SyncMode`，返回它拿到的全局模式。
+fn synced_mode(router: &mut Router, session: SessionId) -> Option<bool> {
+    match router.handle(ClientMessage::SyncMode { session }) {
+        Some(ServerMessage::ModeSync { english, .. }) => english,
+        other => panic!("SyncMode 应回 ModeSync，实际 {other:?}"),
+    }
 }

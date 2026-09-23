@@ -19,6 +19,7 @@ pub use config::{
     DEFAULT_PAGE_KEYS, DecisionConfig, DictionariesConfig, GeneralConfig, KeyBinding, KeyCombo,
     LEARNING_LANGUAGE_OFF, LayoutMode, LocalModelConfig, LogLevel, MAX_PAGE_SIZE, MacModifier,
     MacSwitchAction, MacSwitchKey, MacSwitchPlan, Modifiers, PAGE_KEY_OPTIONS, PreeditMode, Scheme,
-    ShiftLetter, ShortcutConfig, SwitchKey, ThemeMode, scheme_label,
+    ShiftLetter, ShortcutConfig, SwitchKey, SwitchKeys, ThemeMode, UpdateChannel, UpdateConfig,
+    scheme_label,
 };
 pub use error::ConfigError;

@@ -5,7 +5,7 @@ use super::key_binding::KeyBinding;
 use super::key_combo::KeyCombo;
 use super::mac_switch::{MacSwitchKey, MacSwitchPlan};
 use super::modifiers::Modifiers;
-use super::switch_key::SwitchKey;
+use super::switch_key::SwitchKeys;
 
 /// 配置文件 `[shortcut]` 分节：前缀模式键（Core 的 [`ModeKeys`]）加壳层的修饰键组合。
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -15,8 +15,8 @@ pub struct ShortcutConfig {
     #[serde(flatten)]
     pub mode: ModeKeys,
 
-    /// 中 / 英切换键（单击，Windows 用）：`shift` / `control` / `none`。详见 [`SwitchKey`]。
-    pub switch_mode: SwitchKey,
+    /// 中 / 英切换键（Windows 用），可多选：`["shift", "control", "ctrl+alt+space"]`。详见 [`SwitchKeys`]。
+    pub switch_mode: SwitchKeys,
 
     /// macOS：单键切换开关（`[shortcut] mac_switch_single`）。开着时 `mac_switch_toggle` 那个键单击在中英之间翻转。
     pub mac_switch_single: bool,
@@ -56,7 +56,7 @@ impl Default for ShortcutConfig {
         let (translation, translation_second) = (Modifiers::OPTION, Modifiers::SHIFT_OPTION);
         Self {
             mode: ModeKeys::default(),
-            switch_mode: SwitchKey::default(),
+            switch_mode: SwitchKeys::default(),
             mac_switch_single: false,
             mac_switch_toggle: MacSwitchKey::DEFAULT_TOGGLE.key_string(),
             mac_switch_dual: false,
@@ -162,7 +162,7 @@ mod tests {
         let default = ShortcutConfig::default();
         let parsed: ShortcutConfig = toml::from_str("expression = \"i\"\n").unwrap();
         assert_eq!(parsed.mode.expression, 'i');
-        assert_eq!(parsed.switch_mode, SwitchKey::Shift);
+        assert_eq!(parsed.switch_mode, SwitchKeys::default());
         assert_eq!(
             parsed.translation_keys(),
             (default.translation, default.translation_second)
@@ -226,12 +226,12 @@ mod tests {
 
     #[test]
     fn switch_mode_parses_and_defaults_to_shift() {
-        let parsed: ShortcutConfig = toml::from_str("switch_mode = \"ctrl\"\n").unwrap();
-        assert_eq!(parsed.switch_mode, SwitchKey::Control);
+        let parsed: ShortcutConfig = toml::from_str("switch_mode = [\"ctrl\"]\n").unwrap();
+        assert!(parsed.switch_mode.control && !parsed.switch_mode.shift);
         let off: ShortcutConfig = toml::from_str("switch_mode = \"none\"\n").unwrap();
-        assert_eq!(off.switch_mode, SwitchKey::None);
+        assert_eq!(off.switch_mode, crate::SwitchKeys::NONE);
         let missing: ShortcutConfig = toml::from_str("").unwrap();
-        assert_eq!(missing.switch_mode, SwitchKey::Shift);
+        assert_eq!(missing.switch_mode, SwitchKeys::default());
     }
 
     #[test]

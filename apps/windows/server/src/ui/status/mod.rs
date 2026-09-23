@@ -6,6 +6,7 @@
 //! 一格的规格在 [`cell`]，摆放与点击在 [`placement`]。
 
 mod cell;
+mod fullscreen;
 mod placement;
 
 use std::cell::{Cell, RefCell};
@@ -20,9 +21,9 @@ use windows::Win32::UI::HiDpi::{GetDpiForSystem, GetDpiForWindow};
 use windows::Win32::UI::Input::KeyboardAndMouse::{DragDetect, ReleaseCapture};
 use windows::Win32::UI::WindowsAndMessaging::{
     CreateWindowExW, DefWindowProcW, DestroyWindow, GetCursorPos, HTCAPTION, HTCLIENT, IDC_HAND,
-    LoadCursorW, MA_NOACTIVATE, SW_HIDE, SW_SHOWNA, SendMessageW, ShowWindow, WM_EXITSIZEMOVE,
-    WM_LBUTTONDOWN, WM_MOUSEACTIVATE, WM_NCHITTEST, WM_NCLBUTTONDOWN, WNDCLASSEXW, WS_EX_LAYERED,
-    WS_EX_NOACTIVATE, WS_EX_TOOLWINDOW, WS_EX_TOPMOST, WS_POPUP,
+    LoadCursorW, MA_NOACTIVATE, SendMessageW, WM_EXITSIZEMOVE, WM_LBUTTONDOWN, WM_MOUSEACTIVATE,
+    WM_NCHITTEST, WM_NCLBUTTONDOWN, WM_TIMER, WNDCLASSEXW, WS_EX_LAYERED, WS_EX_NOACTIVATE,
+    WS_EX_TOOLWINDOW, WS_EX_TOPMOST, WS_POPUP,
 };
 use windows::core::{Error, PCWSTR, Result, w};
 
@@ -135,14 +136,20 @@ impl StatusBar {
     }
 
     pub(super) fn hide(&self) {
-        let _ = unsafe { ShowWindow(self.hwnd, SW_HIDE) };
+        fullscreen::hide(self.hwnd, &self.placement.fullscreen_hidden);
     }
 
-    /// DPI 或深浅变了就重建主题。
+    /// DPI 或深浅变了就重建主题。DPI 优先取所在位置显示器的，理由同候选窗口（#146）。
     fn sync_theme(&self) {
-        let dpi = match unsafe { GetDpiForWindow(self.hwnd) } {
-            0 => self.dpi.get(),
-            dpi => dpi,
+        let monitor_dpi = self
+            .placement
+            .pos
+            .get()
+            .and_then(|(x, y)| monitor::dpi_near(POINT { x, y }));
+        let dpi = match (monitor_dpi, unsafe { GetDpiForWindow(self.hwnd) }) {
+            (Some(dpi), _) => dpi,
+            (None, 0) => self.dpi.get(),
+            (None, dpi) => dpi,
         };
         let mode = self
             .data
@@ -254,7 +261,7 @@ impl StatusBar {
             None => self.render_gdi(),
         };
         if updated.is_ok() {
-            let _ = unsafe { ShowWindow(self.hwnd, SW_SHOWNA) };
+            fullscreen::show(self.hwnd, &self.placement.fullscreen_hidden);
         } else {
             self.hide();
         }
@@ -417,6 +424,12 @@ unsafe extern "system" fn wndproc(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: 
             } else if let Some(placement) = placement_of(hwnd) {
                 // lparam 低 16 位是客户区 x（有符号）。
                 placement.on_click((lparam.0 & 0xFFFF) as i16 as i32);
+            }
+            LRESULT(0)
+        }
+        WM_TIMER if wparam.0 == fullscreen::TIMER_ID => {
+            if let Some(placement) = placement_of(hwnd) {
+                fullscreen::on_timer(hwnd, &placement.fullscreen_hidden);
             }
             LRESULT(0)
         }

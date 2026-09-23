@@ -11,6 +11,9 @@
 ; 注册新的，旧的装完后删（删不掉的登记成重启后删）；已开着的应用继续用旧 DLL 直到重启，Server 两个版本都服务。
 ; Inno 的 CloseApplications 会用 Restart Manager 找出所有加载了 *.dll 的进程要求关闭——对输入法 DLL 就是关一切，故关掉；
 ; 只有 Server / 设置程序两个 exe 要覆盖，安装前自己 taskkill。
+; Server 杀掉后，正在打字的应用里 DLL 连不上会自己把它拉起来（见 tsf 的 launch.rs），又占住 exe 和 mmap 着的数据：
+; 安装 / 卸载期间持有互斥体 Global\QingjianInstaller，新 DLL 看到它就不拉；旧版 DLL 不认得它，
+; 所以 Server exe 先改名腾位再杀、[Files] 里排最后装，新 exe 落地前 DLL 拉不起任何 Server。
 ;
 ; 版本号由打包脚本用 /DAppVersion=... 传入，缺省 0.1.0。用法见本目录 README.md。
 
@@ -68,7 +71,6 @@ FinishedLabel=安装完成。请注销后重新登录（或重启电脑），青
 ; DLL 按版本起名并排装；卸载时若仍被占用，登记成重启后删。
 Source: "{#Repo}\target\release\qingjian_tsf.dll";      DestDir: "{app}"; DestName: "{#TsfDll}"; Flags: ignoreversion uninsrestartdelete
 Source: "{#Repo}\target\i686-pc-windows-msvc\release\qingjian_tsf.dll"; DestDir: "{app}"; DestName: "{#TsfDll32}"; Flags: ignoreversion uninsrestartdelete
-Source: "{#Repo}\target\release\qingjian-server.exe";   DestDir: "{app}"; Flags: ignoreversion
 Source: "{#Repo}\target\release\qingjian-settings.exe"; DestDir: "{app}"; Flags: ignoreversion
 ; 设置程序自带一份 Windows App Runtime（自包含部署：Windows 10 上机器装的框架包用不了，见 docs\notes\windows-win10.md）；
 ; 文件由 build.ps1 按 settings-runtime.txt 从 target\release 挑进 target\installer\settings-runtime，必须与 exe 同级。
@@ -86,6 +88,7 @@ Source: "{#Repo}\data\generated\dicts\*.qj";     DestDir: "{app}\data\generated\
 ; —— 随包辅码码表（笔画，开箱可用）：Server 按随包根 codes\ 扫；CNS11643 筆順資料派生，署名见「关于」页 ——
 ;    缺表时不阻塞打包（skipifsourcedoesntexist），但发布前应先跑 dict-convert pack codes 生成它
 Source: "{#Repo}\data\generated\codes\*.qj";   DestDir: "{app}\codes";                Flags: ignoreversion skipifsourcedoesntexist
+Source: "{#Repo}\assets\stroke\LICENSE-CNS11643.txt"; DestDir: "{app}\codes";     Flags: ignoreversion
 ; —— 本地整句模型（tools/release/pack-model.sh 打成的单文件 data\model\model.qjm；没有就不装，Server 不重排）——
 Source: "{#Repo}\data\model\model.qjm"; DestDir: "{app}\data\model"; Flags: ignoreversion skipifsourcedoesntexist
 ; —— 随 git 的资源 ——
@@ -98,6 +101,8 @@ Source: "{#Repo}\assets\levels\levels-ja.tsv";   DestDir: "{app}\assets\levels";
 ; 开发布局（cargo run）也对得上
 Source: "{#Repo}\assets\wubi\wubi86.tsv";        DestDir: "{app}\assets\wubi";   Flags: ignoreversion
 Source: "{#Repo}\assets\sample\dict.tsv";        DestDir: "{app}\assets\sample"; Flags: ignoreversion
+; —— Server 放最后：它一落地，旧版 DLL 就能把它拉起来并占住数据文件（见文件头）——
+Source: "{#Repo}\target\release\qingjian-server.exe";   DestDir: "{app}"; Flags: ignoreversion
 
 [Icons]
 Name: "{group}\青简设置"; Filename: "{app}\qingjian-settings.exe"; IconFilename: "{app}\qingjian.ico"
@@ -147,8 +152,43 @@ Type: files; Name: "{app}\data\model\vocab.json"
 [UninstallDelete]
 ; 历次升级留下的旧版本 DLL（正常在升级时就删了；仍被占用的会留到这里）。
 Type: files; Name: "{app}\qingjian_tsf-*.dll"
+Type: files; Name: "{app}\qingjian-server.old-*.exe"
 
 [Code]
+function CreateMutex(Attributes: Longint; InitialOwner: BOOL; Name: String): THandle;
+  external 'CreateMutexW@kernel32.dll stdcall';
+
+{ 安装 / 卸载期间持有的互斥体，名字与 tsf 的 launch.rs 一致；句柄不关，进程退出时系统收回。 }
+procedure HoldInstallerMutex;
+begin
+  if CreateMutex(0, False, 'Global\QingjianInstaller') = 0 then
+    Log('建安装互斥体失败');
+end;
+
+function InitializeSetup: Boolean;
+begin
+  HoldInstallerMutex;
+  Result := True;
+end;
+
+function InitializeUninstall: Boolean;
+begin
+  HoldInstallerMutex;
+  Result := True;
+end;
+
+{ 运行中的 exe 不能覆盖但能改名：改成 qingjian-server.old-<随机>.exe 腾出名字，旧版 DLL 就拉不起它（见文件头）。
+  装完由 DeleteStaleFiles 删掉。 }
+procedure RetireServerExe;
+var
+  Path: String;
+begin
+  Path := ExpandConstant('{app}\qingjian-server.exe');
+  if FileExists(Path) then
+    if not RenameFile(Path, ExpandConstant('{app}\qingjian-server.old-') + IntToStr(Random(1000000)) + '.exe') then
+      Log('改名旧 Server 失败: ' + Path);
+end;
+
 procedure KillProcess(const Image: String);
 var
   ResultCode: Integer;
@@ -176,6 +216,7 @@ end;
   没在跑时 taskkill 返回非 0，忽略。 }
 function PrepareToInstall(var NeedsRestart: Boolean): String;
 begin
+  RetireServerExe;
   KillProcess('qingjian-server.exe');
   KillProcess('qingjian-settings.exe');
   RetireLoadedDll('{#TsfDll}');
@@ -192,6 +233,27 @@ var
 begin
   Exec('schtasks.exe', '/delete /tn "Qingjian Server" /f', '',
     SW_HIDE, ewWaitUntilTerminated, ResultCode);
+end;
+
+{ 删掉改名腾位的旧 Server；删不掉的登记成重启后删。 }
+procedure DeleteRetiredServers;
+var
+  Dir, Path: String;
+  Found: TFindRec;
+begin
+  Dir := ExpandConstant('{app}');
+  if FindFirst(Dir + '\qingjian-server.old-*.exe', Found) then
+  begin
+    try
+      repeat
+        Path := Dir + '\' + Found.Name;
+        if not DeleteFile(Path) then
+          RestartReplace(Path, '');
+      until not FindNext(Found);
+    finally
+      FindClose(Found);
+    end;
+  end;
 end;
 
 { 删掉旧版本的 DLL（含没带版本号的最早那份）。仍被某个应用加载着的删不掉，登记成重启后删：
@@ -225,7 +287,15 @@ begin
   begin
     DeleteLegacyLogonTask;
     DeleteStaleDlls;
+    DeleteRetiredServers;
   end;
+end;
+
+{ 卸载同理：[UninstallRun] 杀 Server 之前先改名，旧版 DLL 拉不起它，文件才删得掉。 }
+procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
+begin
+  if CurUninstallStep = usUninstall then
+    RetireServerExe;
 end;
 
 { 装完在完成页点 Finish 后立即起一次 Server。

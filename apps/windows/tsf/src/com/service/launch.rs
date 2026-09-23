@@ -12,17 +12,24 @@
 //! 以 SYSTEM 跑在安全桌面上的进程，也会进 AppContainer 的商店应用（Low）。在这些宿主里
 //! `ShellExecute` 要么起出一个 SYSTEM 权限、挂在安全桌面上的 Server，要么干脆起不来——
 //! 只在普通桌面应用（Medium）里拉，其余照旧退避重连。
+//!
+//! 安装 / 卸载程序运行期间也不拉：它刚结束 Server 要替换 exe，这时拉起会占住文件（错误代码 5），
+//! 安装程序持有命名互斥体 [`INSTALLER_MUTEX`]（见 `qingjian.iss`），装完它自己起新 Server。
 
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 use std::time::{Duration, Instant};
 
-use windows::Win32::Foundation::{CloseHandle, ERROR_ALREADY_EXISTS, GetLastError, HANDLE};
+use windows::Win32::Foundation::{
+    CloseHandle, ERROR_ACCESS_DENIED, ERROR_ALREADY_EXISTS, GetLastError, HANDLE,
+};
 use windows::Win32::Security::{
     GetSidSubAuthority, GetSidSubAuthorityCount, GetTokenInformation, TOKEN_MANDATORY_LABEL,
     TOKEN_QUERY, TokenIntegrityLevel,
 };
-use windows::Win32::System::Threading::{CreateMutexW, GetCurrentProcess, OpenProcessToken};
+use windows::Win32::System::Threading::{
+    CreateMutexW, GetCurrentProcess, OpenMutexW, OpenProcessToken, SYNCHRONIZATION_SYNCHRONIZE,
+};
 use windows::Win32::UI::Shell::ShellExecuteW;
 use windows::Win32::UI::WindowsAndMessaging::SW_SHOWNORMAL;
 use windows::core::{HSTRING, PCWSTR, w};
@@ -35,6 +42,9 @@ const LAUNCH_COOLDOWN: Duration = Duration::from_secs(5);
 
 /// 跨进程互斥体：多个应用的 DLL 同时发现 Server 不在时只起一个（第二个起来的抢不到管道会自己退出）。
 const LAUNCH_MUTEX: windows::core::PCWSTR = w!("Local\\QingjianServerLaunch");
+
+/// 安装 / 卸载程序运行期间持有的互斥体，名字与 `qingjian.iss` 的 `HoldInstallerMutex` 一致。
+const INSTALLER_MUTEX: windows::core::PCWSTR = w!("Global\\QingjianInstaller");
 
 /// 普通桌面应用的完整性级别 RID（UAC 未提升的用户进程）。低一档是 AppContainer / 浏览器沙箱，
 /// 高一档是管理员提升、SYSTEM 与安全桌面上的进程——那些里都不拉 Server。
@@ -50,6 +60,10 @@ pub(super) fn launch_server() -> bool {
     }
     if !host_is_plain_desktop_app() {
         log("宿主进程不是普通桌面应用（完整性级别非 Medium），不拉起 Server");
+        return false;
+    }
+    if installer_running() {
+        log("安装程序正在运行，不拉起 Server");
         return false;
     }
     let Some(exe) = server_exe() else {
@@ -149,6 +163,17 @@ fn host_is_plain_desktop_app() -> bool {
     }
     let rid_ptr = unsafe { GetSidSubAuthority(sid, u32::from(count) - 1) };
     !rid_ptr.is_null() && unsafe { *rid_ptr } == MEDIUM_INTEGRITY_RID
+}
+
+/// 安装程序的互斥体在不在。它由提升的安装程序建，普通应用打开会被拒（`ERROR_ACCESS_DENIED`），拒也说明存在。
+fn installer_running() -> bool {
+    match unsafe { OpenMutexW(SYNCHRONIZATION_SYNCHRONIZE, false, INSTALLER_MUTEX) } {
+        Ok(handle) => {
+            let _ = unsafe { CloseHandle(handle) };
+            true
+        }
+        Err(error) => error.code() == ERROR_ACCESS_DENIED.to_hresult(),
+    }
 }
 
 /// 跨进程互斥体；已被别的进程持有（对方正在起 Server）返回 `None`。

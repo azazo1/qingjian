@@ -5,7 +5,7 @@
 #
 #   tools/release/publish-releases-json.sh <本次发布的标签> <输出目录>
 #
-# 需要 gh（带仓库写权限）与 python3；Windows runner 上 python3 叫 python，用 PYTHON 环境变量指定。
+# 需要 gh（带仓库写权限）、cargo、环境变量 QINGJIAN_INDEX_SIGNING_KEY 与 python3；Windows runner 上 python3 叫 python，用 PYTHON 环境变量指定。
 set -euo pipefail
 
 TAG="$1"
@@ -25,9 +25,13 @@ mkdir -p "$OUT_DIR"
   --api-json "$TMP/releases.api.json" --meta-dir "$META" --out "$OUT_DIR/releases.json"
 cat "$OUT_DIR/releases.json"
 
-gh release upload "$TAG" "$OUT_DIR/releases.json" --clobber
+# 分离签名 releases.json.sig：软件内检查更新按内置公钥验，验不过就当没查到；私钥在 QINGJIAN_INDEX_SIGNING_KEY
+cargo run --release --locked -q -p qingjian-release-sign -- sign "$OUT_DIR/releases.json"
+cargo run --release --locked -q -p qingjian-release-sign -- verify "$OUT_DIR/releases.json"
+
+gh release upload "$TAG" "$OUT_DIR/releases.json" "$OUT_DIR/releases.json.sig" --clobber
 LATEST="$(gh release view --json tagName --jq .tagName)"
 if [[ "$LATEST" != "$TAG" ]]; then
   echo "latest 是 $LATEST，也覆盖一份 releases.json 上去"
-  gh release upload "$LATEST" "$OUT_DIR/releases.json" --clobber
+  gh release upload "$LATEST" "$OUT_DIR/releases.json" "$OUT_DIR/releases.json.sig" --clobber
 fi

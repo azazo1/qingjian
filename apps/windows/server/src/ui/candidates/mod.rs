@@ -66,6 +66,9 @@ pub(crate) struct CandidateWindow {
     /// 上次解析出的深浅，变了重建配色。
     dark: Cell<bool>,
 
+    /// 上次记进日志的缩放值（窗口 DPI、光标所在显示器 DPI）：变了才再记一条（#146）。
+    logged_dpi: Cell<Option<(u32, Option<u32>)>>,
+
     /// 青简渲染器；`None` 走 GDI。
     painter: SharedPainter,
 }
@@ -105,6 +108,7 @@ impl CandidateWindow {
             data,
             dpi: Cell::new(dpi),
             dark: Cell::new(dark),
+            logged_dpi: Cell::new(None),
             painter,
         })
     }
@@ -116,7 +120,7 @@ impl CandidateWindow {
 
     /// 按光标矩形定位并显示：贴光标下方（放不下放上方），四周留出阴影。
     pub(crate) fn show(&self, anchor: RECT) {
-        self.sync_theme();
+        self.sync_theme(anchor);
         let rendered = {
             let data = self.data.borrow();
             self.painter.borrow_mut().as_mut().and_then(|painter| {
@@ -185,17 +189,46 @@ impl CandidateWindow {
     }
 
     /// DPI 或深浅变了就重建主题；每次 `show` 前调。
-    fn sync_theme(&self) {
-        let dpi = match unsafe { GetDpiForWindow(self.hwnd) } {
-            0 => self.dpi.get(),
-            dpi => dpi,
+    ///
+    /// DPI 取光标所在显示器的：窗口藏着时改了缩放（或睡眠唤醒后多显示器重排），
+    /// `GetDpiForWindow` 会停在旧值，候选字就大小不对（#146）。
+    fn sync_theme(&self, anchor: RECT) {
+        let caret = POINT {
+            x: anchor.left,
+            y: anchor.top,
         };
+        let monitor_dpi = monitor::dpi_near(caret);
+        let window_dpi = unsafe { GetDpiForWindow(self.hwnd) };
+        let dpi = match (monitor_dpi, window_dpi) {
+            (Some(dpi), _) => dpi,
+            (None, 0) => self.dpi.get(),
+            (None, dpi) => dpi,
+        };
+        self.log_dpi(caret, window_dpi, monitor_dpi, dpi);
         let dark = resolve_dark(self.data.borrow().theme_mode);
         if dpi != self.dpi.get() || dark != self.dark.get() {
             self.data.borrow_mut().theme = Rc::new(Theme::new(dpi, dark));
             self.dpi.set(dpi);
             self.dark.set(dark);
         }
+    }
+
+    /// 缩放值变了就记一条，多显示器 / 睡眠唤醒的问题从日志里能看出取到的是哪个值（#146）。
+    fn log_dpi(&self, caret: POINT, window_dpi: u32, monitor_dpi: Option<u32>, used: u32) {
+        if self.logged_dpi.replace(Some((window_dpi, monitor_dpi)))
+            == Some((window_dpi, monitor_dpi))
+        {
+            return;
+        }
+        tracing::info!(
+            window_dpi,
+            ?monitor_dpi,
+            used,
+            system_dpi = unsafe { GetDpiForSystem() },
+            caret_x = caret.x,
+            caret_y = caret.y,
+            "候选窗口缩放值"
+        );
     }
 
     /// 内容需要的大小（不含阴影留白）。

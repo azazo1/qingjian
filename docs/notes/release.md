@@ -100,6 +100,16 @@ artifact 名就是包文件名去掉扩展名. 这些包不走发版流程: 没�
 把锁文件的改动提交（`chore(data): 数据 data-vN`），否则 CI 打的包还是锁文件指的旧数据。模型文件缺失或哈希不符时 CI 会失败，不会静默地发出错数据的包。
 2026-09-16 之前用的是滚动覆盖的 `data` Release，已冻结不再更新。
 
+## 版本索引的签名
+
+软件内「检查更新」只认签过名的 `releases.json`（设计见 `docs/design/update.md`）。`publish-releases-json.sh` 生成索引后用 `tools/release-sign` 签出 `releases.json.sig`，
+两个文件一起挂到本次 Release 与 GitHub latest；官网构建时原样拷到 `https://qingjian.app/releases.json` 与 `.sig`。
+
+- 私钥是仓库 Secret `QINGJIAN_INDEX_SIGNING_KEY`（base64 的 32 字节）；没配时 `release.yml` 的门禁直接失败。维护者本机留一份在 `~/.config/qingjian/index-signing.key`（不进仓库）。
+- 换钥：`cargo run -p qingjian-release-sign -- keygen --out <新文件>`，把打印的公钥加进 `crates/qingjian-update/src/index/signature.rs` 的 `PUBLIC_KEYS`（新旧并列），
+  发一两个版本后再换 Secret、去掉旧公钥。直接换 Secret 会让所有已装版本收不到更新。
+- 改了 CHANGELOG 后用 `publish-releases-json.sh` 重刷索引同样要带这个环境变量。
+
 ## 签名与公证
 
 没有证书时 CI 照样出包（ad-hoc 签名，Release 说明里自动加一句「首次打开要在隐私与安全性里放行」）。

@@ -2,8 +2,6 @@
 
 use std::time::Instant;
 
-use qingjian_platform::protocol::SessionId;
-
 use super::launch;
 use super::{RECONNECT_INTERVAL, TextService_Impl};
 use crate::client::EngineClient;
@@ -11,9 +9,9 @@ use crate::client::pipe::connect_default;
 use crate::com::log::log;
 
 impl TextService_Impl {
-    /// 连 Server 并开会话（会话 id 用 TSF 的 client id，带上宿主 exe 名）。
+    /// 连 Server 并开会话（会话号见 [`crate::com::session_id`]，带上宿主 exe 名）。
     pub(super) fn connect(&self) {
-        let session = SessionId(self.client_id.get() as u64);
+        let session = crate::com::session_id();
         let app = crate::com::host_app_name();
         let connected = connect_default()
             .map_err(|e| e.to_string())
@@ -54,7 +52,12 @@ impl TextService_Impl {
             return false;
         }
         self.connect();
-        self.engine.borrow().is_some()
+        let connected = self.engine.borrow().is_some();
+        // 重连上的多半是重启过的 Server，它不知道当前模式：前台这边报一次，成为全局模式。
+        if connected && self.shared.foreground() {
+            self.report_mode();
+        }
+        connected
     }
 
     /// 转发失败后断开，下一键重连。

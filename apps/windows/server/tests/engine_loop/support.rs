@@ -6,13 +6,15 @@ pub use std::sync::{Arc, Mutex};
 pub use qingjian_core::sentence::SentenceScorer;
 pub use qingjian_core::{Language, ModeKeys, ShuangpinScheme};
 pub use qingjian_platform::protocol::{
-    ClientMessage, Frame, InputSettings, KeyEvent, KeyModifiers, KeyOutcome, PROTOCOL_VERSION,
+    ClientMessage, Frame, KeyEvent, KeyModifiers, KeyOutcome, PROTOCOL_VERSION, ScreenRect,
     ServerMessage, SessionId,
 };
 pub use qingjian_platform::{
     AppsConfig, DEFAULT_ENGLISH_CANDIDATES_OFF_WINDOWS, PreeditMode, Scheme,
 };
-pub use qingjian_windows_server::dispatch::{StatusEvent, StatusSink, StatusView};
+pub use qingjian_windows_server::dispatch::{
+    CandidateSink, RenderSettings, StatusEvent, StatusSink, StatusView,
+};
 pub use qingjian_windows_server::{AssemblySpec, Router, RouterConfig, assembly};
 
 pub const SESSION: SessionId = SessionId(1);
@@ -305,4 +307,27 @@ pub fn tick_until_first(router: &mut Router, text: &str, timeout: std::time::Dur
 
 pub fn press_in(router: &mut Router, session: SessionId, event: KeyEvent) {
     let _ = router.handle(ClientMessage::Key { session, event });
+}
+
+/// 记录自绘候选窗收到的帧。
+#[derive(Clone, Default)]
+pub struct RecordingCandidates(pub Arc<Mutex<Vec<Frame>>>);
+
+impl CandidateSink for RecordingCandidates {
+    fn show(&self, frame: Frame, _rect: ScreenRect) {
+        self.0.lock().unwrap().push(frame);
+    }
+
+    fn hide(&self) {}
+
+    fn configure(&self, _settings: RenderSettings) {}
+}
+
+pub fn rect() -> ScreenRect {
+    ScreenRect {
+        left: 0,
+        top: 0,
+        right: 100,
+        bottom: 20,
+    }
 }

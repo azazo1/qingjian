@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 
+use super::indicator::IndicatorCommand;
 use super::key::KeyEvent;
 use super::screen_rect::ScreenRect;
 use super::session::SessionId;
@@ -102,9 +103,8 @@ pub enum ClientMessage {
         session: SessionId,
     },
 
-    /// 中英模式变化 / 获得焦点：DLL 把当前会话的持久中英模式推给 Server（供悬浮状态条显示当前中 / 英）。
-    /// 单击 Shift 切换、激活、获焦时都发一次；不等回话（模式只在 DLL 侧，Server 据此刷状态条、并当作
-    /// 「这个会话此刻聚焦」）。双拼方案 Server 从自己的配置里知道，不必带。
+    /// 用户在这个应用里切了中英模式：DLL 报给 Server，成为全局模式（其余应用下次取模式时跟上，悬浮状态条同步）。
+    /// 不等回话。双拼方案 Server 从自己的配置里知道，不必带。
     ModeChanged {
         /// 会话标识。
         session: SessionId,
@@ -113,8 +113,8 @@ pub enum ClientMessage {
         english: bool,
     },
 
-    /// 前台、没在组句时 DLL 定时问一次：用户在悬浮状态条上点过「中 / 英」没有。中英模式只在 DLL 侧，
-    /// Server 只能记下「想切成哪个」等 DLL 来取，回 [`super::ServerMessage::ModeSync`]。
+    /// 取全局中英模式：激活、得到焦点时各一次，前台、没在组句时再定时问（别的应用或悬浮状态条可能切过）。
+    /// 回 [`super::ServerMessage::ModeSync`]；有 DLL 来取也说明青简是当前输入法。
     SyncMode {
         /// 会话标识。
         session: SessionId,
@@ -125,6 +125,15 @@ pub enum ClientMessage {
     ImeSwitched {
         /// 会话标识。
         session: SessionId,
+    },
+
+    /// 任务栏「中 / 英」图标右键菜单里点了一项（v7 起）。不等回话。
+    Indicator {
+        /// 会话标识。
+        session: SessionId,
+
+        /// 点的是哪一项。
+        command: IndicatorCommand,
     },
 
     /// 关闭会话，释放 Server 侧状态。

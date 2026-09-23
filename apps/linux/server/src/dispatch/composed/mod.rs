@@ -16,8 +16,10 @@ impl Router {
         self.sentence = None;
         if self.engine.composition().is_empty() {
             self.composed = None;
+            self.stop_rescoring();
             return;
         }
+        self.attach_loaded_model();
         let built = self.engine.query().ok().map(|query| {
             let items = query.candidates.items.clone();
             let preedit: Vec<PreeditSegment> =
@@ -44,6 +46,7 @@ impl Router {
         self.highlight = (0..self.candidate_count())
             .find(|&index| self.layout_candidate(index).is_some())
             .unwrap_or(0);
+        self.schedule_rescoring();
     }
 
     /// 高亮移动 `delta`，夹在 `[0, 末尾]`，到页边自然换页。

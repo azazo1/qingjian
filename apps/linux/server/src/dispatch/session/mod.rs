@@ -20,6 +20,7 @@ impl Router {
         if self.focused == Some(session) {
             return;
         }
+        self.stop_rescoring();
         if let Some(previous) = self.focused.and_then(|id| self.sessions.get_mut(&id)) {
             self.engine.note_displayed(std::iter::empty());
             self.engine.swap_session(&mut previous.engine);
@@ -27,6 +28,7 @@ impl Router {
             previous.highlight = self.highlight;
             previous.navigated = self.navigated;
             previous.display_frame = None;
+            previous.last_frame = None;
             previous.shift_pending = false;
         }
         let Some(next) = self.sessions.get_mut(&session) else {
@@ -51,6 +53,7 @@ impl Router {
         }
         info.private = private;
         info.display_frame = None;
+        info.last_frame = None;
         if let Some(identity) = &mut info.display_identity {
             self.display_revision += 1;
             identity.revision = self.display_revision;
@@ -61,6 +64,7 @@ impl Router {
         // 真正的隐私能力变化是输入边界。仅在切换上下文时恢复 private 不走这里，
         // 因此普通与私密会话来回切换不会丢掉各自尚未上屏的组句。
         if self.focused == Some(session) {
+            self.stop_rescoring();
             self.engine.discard_input();
             self.engine.set_private(private);
             self.composed = None;
@@ -75,6 +79,7 @@ impl Router {
     /// 清掉组句与展示状态。还没交给应用的已选词在这里丢掉：
     /// 失焦那一路（`LinuxEvent::Deactivate`）已经先 `take_raw` 交出去了。
     pub(super) fn reset_composition(&mut self) {
+        self.stop_rescoring();
         self.engine.break_chain();
         self.engine.clear();
         self.composed = None;

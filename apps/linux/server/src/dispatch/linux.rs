@@ -30,6 +30,7 @@ impl Router {
                 info.active = focused;
                 info.shift_pending = false;
                 info.display_frame = None;
+                info.last_frame = None;
                 if !focused && self.focused == Some(session) {
                     self.engine.note_displayed(std::iter::empty());
                 }
@@ -59,6 +60,7 @@ impl Router {
                 info.active = false;
                 info.shift_pending = false;
                 info.display_frame = None;
+                info.last_frame = None;
                 self.flush_learning();
             }
             LinuxEvent::Key { mut event, release } => {
@@ -173,6 +175,7 @@ impl Router {
         let info = self.sessions.get_mut(&session).expect("known session");
         info.shift_pending = false;
         info.display_frame = None;
+        info.last_frame = None;
         info.composed = None;
         info.highlight = 0;
         info.navigated = false;
@@ -181,6 +184,7 @@ impl Router {
             identity.revision = self.display_revision;
         }
         if self.focused == Some(session) {
+            self.stop_rescoring();
             self.engine.discard_input();
             self.composed = None;
             self.sentence = None;

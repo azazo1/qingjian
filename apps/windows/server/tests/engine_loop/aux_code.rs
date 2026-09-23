@@ -1,12 +1,12 @@
 //! 辅码在壳里的闭环：触发与逐键即筛、帧上的码段、筛空与退格边界、标点先上屏、
 //! 码表热加载、老 DLL 降级，以及自绘窗与 DLL 面各看各的帧。
 
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 
 use qingjian_dictionary::{AuxCodeLookup, AuxCodeTable};
 use qingjian_platform::Config;
-use qingjian_platform::protocol::{Frame, PreeditKind, ScreenRect};
-use qingjian_windows_server::dispatch::{CandidateSink, DataDirs, RenderSettings};
+use qingjian_platform::protocol::PreeditKind;
+use qingjian_windows_server::dispatch::DataDirs;
 
 use super::support::*;
 
@@ -44,29 +44,6 @@ fn router_with_aux(config: RouterConfig) -> Router {
 /// 缺省配置 + 码表。
 fn aux_router() -> Router {
     router_with_aux(RouterConfig::default())
-}
-
-/// 记录自绘候选窗收到的帧。
-#[derive(Clone, Default)]
-struct RecordingCandidates(Arc<Mutex<Vec<Frame>>>);
-
-impl CandidateSink for RecordingCandidates {
-    fn show(&self, frame: Frame, _rect: ScreenRect) {
-        self.0.lock().unwrap().push(frame);
-    }
-
-    fn hide(&self) {}
-
-    fn configure(&self, _settings: RenderSettings) {}
-}
-
-fn rect() -> ScreenRect {
-    ScreenRect {
-        left: 0,
-        top: 0,
-        right: 100,
-        bottom: 20,
-    }
 }
 
 /// 辅码态：触发键进状态、码段按 AuxCode 段下发、逐键即筛、筛空留 preedit、退格逐级放宽。

@@ -22,7 +22,7 @@ use std::time::{Duration, Instant};
 use qingjian_core::Engine;
 use qingjian_platform::LocalModelConfig;
 use qingjian_platform::protocol::{
-    ClientMessage, Frame, InputSettings, ScreenRect, ServerMessage, SessionId,
+    ClientMessage, Frame, IndicatorState, InputSettings, ScreenRect, ServerMessage, SessionId,
 };
 
 pub use self::candidates::{CandidateSink, NoopSink, RenderSettings};
@@ -90,12 +90,12 @@ pub struct Router {
     /// 悬浮状态条输出端；Windows 上由 [`crate::ui`] 注入。
     status: Box<dyn StatusSink>,
 
-    /// 状态条要显示的中英模式；`None` 表示青简没在前台（还没有会话报过模式 / 切成了别的输入法），不显示。
-    /// 应用退出不影响它：状态条是桌面常驻的，只跟「当前输入法是不是青简」走。
-    status_mode: Option<bool>,
+    /// 全局中英模式（`true` 英文），所有应用共用。DLL 切了报来，激活 / 获焦 / 轮询时取走。
+    english: bool,
 
-    /// 状态条上点出来、还没被 DLL 用 `SyncMode` 取走的目标模式。
-    pending_mode: Option<bool>,
+    /// 当前输入法是不是青简：有 DLL 来取模式就是，切成别的输入法时收起。状态条只在这时显示；
+    /// 应用退出不影响它，状态条是桌面常驻的。
+    ime_active: bool,
 
     /// 聚焦会话最近报来的光标矩形；云联想异步到达时按它原地重摆候选窗口。
     last_rect: Option<ScreenRect>,
@@ -141,8 +141,8 @@ impl Router {
             reload: None,
             candidates: Box::new(NoopSink),
             status: Box::new(NoopStatusSink),
-            status_mode: None,
-            pending_mode: None,
+            english: false,
+            ime_active: false,
             last_rect: None,
             last_shown: None,
             model_path: None,
@@ -160,6 +160,16 @@ impl Router {
             switch_mode: self.config.switch_mode,
             english_mode: self.config.english_mode,
             shift_letter_compose: self.config.shift_letter_compose,
+        }
+    }
+
+    /// 任务栏图标右键菜单打勾用的开关状态，随 `ModeSync` 每一拍下发。
+    pub(super) fn indicator_state(&self) -> IndicatorState {
+        IndicatorState {
+            full_width_punctuation: self.config.full_width,
+            english_full_width_punctuation: self.config.english_full_width,
+            status_bar: self.config.status_enabled,
+            update_available: self.update_available(),
         }
     }
 
