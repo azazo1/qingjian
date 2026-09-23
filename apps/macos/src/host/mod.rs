@@ -135,6 +135,12 @@ pub struct Host {
     /// 调频修饰键正按着: 渲染时候选行多一段频次（只在组句里认, 见 `dispatch_modifier_change`）。
     pub preview_frequency: bool,
 
+    /// 组句时把候选高亮往下挪一格的组合键 (配置 `[shortcut] highlight_down`, 缺省 ⌃N); `None` 是关掉了.
+    pub highlight_down: Option<KeyCombo>,
+
+    /// 往上挪一格 (配置 `[shortcut] highlight_up`, 缺省 ⌃P); `None` 是关掉了.
+    pub highlight_up: Option<KeyCombo>,
+
     /// 候选窗口顶行显示的一句临时状态（删了什么词），下一次查询就没了。
     pub status: Option<String>,
 

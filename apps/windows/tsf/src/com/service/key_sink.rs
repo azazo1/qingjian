@@ -7,6 +7,7 @@ use windows::Win32::UI::Input::KeyboardAndMouse::VK_CAPITAL;
 use windows::Win32::UI::TextServices::{ITfContext, ITfKeyEventSink_Impl};
 use windows::core::{BOOL, GUID, Ref, Result};
 
+use qingjian_platform::KeyCombo;
 use qingjian_platform::protocol::{KeyEvent, KeyModifiers, KeyOutcome};
 
 use super::TextService_Impl;
@@ -124,7 +125,8 @@ impl TextService_Impl {
 
     /// 这个键吃不吃，与 Router 的分派对齐；`OnTestKeyDown` 用，无副作用。判定见 [`eats_key`]。
     ///
-    /// 带 Ctrl/Alt/Win 只有组句中的「修饰键 + 数字」送 Server（译词 / 删候选），其余归应用（翻译选中文字走保留键）；
+    /// 带 Ctrl/Alt/Win 只有组句中的「修饰键 + 数字」送 Server（译词 / 删候选）与配置的调频键 / 高亮键
+    /// (见 [`eats_adjust`] / [`eats_highlight`])，其余归应用（翻译选中文字走保留键）；
     /// 字母只有「中文模式、没在组句、按住 Shift 的大写」归应用（`[general] shift_letter = "compose"` 时也吃，
     /// 让它起一段组句），其中 V / U / I 仍送 Server：双拼下是表达式 / 问字入口；
     /// 组句中功能键 / 方向键 / 可打印字符都吃；没在组句时数字 / 标点也先「测吃」送去转全角（中英各有一份开关），
@@ -134,10 +136,16 @@ impl TextService_Impl {
         let shift_letter_compose = input.is_some_and(|input| input.shift_letter_compose);
         let composing = self.shared.composing();
         // 调频键（缺省 Ctrl）在组句里另算：修饰键本身（开关频次预览）与它配的 J / K（升降候选）都送 Server
+        // 高亮上下挪一格 (缺省 Ctrl+N / Ctrl+P) 同理: 组句里与 ↓ / ↑ 同义, 先送 Server 才谈得上拦
         eats_adjust(
             event,
             composing,
             input.and_then(|input| input.adjust_frequency),
+        ) || eats_highlight(
+            event,
+            composing,
+            input.and_then(|input| input.highlight_down),
+            input.and_then(|input| input.highlight_up),
         ) || eats_key(
             event,
             composing,
@@ -323,6 +331,27 @@ fn eats_adjust(event: &KeyEvent, composing: bool, adjust: Option<KeyModifiers>) 
         || (event.modifiers.chord() == adjust && adjust_key(event.virtual_key).is_some())
 }
 
+/// 组句里的高亮上下挪一格 (配置 `[shortcut] highlight_down` / `highlight_up`, 缺省 Ctrl+N / Ctrl+P) 吃不吃:
+/// 配到的那个组合键送 Server (Router 那边与 ↓ / ↑ 同义, 到页边自动翻页), 其余带修饰键的键照旧归应用.
+/// `composing` 是硬条件: 不在组句时这两个键一个都不碰 (终端里 Ctrl+N 是下一行, Ctrl+P 是上一行).
+fn eats_highlight(
+    event: &KeyEvent,
+    composing: bool,
+    down: Option<KeyCombo>,
+    up: Option<KeyCombo>,
+) -> bool {
+    if !composing {
+        return false;
+    }
+    let Some(typed) = event.character else {
+        return false;
+    };
+    let chord = event.modifiers.chord();
+    [down, up].into_iter().flatten().any(|combo| {
+        KeyModifiers::from(combo.modifiers) == chord && combo.key.eq_ignore_ascii_case(&typed)
+    })
+}
+
 /// 这个键吃不吃（[`TextService_Impl::would_eat`] 的纯逻辑，便于单测）。
 ///
 /// - 翻译评审中一律吃，交给 Server 定接受 / 取消；
@@ -366,8 +395,9 @@ fn eats_key(
 mod tests {
     use qingjian_platform::protocol::{KeyEvent, KeyModifiers};
 
-    use super::{eats_adjust, eats_key, eats_without_server};
+    use super::{eats_adjust, eats_highlight, eats_key, eats_without_server};
     use crate::com::key::event::to_key_event;
+    use qingjian_platform::KeyCombo;
 
     /// 中文模式（`caps` / `english_mode` 都灭）。
     const CHINESE: (bool, bool) = (false, false);
@@ -522,6 +552,50 @@ mod tests {
             &with_modifiers(0x43, 'c', ctrl),
             true,
             Some(ctrl)
+        ));
+    }
+
+    #[test]
+    fn highlight_keys_are_eaten_only_in_composition() {
+        let ctrl = KeyModifiers {
+            ctrl: true,
+            ..KeyModifiers::default()
+        };
+        let down = Some(KeyCombo::HIGHLIGHT_DOWN);
+        let up = Some(KeyCombo::HIGHLIGHT_UP);
+        // 组句里: ⌃N / ⌃P 送 Server (那边与 ↓ / ↑ 同义)
+        assert!(eats_highlight(&with_modifiers(0x4E, 'n', ctrl), true, down, up));
+        assert!(eats_highlight(&with_modifiers(0x50, 'p', ctrl), true, down, up));
+        // 没在组句: 这两个键一个都不碰 (终端里 ⌃N 是下一行)
+        assert!(!eats_highlight(
+            &with_modifiers(0x4E, 'n', ctrl),
+            false,
+            down,
+            up
+        ));
+        // 配成 none: 照旧归应用
+        assert!(!eats_highlight(
+            &with_modifiers(0x4E, 'n', ctrl),
+            true,
+            None,
+            None
+        ));
+        // 修饰键对不上的 ⌃⇧N 与别的字母 ⌃C 也不吃
+        let ctrl_shift = KeyModifiers {
+            shift: true,
+            ..ctrl
+        };
+        assert!(!eats_highlight(
+            &with_modifiers(0x4E, 'n', ctrl_shift),
+            true,
+            down,
+            up
+        ));
+        assert!(!eats_highlight(
+            &with_modifiers(0x43, 'c', ctrl),
+            true,
+            down,
+            up
         ));
     }
 }

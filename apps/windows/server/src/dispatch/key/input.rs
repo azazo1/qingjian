@@ -29,6 +29,14 @@ impl Router {
         {
             return effect;
         }
+        // 组句里上下挪候选高亮 (配置 `[shortcut] highlight_down` / `highlight_up`, 缺省 Ctrl+N / Ctrl+P):
+        // 与 ↓ / ↑ 同义, 到页边自动翻页; 没配到的那一边不拦, 键照旧归应用
+        if composing
+            && !self.engine.expression_mode()
+            && let Some(effect) = self.apply_highlight_shortcut(event)
+        {
+            return effect;
+        }
         if event.modifiers.has_command_key() {
             return Effect::Passthrough;
         }

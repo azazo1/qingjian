@@ -151,6 +151,8 @@ pub fn init(mtm: MainThreadMarker, info: &BundleInfo) -> Result<(), HostError> {
             },
             delete_keys: ShortcutConfig::default().delete_keys().key(),
             adjust_keys: ShortcutConfig::default().adjust_frequency.key(),
+            highlight_down: ShortcutConfig::default().highlight_down.key(),
+            highlight_up: ShortcutConfig::default().highlight_up.key(),
             preview_frequency: false,
             status: None,
             input_log_enabled: None,

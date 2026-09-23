@@ -128,6 +128,33 @@ fn adjust_keys_preview_frequencies_and_move_the_highlighted_candidate() {
 }
 
 #[test]
+fn highlight_keys_move_the_highlight_only_in_composition() {
+    let mut router = router();
+    // 没在组句: Ctrl + N 归应用 (终端里它是下一行)
+    let (outcome, _, _) = press(&mut router, letter_with('n', CTRL));
+    assert_eq!(outcome, KeyOutcome::Passthrough);
+
+    let (_, _, frame) = type_letters(&mut router, "nihao");
+    let first = frame.highlight;
+    // 组句里: Ctrl + N 往下, Ctrl + P 往上, 与 ↓ / ↑ 同义
+    let (outcome, commit, down) = press(&mut router, letter_with('n', CTRL));
+    assert_eq!((outcome, commit), (KeyOutcome::Consumed, None));
+    assert!(down.highlight > first, "Ctrl+N 应当把高亮往下挪");
+    let (_, _, up) = press(&mut router, letter_with('p', CTRL));
+    assert_eq!(up.highlight, first, "Ctrl+P 应当挪回来");
+
+    // 配成 none 关掉: 组句里 Ctrl + N 也不再是高亮键
+    let mut off = router_with(RouterConfig {
+        highlight_down: None,
+        highlight_up: None,
+        ..RouterConfig::default()
+    });
+    type_letters(&mut off, "nihao");
+    let (outcome, _, _) = press(&mut off, letter_with('n', CTRL));
+    assert_eq!(outcome, KeyOutcome::Passthrough);
+}
+
+#[test]
 fn adjust_keys_do_nothing_outside_composition() {
     let mut router = router();
     // 没在组句：Ctrl + K 原样归应用（终端里它是换行）

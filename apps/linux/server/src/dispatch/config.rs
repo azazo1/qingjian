@@ -1,6 +1,6 @@
 //! Linux 首版按键与候选配置。
 use qingjian_platform::protocol::KeyModifiers;
-use qingjian_platform::{AppsConfig, Config, LayoutMode, PreeditMode, ThemeMode};
+use qingjian_platform::{AppsConfig, Config, KeyCombo, LayoutMode, PreeditMode, ThemeMode};
 
 /// Router 要用的配置项，与 macOS 壳的 `Host` 字段对齐。
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -52,6 +52,12 @@ pub struct RouterConfig {
     /// 调频的修饰键（`[shortcut] adjust_frequency`）; `None` 是关掉了.
     /// 组句里按住它时候选面板显示每个候选的频次, 同时配 J / K 升降当前高亮的候选.
     pub adjust_keys: Option<KeyModifiers>,
+
+    /// 组句里把候选高亮往下挪一格的组合键 (`[shortcut] highlight_down`, 缺省 Ctrl+N); `None` 是关掉了.
+    pub highlight_down: Option<KeyCombo>,
+
+    /// 往上挪一格 (`[shortcut] highlight_up`, 缺省 Ctrl+P); `None` 是关掉了.
+    pub highlight_up: Option<KeyCombo>,
 }
 
 impl RouterConfig {
@@ -63,6 +69,7 @@ impl RouterConfig {
 
 impl From<&Config> for RouterConfig {
     fn from(config: &Config) -> Self {
+        let (highlight_down, highlight_up) = config.shortcut.highlight_keys();
         Self {
             page_size: config.general.page_size(),
             preedit: config.general.preedit,
@@ -89,6 +96,8 @@ impl From<&Config> for RouterConfig {
                 .adjust_frequency
                 .key()
                 .map(KeyModifiers::from),
+            highlight_down: highlight_down.key(),
+            highlight_up: highlight_up.key(),
         }
     }
 }

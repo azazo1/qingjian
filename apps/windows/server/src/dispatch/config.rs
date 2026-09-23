@@ -73,6 +73,12 @@ pub struct RouterConfig {
     /// 组句里按住它时候选窗口显示每个候选的频次, 同时配 J / K 升降当前高亮的候选.
     pub adjust_keys: Option<KeyModifiers>,
 
+    /// 组句里把候选高亮往下挪一格的组合键 (`[shortcut] highlight_down`, 缺省 Ctrl+N); `None` 是关掉了.
+    pub highlight_down: Option<KeyCombo>,
+
+    /// 往上挪一格 (`[shortcut] highlight_up`, 缺省 Ctrl+P); `None` 是关掉了.
+    pub highlight_up: Option<KeyCombo>,
+
     /// 「翻译选中文字」快捷键（`[shortcut] translate_selection`）; `None` 是关掉了.
     pub translate_selection: Option<KeyCombo>,
 
@@ -112,6 +118,7 @@ impl RouterConfig {
 
 impl From<&Config> for RouterConfig {
     fn from(config: &Config) -> Self {
+        let (highlight_down, highlight_up) = config.shortcut.highlight_keys();
         Self {
             page_size: config.general.page_size(),
             cloud_slots: config.predict.slots,
@@ -144,6 +151,8 @@ impl From<&Config> for RouterConfig {
                 .key()
                 .map(KeyModifiers::from),
             translate_selection: config.shortcut.translate_selection.key(),
+            highlight_down: highlight_down.key(),
+            highlight_up: highlight_up.key(),
             status_enabled: config.status_bar.enabled,
             status_pos: config.status_bar.x.zip(config.status_bar.y),
             scheme: config.general.scheme(),

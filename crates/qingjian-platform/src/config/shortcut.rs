@@ -49,6 +49,13 @@ pub struct ShortcutConfig {
     /// 按住这个修饰键时候选窗口显示每个候选的频次, 同时配 J / K 把当前高亮的候选降 / 升一格;
     /// 写 `none` 就是不用这个功能. 不在组句 (没有候选) 时这几个键一个都不拦.
     pub adjust_frequency: KeyBinding<Modifiers>,
+
+    /// 组句里把候选高亮往下挪一格的组合键 (缺省 `control+n`, 等价 ↓, 到页边自动翻页);
+    /// 写 `none` 就是不用这个键. 不在组句时拦都不拦.
+    pub highlight_down: KeyBinding<KeyCombo>,
+
+    /// 往上挪一格 (缺省 `control+p`, 等价 ↑); 写 `none` 就是不用.
+    pub highlight_up: KeyBinding<KeyCombo>,
 }
 
 impl Default for ShortcutConfig {
@@ -73,6 +80,9 @@ impl Default for ShortcutConfig {
             delete_candidate: KeyBinding::on(Modifiers::SHIFT),
             // 调频键缺省用 ⌃ / Ctrl：⌥ 系是译词键、⇧ 是删候选键，三端都按着住的修饰键看频次
             adjust_frequency: KeyBinding::on(Modifiers::CONTROL),
+            // 高亮上下挪一格缺省用 ⌃N / ⌃P (emacs 的下一行 / 上一行): 与调频的 ⌃J / ⌃K 各认各的字母, 互不打扰
+            highlight_down: KeyBinding::on(KeyCombo::HIGHLIGHT_DOWN),
+            highlight_up: KeyBinding::on(KeyCombo::HIGHLIGHT_UP),
         }
     }
 }
@@ -103,6 +113,19 @@ impl ShortcutConfig {
             return (default.translation, default.translation_second);
         }
         (self.translation, self.translation_second)
+    }
+
+    /// 高亮上下挪一格的两个组合键 (下, 上); 关着的那一边就是不用.
+    /// 两边配成同一个键 (配置写重了) 时整对退回缺省, 不做一半.
+    pub fn highlight_keys(&self) -> (KeyBinding<KeyCombo>, KeyBinding<KeyCombo>) {
+        if let (KeyBinding::On(down), KeyBinding::On(up)) = (self.highlight_down, self.highlight_up)
+            && down == up
+        {
+            tracing::warn!("候选高亮上下挪一格配成了同一个键, 整对退回缺省");
+            let default = Self::default();
+            return (default.highlight_down, default.highlight_up);
+        }
+        (self.highlight_down, self.highlight_up)
     }
 
     /// 单键切换用的那个键；写坏了退回缺省并记一条警告。
@@ -343,6 +366,40 @@ mod tests {
         assert_eq!(
             custom.adjust_frequency.key(),
             Some(Modifiers::SHIFT_CONTROL)
+        );
+    }
+
+    #[test]
+    fn highlight_keys_default_to_control_n_and_p_and_can_be_switched_off() {
+        let default = ShortcutConfig::default();
+        assert_eq!(
+            default.highlight_down,
+            KeyBinding::on(KeyCombo::HIGHLIGHT_DOWN)
+        );
+        assert_eq!(default.highlight_up, KeyBinding::on(KeyCombo::HIGHLIGHT_UP));
+        let parsed: ShortcutConfig = toml::from_str("").unwrap();
+        assert_eq!(
+            parsed.highlight_keys(),
+            (default.highlight_down, default.highlight_up)
+        );
+
+        let off: ShortcutConfig =
+            toml::from_str("highlight_down = \"none\"\nhighlight_up = \"none\"\n").unwrap();
+        let (down, up) = off.highlight_keys();
+        assert!(down.is_off() && up.is_off());
+
+        // 两边写重了整个退回缺省, 不做一半
+        let same: ShortcutConfig =
+            toml::from_str("highlight_down = \"control+n\"\nhighlight_up = \"control+n\"\n").unwrap();
+        assert_eq!(
+            same.highlight_keys(),
+            (default.highlight_down, default.highlight_up)
+        );
+
+        // 组合键只收一个字母或数字, 写成方向键那种名字是配置错误, 不是 "关掉"
+        assert!(
+            toml::from_str::<ShortcutConfig>("highlight_down = \"alt+down\"\n").is_err(),
+            "认不出来的键应当报错"
         );
     }
 }
