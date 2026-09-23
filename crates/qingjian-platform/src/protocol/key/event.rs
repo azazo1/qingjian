@@ -13,6 +13,11 @@ pub struct KeyEvent {
 
     /// 按下时的修饰键状态。
     pub modifiers: KeyModifiers,
+
+    /// 这是按键抬起（TSF 的 `OnKeyUp`）而不是按下。组句里 DLL 会把调频修饰键的按下与抬起都送过来，
+    /// Server 据此开关频次预览；老 DLL 不带这个字段，读成 `false`（按下）。
+    #[serde(default)]
+    pub release: bool,
 }
 
 impl KeyEvent {
@@ -21,6 +26,13 @@ impl KeyEvent {
             virtual_key,
             character,
             modifiers,
+            release: false,
         }
+    }
+
+    /// 同一次按键的抬起事件（见 [`Self::release`]）。
+    pub fn released(mut self) -> Self {
+        self.release = true;
+        self
     }
 }

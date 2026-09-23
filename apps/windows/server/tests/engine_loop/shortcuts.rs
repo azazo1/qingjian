@@ -1,4 +1,6 @@
-//! 组句中「修饰键 + 数字」：译词上屏与删候选。
+//! 组句中的快捷键：修饰键 + 数字（译词上屏、删候选）与调频键 + J / K。
+
+use qingjian_core::WordFrequency;
 
 use crate::support::*;
 
@@ -72,4 +74,74 @@ fn deleting_a_candidate_shows_a_notice_until_next_key() {
 
     let (_, _, next) = press(&mut router, KeyEvent::new(0x28, None, Default::default())); // VK_DOWN
     assert_eq!(next.notice, None, "提示应只活到下一次按键");
+}
+
+#[test]
+fn adjust_keys_preview_frequencies_and_move_the_highlighted_candidate() {
+    let mut router = router();
+    let (_, _, frame) = type_letters(&mut router, "nihao");
+    assert!(frame.frequencies.is_empty(), "没按调频键时不带频次");
+
+    // 按住缺省调频键（Ctrl）：帧里按候选逐项带上频次，而修饰键本身照旧归应用
+    let (outcome, _, held) = press(&mut router, KeyEvent::new(0x11, None, CTRL)); // VK_CONTROL
+    assert_eq!(outcome, KeyOutcome::Passthrough, "调频修饰键本身不拦");
+    assert_eq!(held.frequencies.len(), held.candidates.items.len());
+    let highlighted = held.highlight;
+    let word = held.candidates.items[highlighted].text.clone();
+    assert_eq!(
+        held.frequencies[highlighted],
+        Some(WordFrequency {
+            total: 0,
+            selected: 0
+        })
+    );
+
+    // Ctrl + K：这个候选升一格（相当于又选一次），高亮跟着它走
+    let (outcome, commit, up) = press(&mut router, letter_with('k', CTRL));
+    assert_eq!((outcome, commit), (KeyOutcome::Consumed, None));
+    assert_eq!(up.candidates.items[up.highlight].text, word);
+    assert_eq!(
+        up.frequencies[up.highlight],
+        Some(WordFrequency {
+            total: 1,
+            selected: 1
+        })
+    );
+
+    // Ctrl + J 降回来；已经到底之后再降只给提示，计数不动
+    let (_, _, down) = press(&mut router, letter_with('j', CTRL));
+    assert_eq!(
+        down.frequencies[down.highlight],
+        Some(WordFrequency {
+            total: 0,
+            selected: 0
+        })
+    );
+    let (_, _, floor) = press(&mut router, letter_with('j', CTRL));
+    let notice = floor.notice.as_deref().expect("降到底应给一句提示");
+    assert!(notice.contains(&word), "提示应提到候选词，实际：{notice}");
+
+    // 抬起调频键：频次收起
+    let (outcome, _, released) = press(&mut router, KeyEvent::new(0x11, None, CTRL).released());
+    assert_eq!(outcome, KeyOutcome::Passthrough);
+    assert!(released.frequencies.is_empty(), "抬起后不再显示频次");
+}
+
+#[test]
+fn adjust_keys_do_nothing_outside_composition() {
+    let mut router = router();
+    // 没在组句：Ctrl + K 原样归应用（终端里它是换行）
+    let (outcome, _, frame) = press(&mut router, letter_with('k', CTRL));
+    assert_eq!(outcome, KeyOutcome::Passthrough);
+    assert!(frame.frequencies.is_empty());
+
+    // 配成 none 关掉：组句里也不再是调频键
+    let mut off = router_with(RouterConfig {
+        adjust_keys: None,
+        ..RouterConfig::default()
+    });
+    type_letters(&mut off, "nihao");
+    let (outcome, _, frame) = press(&mut off, letter_with('k', CTRL));
+    assert_eq!(outcome, KeyOutcome::Passthrough, "关掉调频键后 Ctrl+字母照旧归应用");
+    assert!(frame.frequencies.is_empty());
 }

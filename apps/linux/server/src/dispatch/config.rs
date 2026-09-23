@@ -44,6 +44,10 @@ pub struct RouterConfig {
 
     /// 删候选的修饰键（`[shortcut] delete_candidate`）; `None` 是关掉了.
     pub delete_keys: Option<KeyModifiers>,
+
+    /// 调频的修饰键（`[shortcut] adjust_frequency`）; `None` 是关掉了.
+    /// 组句里按住它时候选面板显示每个候选的频次, 同时配 J / K 升降当前高亮的候选.
+    pub adjust_keys: Option<KeyModifiers>,
 }
 
 impl RouterConfig {
@@ -75,6 +79,11 @@ impl From<&Config> for RouterConfig {
                 )
             },
             delete_keys: config.shortcut.delete_keys().key().map(KeyModifiers::from),
+            adjust_keys: config
+                .shortcut
+                .adjust_frequency
+                .key()
+                .map(KeyModifiers::from),
         }
     }
 }

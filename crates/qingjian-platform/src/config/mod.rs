@@ -189,7 +189,10 @@ translation_second = "shift+option"
 translate_selection = "control+option+t"
 # 数字键配这些修饰键删掉候选：用户词（云端选过的、自动造的）整个删掉，词库里的词清掉对它的学习记录。组句中要打感叹号先把词上屏
 delete_candidate = "shift"
-# 上面四项都能写 none: 写 none 的那一项就是不用 (比如 delete_candidate = "none" 时这组键不再删候选, 也不再占着它)
+# 组句时按住这个修饰键: 候选右侧显示每个词被选过的次数 (全局次数 / 这个输入串下选过几次), 同时按 K 升, 按 J 降当前高亮的候选
+# 每次升降相当于又选一次 / 撤销一次选择. 与译词键共用 Ctrl 不冲突 (译词认数字键, 调频认 J / K). 不在组句时这几个键一律不拦
+adjust_frequency = "control"
+# 上面五项都能写 none: 写 none 的那一项就是不用 (比如 delete_candidate = "none" 时这组键不再删候选, 也不再占着它)
 "#
     };
 }
@@ -209,7 +212,10 @@ translation_second = "shift+ctrl"
 translate_selection = "ctrl+alt+t"
 # 数字键配这些修饰键删掉候选：用户词（云端选过的、自动造的）整个删掉，词库里的词清掉对它的学习记录。组句中要打感叹号先把词上屏
 delete_candidate = "shift"
-# 上面四项都能写 none: 写 none 的那一项就是不用 (比如 delete_candidate = "none" 时这组键不再删候选, 也不再占着它)
+# 组句时按住这个修饰键: 候选右侧显示每个词被选过的次数 (全局次数 / 这个输入串下选过几次), 同时按 K 升, 按 J 降当前高亮的候选
+# 每次升降相当于又选一次 / 撤销一次选择. 与译词键共用 Ctrl 不冲突 (译词认数字键, 调频认 J / K). 不在组句时这几个键一律不拦
+adjust_frequency = "control"
+# 上面五项都能写 none: 写 none 的那一项就是不用 (比如 delete_candidate = "none" 时这组键不再删候选, 也不再占着它)
 "#
     };
 }

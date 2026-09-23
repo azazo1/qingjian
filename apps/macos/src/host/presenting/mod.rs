@@ -30,6 +30,23 @@ impl Host {
         self.english_candidates && !bundle.is_some_and(|b| self.apps.english_candidates_off(b))
     }
 
+    /// 调频：整个排布里第 `index` 格的候选升 / 降一格（调频键 + K / J，调用方给的是高亮那一格）。
+    /// 计数真的动了返回 `None`（界面靠频次数字与候选挪位给反馈），没动才返回一句给用户看的话。
+    /// 那一格没有候选也返回 `None`（调用方吞掉按键）。
+    pub fn adjust_candidate(&mut self, index: usize, up: bool) -> Option<String> {
+        let candidate = self.session.candidate(index)?;
+        let change = self.engine.adjust_frequency(&candidate, up);
+        if change.changed {
+            return None;
+        }
+        let text = &candidate.text;
+        Some(match (up, self.engine.frequency_of(&candidate)) {
+            (_, None) => format!("「{text}」没有可以调的词频"),
+            (true, _) => format!("「{text}」没有可以升的记录"),
+            (false, _) => format!("「{text}」已经降到底了, 没有学习记录可降"),
+        })
+    }
+
     /// 开始一次翻译：记下选区，窗口先显示「翻译中…」。调用方已发出请求。
     pub fn begin_translation(&mut self, range: objc2_foundation::NSRange) {
         self.translation = Some(TranslationJob {
@@ -82,6 +99,10 @@ impl Host {
 
     /// 按会话状态画候选窗口。候选为空且没有 preedit 时收窗。
     pub fn render(&mut self) {
+        // 没在组句就没有候选可调，调频预览跟着归位（下次组句里按住调频键会重新置位）
+        if self.engine.composition().is_empty() {
+            self.preview_frequency = false;
+        }
         let size = self.session.layout.page_size();
         let page = self.session.page;
         // 横排展开成矩阵时画视口里的几行，序号只标在高亮所在那一行（数字键选的就是它）；单行时只画当前页
@@ -134,6 +155,26 @@ impl Host {
             }
             row.annotation
                 .insert(0, (label, crate::candidates::Tone::Model));
+        }
+        // 调频键正按着: 每行前面加上这个词的频次 (全局次数 / 这个输入串下的次数), 以便一边按 K / J 一边看数字怎么变.
+        // 放在模型小标之后插, 于是它排在最前面 (调频时它比「为什么排这儿」更该先看到)
+        if self.preview_frequency {
+            for (i, row) in rows.iter_mut().enumerate() {
+                let Some(frequency) = cells
+                    .get(i)
+                    .and_then(|cell| cell.candidate())
+                    .and_then(|candidate| self.engine.frequency_of(candidate))
+                else {
+                    continue;
+                };
+                row.annotation.insert(
+                    0,
+                    (
+                        format!("频 {}/{}", frequency.total, frequency.selected),
+                        crate::candidates::Tone::Frequency,
+                    ),
+                );
+            }
         }
         // 页上的译词告诉 Engine：用户上屏那一刻它们在屏幕上，算「见过」（词汇记录）；窗口收起时传空
         self.engine

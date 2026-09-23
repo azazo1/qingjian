@@ -45,6 +45,10 @@ pub struct ShortcutConfig {
 
     /// 数字键配这些修饰键: 删掉候选 (用户词整个删掉, 词库词清掉对它的学习); 写 `none` 就是不用.
     pub delete_candidate: KeyBinding<Modifiers>,
+
+    /// 按住这个修饰键时候选窗口显示每个候选的频次, 同时配 J / K 把当前高亮的候选降 / 升一格;
+    /// 写 `none` 就是不用这个功能. 不在组句 (没有候选) 时这几个键一个都不拦.
+    pub adjust_frequency: KeyBinding<Modifiers>,
 }
 
 impl Default for ShortcutConfig {
@@ -67,6 +71,8 @@ impl Default for ShortcutConfig {
             translation_second: KeyBinding::on(translation_second),
             translate_selection: KeyBinding::on(KeyCombo::TRANSLATE_DEFAULT),
             delete_candidate: KeyBinding::on(Modifiers::SHIFT),
+            // 调频键缺省用 ⌃ / Ctrl：⌥ 系是译词键、⇧ 是删候选键，三端都按着住的修饰键看频次
+            adjust_frequency: KeyBinding::on(Modifiers::CONTROL),
         }
     }
 }
@@ -320,5 +326,20 @@ mod tests {
             panic!("组合键应当原样生效");
         };
         assert_eq!(combo.key, 'z');
+    }
+
+    #[test]
+    fn adjust_frequency_defaults_to_control_and_can_be_switched_off() {
+        let default = ShortcutConfig::default();
+        assert_eq!(default.adjust_frequency, KeyBinding::on(Modifiers::CONTROL));
+        let parsed: ShortcutConfig = toml::from_str("").unwrap();
+        assert_eq!(parsed.adjust_frequency, default.adjust_frequency);
+
+        let off: ShortcutConfig = toml::from_str("adjust_frequency = \"none\"\n").unwrap();
+        assert!(off.adjust_frequency.is_off());
+
+        let custom: ShortcutConfig =
+            toml::from_str("adjust_frequency = \"control+shift\"\n").unwrap();
+        assert_eq!(custom.adjust_frequency.key(), Some(Modifiers::SHIFT_CONTROL));
     }
 }

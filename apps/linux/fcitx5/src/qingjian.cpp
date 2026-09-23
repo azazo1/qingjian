@@ -313,16 +313,27 @@ void QingjianEngine::render(InputContext *context, const nlohmann::json &frame) 
     list->setLabels({"1", "2", "3", "4", "5", "6", "7", "8", "9"});
     list->setLayoutHint(frame.value("layout", "horizontal") == "vertical" ? CandidateLayoutHint::Vertical : CandidateLayoutHint::Horizontal);
     nlohmann::json senses = nlohmann::json::array();
+    // 调频键按住时 server 会随帧带上每个候选的频次（与候选逐项平行），空数组表示不显示
+    const auto frequencies = frame.value("frequencies", nlohmann::json::array());
     size_t index = 0;
     for (const auto &item : items) {
         std::string annotation;
         auto text = item.at("text").get<std::string>();
+        if (index < frequencies.size() && frequencies[index].is_object()) {
+            const auto &frequency = frequencies[index];
+            annotation = "频 " + std::to_string(frequency.value("total", 0u)) + "/"
+                + std::to_string(frequency.value("selected", 0u));
+        }
         const auto &translation = item.at("translation");
         if (!text.empty() && translation.is_object() && !translation.at("senses").empty()) {
             const auto &sense = translation.at("senses").front();
-            annotation = sense.at("text").get<std::string>();
-            if (!annotation.empty()) senses.push_back({index, 0});
-            if (sense.value("fresh", false)) annotation += " · 生";
+            std::string gloss = sense.at("text").get<std::string>();
+            if (!gloss.empty()) senses.push_back({index, 0});
+            if (sense.value("fresh", false)) gloss += " · 生";
+            if (!gloss.empty()) {
+                if (!annotation.empty()) annotation += " · ";
+                annotation += gloss;
+            }
         }
         list->append(std::make_unique<qingjian::Word>(text, annotation, [this, alive = alive_, watched, index, revision, identity](InputContext *ic) {
             if (*alive && ic && ic == watched.get() && ic->hasFocus() && ic->propertyFor(&sessions_)->revision == revision)

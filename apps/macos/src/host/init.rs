@@ -150,6 +150,8 @@ pub fn init(mtm: MainThreadMarker, info: &BundleInfo) -> Result<(), HostError> {
                 (first.key(), second.key())
             },
             delete_keys: ShortcutConfig::default().delete_keys().key(),
+            adjust_keys: ShortcutConfig::default().adjust_frequency.key(),
+            preview_frequency: false,
             status: None,
             input_log_enabled: None,
             translate_keys: Some(KeyCombo::TRANSLATE_DEFAULT),

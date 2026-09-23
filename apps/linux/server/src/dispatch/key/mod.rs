@@ -18,7 +18,8 @@ fn with_prefix(prefix: Option<String>, effect: Effect, c: char) -> Effect {
             prefix.push_str(commit.as_deref().unwrap_or_default());
         }
         Effect::Navigated => {}
-        Effect::Passthrough => prefix.push(c),
+        // Noted 与 Passthrough 一样是「键归应用」，只是不交已选词；有前缀时这个字符照旧一起插入
+        Effect::Noted | Effect::Passthrough => prefix.push(c),
     }
     Effect::Changed(Some(prefix))
 }

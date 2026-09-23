@@ -31,6 +31,7 @@ impl Host {
         let (translation, translation_second) = config.shortcut.translation_keys();
         self.translation_keys = (translation.key(), translation_second.key());
         self.delete_keys = config.shortcut.delete_keys().key();
+        self.adjust_keys = config.shortcut.adjust_frequency.key();
         self.translate_keys = config.shortcut.translate_selection.key();
         self.page_size = config.general.page_size();
         self.cloud_slots = config.predict.slots;

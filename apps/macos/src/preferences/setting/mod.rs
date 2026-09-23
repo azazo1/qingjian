@@ -217,6 +217,9 @@ pub enum Setting {
     /// `[shortcut] delete_candidate`，快捷键录制按钮（只记修饰键）。
     DeleteCandidateKeys,
 
+    /// `[shortcut] adjust_frequency`，快捷键录制按钮（只记修饰键）：组句里按住看频次，配 J / K 升降当前候选。
+    AdjustFrequencyKeys,
+
     /// `[general] input_log`，勾选框。
     InputLog,
 
@@ -281,6 +284,7 @@ impl Setting {
             Self::MacCapsLockSwitch => 64,
             Self::MacSwitchDual => 65,
             Self::ModeBadge => 66,
+            Self::AdjustFrequencyKeys => 67,
             Self::InputLog => 27,
             Self::Learning => 45,
             Self::ClearInputLog => 28,
@@ -361,6 +365,7 @@ impl Setting {
             64 => Self::MacCapsLockSwitch,
             65 => Self::MacSwitchDual,
             66 => Self::ModeBadge,
+            67 => Self::AdjustFrequencyKeys,
             27 => Self::InputLog,
             45 => Self::Learning,
             28 => Self::ClearInputLog,
@@ -451,6 +456,7 @@ mod tests {
             Setting::CloudSlots,
             Setting::EnglishCandidatesOffInApps,
             Setting::DeleteCandidateKeys,
+            Setting::AdjustFrequencyKeys,
             Setting::MacSwitchSingle,
             Setting::MacSwitchToggle,
             Setting::MacSwitchDual,

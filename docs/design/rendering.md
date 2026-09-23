@@ -119,6 +119,7 @@
 - **配置**：`[general] renderer` / `[general] font` 经 `CandidateSink::configure` 送到 UI 线程，装上时与热加载变了时各送一次；字族名按 DirectWrite 的系统字体集合找文件（`qingjian_render::system_fonts`），设置程序的「字体」框也从它列字族。
 - **候选行类型**：Windows 壳直接用渲染器的 `Row` / `Tone`，不再有自己的一份；macOS 壳还留着 `convert.rs`，spike 定型后一起去掉。
 - **删候选的提示**：渲染器画在拼音行右侧（与 macOS 一致）；GDI 画法仍在拼音行下方。
+- **调频预览**：调频键按住时，每行 annotation 最前面多一段 `频 全局/本串`（`Tone::Frequency`，取强调色）；macOS 壳与 Windows 渲染器同形，Linux 的 fcitx5 面板把同一段拼在候选 annotation 最前面。
 
 真机结果（Windows 11 26200，2026-09-15）：候选窗口深色 / 浅色、竖排 / 横排、Segoe UI Emoji（COLRv0）彩色、阴影，悬浮状态条与矢量齿轮，「渲染引擎 / 字体」设置项与热切换（换成 Maple Mono NF CN 立即生效），`renderer = "system"` 退回 GDI，均通过。灰度抗锯齿与微软雅黑回退看着与 GDI 版没有可感差异；Yu Gothic 回退与首帧耗时没有单独测。
 排查中顺带发现并修掉的与渲染器无关的问题：TSF DLL 动态链 `vcruntime140.dll`，AppContainer 进程（任务栏搜索等）读不到系统里那份时整个 DLL 加载失败、系统切回上一个输入法，已改成静态 CRT（仓库根 `.cargo/config.toml`）。

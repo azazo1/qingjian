@@ -1,4 +1,4 @@
-//! 学习与统计的挂钩：释义兜底回填、词汇曝光、输入统计、输入日志、删候选、定时落盘。
+//! 学习与统计的挂钩：释义兜底回填、词汇曝光、输入统计、输入日志、删候选、调频、定时落盘。
 
 use super::Engine;
 use super::input_log::{CommitEntry, InputLogEntry, InputLogger, InputSource, LOGGED_CANDIDATES};
@@ -8,11 +8,13 @@ use crate::candidate::{Candidate, CandidateKind, Translation};
 use crate::sentence;
 
 mod forgotten;
+mod frequency;
 mod learner;
 mod muted;
 pub(crate) mod phrase;
 
 pub use forgotten::Forgotten;
+pub use frequency::{FrequencyChange, WordFrequency};
 pub use learner::{Learner, NoLearner};
 pub(super) use muted::MutedLearner;
 pub use phrase::LearnPhraseError;
@@ -182,6 +184,49 @@ impl Engine {
             tracing::debug!(text = %candidate.text, ?forgotten, "删除候选");
         }
         forgotten
+    }
+
+    /// 一个候选的学习计数（调频键按住时候选窗口里的预览）；整句、快捷、emoji、自定义规则没有词频可调，返回 `None`。
+    /// 空文本的占位格（Linux 面板用空候选占住位置）同样没有。
+    pub fn frequency_of(&self, candidate: &Candidate) -> Option<WordFrequency> {
+        if candidate.text.is_empty() || !frequency::adjustable(candidate.kind) {
+            return None;
+        }
+        let input = self.composition.scope();
+        Some(WordFrequency {
+            total: self.learner.weight(&candidate.text),
+            selected: self.learner.choice_weight(input, &candidate.text),
+        })
+    }
+
+    /// 用户在候选窗口里手动调频（调频键 + K / J）：升频算「又选了一次」，降频算「撤销一次选择」，
+    /// 降到底（两个计数都已经是 0）就不再变，返回的 [`FrequencyChange::changed`] 是 `false`。
+    /// 计数一变，整句格子候选与纠错缓存作废，下一次查询就按新次序排。
+    ///
+    /// 与 [`Self::forget`] 一样，这是用户在候选窗口里明确要求的管理操作，私密输入里照做。
+    pub fn adjust_frequency(&mut self, candidate: &Candidate, up: bool) -> FrequencyChange {
+        if !frequency::adjustable(candidate.kind) {
+            return FrequencyChange::default();
+        }
+        // 繁体候选按简体记，与 forget 一致
+        let mut candidate_owned = candidate.clone();
+        if self.traditional
+            && let Some(simp) = self.traditional_map.borrow().get(&candidate_owned.text)
+        {
+            candidate_owned.text = simp.clone();
+        }
+        let candidate = &candidate_owned;
+        let before = self.frequency_of(candidate).unwrap_or_default();
+        let input = self.composition.scope().to_owned();
+        let (total, selected) = self.learner.adjust_frequency(&input, &candidate.text, up);
+        let frequency = WordFrequency { total, selected };
+        let changed = frequency != before;
+        if changed {
+            self.forget_span_cache();
+            *self.correction_cache.borrow_mut() = None;
+            tracing::debug!(text = %candidate.text, up, total, selected, "调整候选词频");
+        }
+        FrequencyChange { frequency, changed }
     }
 
     /// 把学习数据与输入日志落盘。壳在停用输入法时调，激活期间也可以定时调（进程被杀时少丢）：

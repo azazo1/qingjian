@@ -46,3 +46,22 @@ pub(crate) fn digit_key(virtual_key: u32) -> Option<usize> {
 pub(crate) fn is_keypad(virtual_key: u32) -> bool {
     (0x60..=0x6F).contains(&virtual_key)
 }
+
+/// 主键盘区的 J / K：调频键配的两个字母（vim 键位），`true` 是升、`false` 是降。
+pub(crate) fn adjust_key(virtual_key: u32) -> Option<bool> {
+    match virtual_key {
+        0x4B => Some(true),
+        0x4A => Some(false),
+        _ => None,
+    }
+}
+
+/// 修饰键的物理键码（左右都算）：组句里调频修饰键的按下 / 抬起要送进来开关频次预览。
+pub(crate) fn is_modifier_key(virtual_key: u32) -> bool {
+    matches!(
+        virtual_key,
+        0x10 | 0x11 | 0x12 // Shift / Ctrl / Alt
+            | 0xA0 | 0xA1 | 0xA2 | 0xA3 | 0xA4 | 0xA5 // 左右 Shift / Ctrl / Alt
+            | 0x5B | 0x5C // 左右 Win
+    )
+}

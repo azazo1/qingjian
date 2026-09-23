@@ -600,6 +600,7 @@ impl CandidateView {
             Tone::Fresh => &self.theme().fresh_color,
             Tone::Faint => &self.theme().pos_color,
             Tone::Model => &self.theme().fresh_color,
+            Tone::Frequency => &self.theme().fresh_color,
         }
     }
 

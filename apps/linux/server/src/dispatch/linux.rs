@@ -89,6 +89,9 @@ impl Router {
                         self.reset_composition();
                         outcome = KeyOutcome::Consumed;
                     }
+                    // 调频修饰键抬起：收起频次预览（键本身照旧归应用，outcome 仍是 Passthrough）
+                    event.release = true;
+                    self.apply_adjust_modifier(&event);
                 } else {
                     info.shift_pending = shift && !event.modifiers.has_command_key();
                     event.modifiers.english_mode = info.english;
@@ -105,6 +108,8 @@ impl Router {
                             outcome = KeyOutcome::Consumed;
                         }
                         Effect::Navigated => outcome = KeyOutcome::Consumed,
+                        // 只更新了预览状态（调频键的按下 / 抬起）：键归应用，但不碰组句 —— 按一下 Ctrl 不该把已选词上屏
+                        Effect::Noted => {}
                         // 这一键归应用：文本流越过了这段组句，还没交给应用的已选词先交出去
                         Effect::Passthrough => {
                             let pending = self.engine.take_pending();

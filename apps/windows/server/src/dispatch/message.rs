@@ -150,6 +150,8 @@ impl Router {
                 (commit.filter(|text| !text.is_empty()), KeyOutcome::Consumed)
             }
             Effect::Navigated => (None, KeyOutcome::Consumed),
+            // 只更新了预览状态（调频键的按下 / 抬起）：键归应用，但不碰组句 —— 按一下 Ctrl 不该把已选词上屏
+            Effect::Noted => (None, KeyOutcome::Passthrough),
             // 这一键归应用：文本流越过了这段组句，还没交给应用的已选词先交出去（DLL 先插它再放行按键）
             Effect::Passthrough => {
                 let pending = self.engine.take_pending();

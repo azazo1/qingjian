@@ -721,3 +721,69 @@ fn input_log_records_the_session_and_page_turns() {
     };
     assert_eq!(commit.pages, 2);
 }
+
+#[test]
+fn adjusting_a_candidate_frequency_counts_like_one_more_choice_and_stops_at_zero() {
+    let mut engine = engine().with_learner(Box::new(CountingLearner(HashMap::new())));
+    engine.set_input("kaifa");
+    let word = engine
+        .query()
+        .unwrap()
+        .candidates
+        .items
+        .into_iter()
+        .find(|c| c.text == "开发" && c.kind == CandidateKind::Chinese)
+        .unwrap();
+    assert_eq!(
+        engine.frequency_of(&word),
+        Some(WordFrequency {
+            total: 0,
+            selected: 0
+        })
+    );
+
+    // 升频：全局次数与当前输入串下的选择各 +1，与上屏选一次记的一样
+    let up = engine.adjust_frequency(&word, true);
+    assert!(up.changed);
+    assert_eq!(
+        up.frequency,
+        WordFrequency {
+            total: 1,
+            selected: 1
+        }
+    );
+    assert_eq!(engine.learner().weight("开发"), 1);
+    assert_eq!(engine.learner().choice_weight("kaifa", "开发"), 1);
+    assert_eq!(engine.adjust_frequency(&word, true).frequency.total, 2);
+
+    // 降频：各 -1，降到底之后不再变
+    let down = engine.adjust_frequency(&word, false);
+    assert!(down.changed);
+    assert_eq!(down.frequency.total, 1);
+    let floor = engine.adjust_frequency(&word, false);
+    assert!(floor.changed);
+    assert_eq!(floor.frequency, WordFrequency::default());
+    let below = engine.adjust_frequency(&word, false);
+    assert!(!below.changed);
+    assert_eq!(below.frequency, WordFrequency::default());
+    assert_eq!(engine.learner().weight("开发"), 0);
+    assert_eq!(engine.learner().choice_weight("kaifa", "开发"), 0);
+}
+
+#[test]
+fn only_candidates_with_a_word_frequency_can_be_adjusted() {
+    let mut engine = engine().with_learner(Box::new(CountingLearner(HashMap::new())));
+    engine.set_input("kaifa");
+    let sentence = Candidate {
+        text: "开发了".to_owned(),
+        kind: CandidateKind::Sentence,
+        syllables: Vec::new(),
+        reading: None,
+        translation: None,
+        aux_code: None,
+    };
+    assert_eq!(engine.frequency_of(&sentence), None);
+    let change = engine.adjust_frequency(&sentence, true);
+    assert!(!change.changed);
+    assert_eq!(change.frequency, WordFrequency::default());
+}

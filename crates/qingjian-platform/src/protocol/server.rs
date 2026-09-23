@@ -2,9 +2,9 @@ use serde::{Deserialize, Serialize};
 
 use super::frame::Frame;
 use super::indicator::IndicatorState;
-use super::key::KeyOutcome;
+use super::key::{KeyModifiers, KeyOutcome};
 use super::session::SessionId;
-use crate::config::SwitchKeys;
+use crate::config::{Modifiers, SwitchKeys};
 
 /// Server 下发给 DLL 的「按键行为」设置。
 ///
@@ -24,6 +24,11 @@ pub struct InputSettings {
     /// 按住 Shift 敲的字母吃不吃：缺省交给应用，开着时送 Server 起一段组句（`⇧C` 接 `pan` 出「C盘」）。
     #[serde(default)]
     pub shift_letter_compose: bool,
+
+    /// 调频修饰键（`[shortcut] adjust_frequency`）；`None` 是关掉了。DLL 据此决定组句里要不要把
+    /// 按下的调频修饰键与它配的 J / K 送给 Server（按住预览频次、升降当前候选）。
+    #[serde(default)]
+    pub adjust_frequency: Option<KeyModifiers>,
 }
 
 impl Default for InputSettings {
@@ -32,6 +37,7 @@ impl Default for InputSettings {
             switch_mode: SwitchKeys::default(),
             english_mode: true,
             shift_letter_compose: false,
+            adjust_frequency: Some(KeyModifiers::from(Modifiers::CONTROL)),
         }
     }
 }
