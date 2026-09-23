@@ -11,11 +11,12 @@ impl Router {
     /// 表达式模式里 Shift + 数字打的是 `^ * ( )`，不当快捷键。
     pub(crate) fn apply_key(&mut self, event: &KeyEvent) -> Effect {
         // 调频修饰键（缺省 Ctrl）的按下 / 抬起：只开关帧里的频次预览，键照旧归应用
-        if let Some(effect) = self.apply_adjust_modifier(event) {
+        let composing = self.composing();
+        if let Some(effect) = self.apply_adjust_modifier(event, composing) {
             return effect;
         }
         // 调频键 + J / K：升降当前高亮的候选（表达式模式里 Shift + 字母另有用途，与数字快捷键一样绕过）
-        if self.composing()
+        if composing
             && !self.engine.expression_mode()
             && let Some(effect) = self.apply_frequency_shortcut(event)
         {

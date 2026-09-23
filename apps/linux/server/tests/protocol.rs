@@ -74,14 +74,20 @@ fn linux_display_identity_round_trips_without_changing_shared_protocol() {
     assert_eq!(decoded.senses, vec![(0, 1), (3, 0)]);
 }
 
-/// Fcitx5 插件的 OpenSession 把协议版本写死在 C++ 里；Server 要求完全一致，升版本时两边得一起改。
+/// Fcitx5 插件的 OpenSession 用 `protocol.h` 里的 `kProtocolVersion`（两边成对，升版本时一起改）：
+/// 插件要引用那个常量，常量本身要和 Server 的 `PROTOCOL_VERSION` 相同。
 #[test]
 fn fcitx5_plugin_opens_sessions_with_the_current_protocol() {
-    let plugin = concat!(env!("CARGO_MANIFEST_DIR"), "/../fcitx5/src/qingjian.cpp");
-    let source = std::fs::read_to_string(plugin).unwrap();
-    let expected = format!("{{\"protocol\", {PROTOCOL_VERSION}}}");
+    let dir = concat!(env!("CARGO_MANIFEST_DIR"), "/../fcitx5/src");
+    let plugin = std::fs::read_to_string(format!("{dir}/qingjian.cpp")).unwrap();
     assert!(
-        source.contains(&expected),
-        "qingjian.cpp 的 OpenSession 应写 {expected}"
+        plugin.contains("{\"protocol\", qingjian::kProtocolVersion}"),
+        "qingjian.cpp 的 OpenSession 应带上 qingjian::kProtocolVersion"
+    );
+    let header = std::fs::read_to_string(format!("{dir}/protocol.h")).unwrap();
+    let expected = format!("kProtocolVersion = {PROTOCOL_VERSION}");
+    assert!(
+        header.contains(&expected),
+        "protocol.h 里应有 {expected}（与 Server 的 PROTOCOL_VERSION 对齐）"
     );
 }

@@ -91,7 +91,8 @@ impl Router {
                     }
                     // 调频修饰键抬起：收起频次预览（键本身照旧归应用，outcome 仍是 Passthrough）
                     event.release = true;
-                    self.apply_adjust_modifier(&event);
+                    let composing = !self.engine.composition().is_empty();
+                    self.apply_adjust_modifier(&event, composing);
                 } else {
                     info.shift_pending = shift && !event.modifiers.has_command_key();
                     event.modifiers.english_mode = info.english;

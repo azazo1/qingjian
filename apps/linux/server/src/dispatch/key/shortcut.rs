@@ -30,13 +30,17 @@ impl Router {
     }
 
     /// 调频修饰键（配置 `[shortcut] adjust_frequency`，缺省 Ctrl）的按下 / 抬起：只用来开 / 关帧里的
-    /// 频次预览，键本身照旧归应用（回 `Passthrough`）。没配调频键、没在组句、不是修饰键都返回 `None`，
-    /// 按键继续按原来的规矩分流。
+    /// 频次预览，键本身照旧归应用（回 `Noted`）。没配调频键、没在组句、不是修饰键都返回 `None`，
+    /// 按键继续按原来的规矩分流。`composing` 由调用方给（与 [`Self::apply_digit_shortcut`] 同一套）。
     ///
     /// 抬起那一次由 [`crate::dispatch::linux`] 的按键入口直接调（fcitx5 把抬起也送进来了），所以是 `pub(crate)`。
-    pub(crate) fn apply_adjust_modifier(&mut self, event: &KeyEvent) -> Option<Effect> {
+    pub(crate) fn apply_adjust_modifier(
+        &mut self,
+        event: &KeyEvent,
+        composing: bool,
+    ) -> Option<Effect> {
         let keys = self.config.adjust_keys?;
-        if !self.composing() || !codes::is_modifier_key(event.virtual_key) {
+        if !composing || !codes::is_modifier_key(event.virtual_key) {
             return None;
         }
         let preview = !event.release && event.modifiers.chord() == keys;
