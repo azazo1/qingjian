@@ -147,12 +147,8 @@ impl GeneralPage {
             mtm,
             "仅影响标点，字母和数字保持半角；自定义短语原样输出。设置会保存。 ",
         );
-        let punctuation_first = checkbox(
-            mtm,
-            "标点符号自动上屏",
-            Setting::PunctuationFirst,
-            target,
-        );
+        let punctuation_first =
+            checkbox(mtm, "标点符号自动上屏", Setting::PunctuationFirst, target);
         row_checkbox(layout, &punctuation_first);
         note(
             layout,
