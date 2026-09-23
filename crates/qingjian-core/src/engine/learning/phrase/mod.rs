@@ -141,7 +141,9 @@ impl Engine {
         let static_map = self.phrase_readings.borrow();
         let user_slot = self.user_phrase_readings.borrow();
         let static_hit = static_map.as_ref().and_then(|readings| readings.get(text));
-        let user_hit = user_slot.as_ref().and_then(|(_, readings)| readings.get(text));
+        let user_hit = user_slot
+            .as_ref()
+            .and_then(|(_, readings)| readings.get(text));
         let pinyin = match (static_hit, user_hit) {
             (Some((pinyin, freq)), Some((user_pinyin, user_freq))) if *user_freq > *freq => {
                 user_pinyin.as_str()
@@ -165,7 +167,10 @@ fn build_readings(
                 Some((_, freq)) if *freq >= entry.frequency => {}
                 Some(slot) => *slot = (entry.pinyin.to_owned(), entry.frequency),
                 None => {
-                    best.insert(entry.text.to_owned(), (entry.pinyin.to_owned(), entry.frequency));
+                    best.insert(
+                        entry.text.to_owned(),
+                        (entry.pinyin.to_owned(), entry.frequency),
+                    );
                 }
             }
         }
