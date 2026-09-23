@@ -5,6 +5,7 @@ use std::collections::HashMap;
 use qingjian_dictionary::canonical_syllable;
 
 use super::super::Engine;
+use super::Learner;
 use crate::candidate::{Candidate, CandidateKind};
 use crate::parser;
 use crate::sentence;
@@ -129,7 +130,7 @@ impl Engine {
             return;
         }
         let readings = match self.learner.user_words() {
-            Some(dictionary) => build_readings(std::slice::from_ref(dictionary)),
+            Some(dictionary) => build_readings(std::slice::from_ref(&dictionary)),
             None => HashMap::new(),
         };
         *self.user_phrase_readings.borrow_mut() = Some((addr, readings));
