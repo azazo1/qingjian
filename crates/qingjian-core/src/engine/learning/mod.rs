@@ -10,9 +10,11 @@ use crate::sentence;
 mod forgotten;
 mod learner;
 mod muted;
+pub(crate) mod phrase;
 
 pub use forgotten::Forgotten;
 pub use learner::{Learner, NoLearner};
+pub use phrase::LearnPhraseError;
 pub(super) use muted::MutedLearner;
 
 impl Engine {

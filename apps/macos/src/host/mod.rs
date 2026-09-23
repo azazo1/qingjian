@@ -10,6 +10,7 @@ mod config;
 mod diagnostics;
 mod dictionaries;
 mod init;
+mod learn_phrase;
 mod mode;
 mod model;
 mod presenting;
@@ -45,6 +46,7 @@ use crate::app::BundleInfo;
 use crate::app::{Settings, logging, paths};
 use crate::candidates::{CandidateWindow, Frame, Preedit, Row};
 use crate::error::HostError;
+use crate::learn_phrase::LearnPhraseWindow;
 use crate::menubar::{InputMenu, MenuAction, ModeBadge, ModeIndicator};
 use crate::preferences::{PreferencesWindow, Setting, SettingValue};
 
@@ -76,6 +78,9 @@ pub struct Host {
 
     /// 偏好设置窗口。
     pub preferences: PreferencesWindow,
+
+    /// 菜单栏「录入词组」窗口.
+    pub learn_phrase: LearnPhraseWindow,
 
     /// 配置文件的当前值与修改时间。
     pub settings: Settings,

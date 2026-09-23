@@ -54,6 +54,7 @@ Windows / Linux 的 `settle_pending` (同上两种情形) 与 `Effect::Passthrou
 拼音那套在纯形码下全部不适用，靠 `modes()` 返回 `ModeKeys::LETTERLESS` 与 `active_correction` 直接返回 `None` 关掉；
 译词标注、生词记录、输入日志、用户选择学习与个人 n-gram 仍照常工作。
 `Engine` 是对外唯一门面，`Translator` / `Learner` trait 在 `engine` 模块；词库是「主词库 + 附加词库（`set_extra_dictionaries`）+ 用户词」的列表；繁体输出（`traditional` 开关与 `traditional_map` 映射）依赖 `ferrous-opencc`（`s2tw`）在出候选与上屏边界转换，内部保持简体。
+- 手动录入词组 (`engine/learning/phrase/`): `Engine::suggest_pinyin` 按词库反查全拼 (整词最高频读音, 否则语言模型切词, 再否则逐字), `parse_phrase_pinyin` 接受空格 / `'` / 无分隔全拼, `learn_phrase` 等同于打这段全拼并选一次该词 (`learn_word` 若词库没有同音节的词, 再 `record` + `record_choice`). 这是管理操作, 走 `MutedLearner::inner_mut`, 学习开关关掉也写入; 不记 n-gram, 不写下屏日志. 字数上限 32, 与自动造词的 4 字上限无关.
 - 中英混输的英文词位置：`Engine::set_chinese_first`（配置 `[general] chinese_first`，缺省关）关着时拼音不像话的输入英文排第一（`extras::insert_english`，
   用户老选中文词时仍让中文在前），开着时整句先插、英文词紧随其后排第二（`query_inner` 里两步的先后按开关掉转）；句末英文词并入整句（`EnglishTail`）不受它影响。
   缺省关是回放定的（9241 词 / 269 条英文上屏：缺省开英文首选 82.5% → 7.1%）。
@@ -206,7 +207,8 @@ macOS 另有 `[shortcut] mac_switch_single` / `mac_switch_dual` 两个开关（`
 
 ## apps/macos
 
-IMK 输入法，源码按 `app / host / imk / candidates / menubar / preferences` 分目录。
+IMK 输入法, 源码按 `app / host / imk / candidates / menubar / preferences / learn_phrase` 分目录.
+- 输入法菜单「录入词组…」 (`learn_phrase/`): 独立 NSWindow, 与偏好设置共用 Accessory 激活策略 (`preferences/panel.rs` 的 `enter_accessory` / `leave_accessory`); 点确认走 `Engine::learn_phrase`, 立刻 `flush_learning`.
 
 - 输入法菜单（状态项 + 系统输入源菜单）与偏好设置窗口都是配置文件的前端：只写 `config.toml`，`Host::apply_config` 一条通路热加载，激活期间每秒看一次文件 mtime。
   输入方案（`[general] scheme`）也在这里装配：双拼 / 注音设给引擎，形码额外按 `paths::code_table_path()` 挂码表

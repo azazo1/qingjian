@@ -59,6 +59,12 @@ impl InputMenu {
         menu.addItem(&NSMenuItem::separatorItem(mtm));
         menu.addItem(&action_item(
             mtm,
+            "录入词组…",
+            Some(MenuAction::LearnPhrase),
+            &target,
+        ));
+        menu.addItem(&action_item(
+            mtm,
             "偏好设置…",
             Some(MenuAction::OpenPreferences),
             &target,

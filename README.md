@@ -6,6 +6,7 @@
 
 这是自用 fork, `upstream` 指向 [qingjian-team/qingjian](https://github.com/qingjian-team/qingjian). 相对上游的改动都记在这里, 便于日后 merge upstream 时对照.
 
+- macOS 输入法菜单「录入词组…」: 填一个词, 拼音按词库自动生成且可改, 确认后效果等同于打这段全拼并选一次该词 (词库没有则记成用户词). 见 `docs/user/settings/preferences.md`.
 - 双拼下行内拼音显示敲的键: 输入框里的拼音行按音节显示双拼码 (`kd'fa've`), 候选窗口里仍是解出的全拼 (`kai'fa'zhe`). 配置项 `[general] inline_keys` 缺省开, 偏好设置「候选窗口」页可改.
 - CI 在 push main 与手动触发时, 除原有检查外还各打一份未签名的测试包传成 Actions artifact (macOS 的 pkg 两个架构、Windows 的 Inno 安装包), PR 只跑检查不打包. 见 `docs/notes/release.md`.
 - 决策模型接入: 新增 `crates/qingjian-decision` 与配置 `[decision]`, 把 jev (云端接口) 与 laya (本地服务) 这类 typed decision 模型接成整句重排的第二个来源 (与 `[model]` 的本地字级模型互斥, 只走 HTTP 不内嵌推理栈); macOS 壳与偏好设置 "云服务" 页已接上, 见 `docs/design/decision-models.md` 与 `docs/user/input/decision-model.md`.

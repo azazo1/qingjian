@@ -120,6 +120,7 @@ pub fn init(mtm: MainThreadMarker, info: &BundleInfo) -> Result<(), HostError> {
     let menu = InputMenu::new(mtm, version);
     indicator.set_menu(&menu.ns_menu());
     let preferences = PreferencesWindow::new(mtm, &languages, version, &info.build);
+    let learn_phrase = LearnPhraseWindow::new(mtm);
     let monitor = PredictMonitor::new(mtm);
     let watch = ConfigWatch::new(mtm);
     HOST.with(|host| {
@@ -130,6 +131,7 @@ pub fn init(mtm: MainThreadMarker, info: &BundleInfo) -> Result<(), HostError> {
             badge,
             menu,
             preferences,
+            learn_phrase,
             settings,
             watch,
             last_flush: std::time::Instant::now(),

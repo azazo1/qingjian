@@ -11,6 +11,7 @@ mod inline;
 mod learning;
 mod lookup;
 mod pending;
+mod phrase;
 mod privacy;
 mod raw;
 mod shuangpin;

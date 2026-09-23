@@ -34,7 +34,8 @@ pub use emoji::EmojiTable;
 pub use engine::{
     AnnotationReport, AuxSegment, BOOKS, Book, CloudWord, CommitEntry, DEFAULT_AUX_CODE_KEY,
     Engine, EngineSession, FRESH_UNTIL, FilledGloss, Forgotten, GlossFiller, INPUT_LOG_VERSION,
-    InputLogEntry, InputLogger, InputSource, Learner, LevelCount, MarkedKind, MarkedSegment,
+    InputLogEntry, InputLogger, InputSource, Learner, LearnPhraseError, LevelCount, MarkedKind,
+    MarkedSegment,
     ModeKeys, ModelHint, NEURAL_MARGIN, NEURAL_WEIGHT, NoGlossFiller, NoInputLogger, NoLearner,
     NoPredictor, NoTranslator, NoUsageMeter, NoVocabularyTracker, Prediction, PredictionKind,
     PredictionPolicy, PredictionRequest, Predictor, QUESTION_PREFIX, Query, RESCORE_CONTEXT_CHARS,

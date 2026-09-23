@@ -23,7 +23,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `crates/qingjian-platform`：平台层共用：`Config`（TOML 配置）、`extra_dictionaries`、Windows Server ↔ DLL 的 `protocol` 类型。
 - `crates/qingjian-render`：自绘渲染器（spike 中，分支 renderer-spike）：候选窗一帧 + 主题 → 位图，各平台只贴图。见 `docs/design/rendering.md`。
 - `apps/cli`：Core 的验证工具：查询、逐键计时、输入日志回放、整句评测、常数扫描。排序 / 整句 / 纠错的改动先跑它再合。
-- `apps/macos`：IMK 壳，按 `app / host / imk / candidates / menubar / preferences` 分目录；`scripts/bundle.sh --install` 装到本机，`--pkg` 出分发包。
+- `apps/macos`：IMK 壳，按 `app / host / imk / candidates / menubar / preferences / learn_phrase` 分目录；`scripts/bundle.sh --install` 装到本机，`--pkg` 出分发包。
 - `apps/windows`：`server`（Server 进程：Engine + IPC + 自绘候选窗与状态条）+ `tsf`（TSF DLL）+ `settings`（WinUI 3）+ `installer`（Inno）。DLL 不能带 Engine 的依赖树，所以是两个 package。
 - `apps/linux`：`server`（Engine + Unix socket）+ `fcitx5`（框架事件、默认面板）+ `scripts`（用户级安装卸载）；Server 手动启动，见 `docs/notes/linux-fcitx5.md`。
 - `tools/dict-convert`、`tools/gloss-gen`、`tools/corpus`：产品数据生成（词库 / 语言模型 / 释义表 / emoji / 英文词表），输出到 `data/generated/`（gitignore）。

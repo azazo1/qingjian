@@ -27,6 +27,7 @@ pub use file_dialog::choose_dictionary_file;
 pub use key_recorder::KeyRecorder;
 pub use pages::{REPOSITORY_URL, WEBSITE_URL};
 pub use setting::{Setting, SettingValue};
+pub(crate) use panel::{enter_accessory, leave_accessory};
 pub use window::PreferencesWindow;
 
 /// 字体组合框里代表「用系统字体」的那一项。
