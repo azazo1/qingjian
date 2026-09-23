@@ -18,6 +18,7 @@
 - 组句里的上屏改成延迟: 一段拼音还没选完时 (例如双拼 `bilw` 先选了 `避`, 还剩 `lw`), 选中的词先留在 preedit 里 (`避lw`), 等这段拼音选完、回车原样上屏、取消组句或失焦时才真正交给应用. 退格按后进先出先把这个词拆回候选 (键还回缓冲区, 候选重新按整段拼音算), 拆完再删拼音字符, 与 Rime 的退格手感一致; 见 `docs/notes/crate-notes.md` 的 Engine 一节.
 - 候选旁的模型标注: 被整句打分器重排过的候选, macOS 壳在其后标一个小字, 决策模型是 `AI 76% ↑2` (模型给这条的概率, 以及名次被抬了几位), 本地字级模型只标 `AI ↑2` (它的整句 log 概率不是概率, 折成百分比是假精度). Core 侧由 `Engine::model_hint` 给出 `ModelHint` (位移 + 置信度), 见 `docs/design/decision-models.md` 的模型标注一节.
 - macOS 候选窗 / 模式徽标的 NSPanel 层级从 `kCGPopUpMenuWindowLevel` (101) 抬到 `CGShieldingWindowLevel()`, 截屏软件标注界面里也能看到拼音行和候选 (popup menu 会被截屏覆盖层压住).
+- 组句中标点可先上屏候选: 新增配置 `[general] punctuation_first` (缺省 false, 保持 upstream 的「标点进英文直输段」行为), 打开后拼音打完直接敲 `,` `.` `?` 等先把高亮候选上屏、再按全角设置补上这个标点 (`ni'hao,` 出「你好，」), 不必先按空格; 表达式 / 问字模式、英文直输段、英文模式与配成翻页键的标点不受影响. Core 侧判据是 `Engine::punctuation_commits_candidate`, macOS 与 Windows / Linux 三个壳都接上, 偏好设置 / 设置的通用页各有一项.
 
 青简（Qingjian）是一个使用 **Rust** 开发的跨平台输入法。
 

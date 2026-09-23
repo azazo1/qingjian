@@ -144,6 +144,9 @@ pub enum Setting {
     /// `[general] shift_letter`，勾选框：中文模式下 Shift+字母进组句（勾上是 compose，否则 passthrough）。
     ShiftLetter,
 
+    /// `[general] punctuation_first`，勾选框：组句中敲标点先上屏高亮候选、再补这个标点。
+    PunctuationFirst,
+
     /// `[shortcut] translation`，快捷键录制按钮（只记修饰键）。
     TranslationKeys,
 
@@ -258,6 +261,7 @@ impl Setting {
             Self::EnglishCandidates => 14,
             Self::ChineseFirst => 42,
             Self::ShiftLetter => 50,
+            Self::PunctuationFirst => 70,
             Self::HorizontalGrid => 51,
             Self::TranslationKeys => 15,
             Self::TranslationSecondKeys => 16,
@@ -337,6 +341,7 @@ impl Setting {
             14 => Self::EnglishCandidates,
             42 => Self::ChineseFirst,
             50 => Self::ShiftLetter,
+            70 => Self::PunctuationFirst,
             51 => Self::HorizontalGrid,
             15 => Self::TranslationKeys,
             16 => Self::TranslationSecondKeys,
@@ -461,6 +466,7 @@ mod tests {
             Setting::InputLog,
             Setting::SystemTextReplacements,
             Setting::ShiftLetter,
+            Setting::PunctuationFirst,
             Setting::HorizontalGrid,
             Setting::ClearInputLog,
             Setting::TestCloud,

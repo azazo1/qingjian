@@ -8,8 +8,8 @@ use super::{CandidateRenderer, LayoutMode, LogLevel, PreeditMode, ShiftLetter, T
 pub const MAX_PAGE_SIZE: usize = 9;
 
 /// 翻页键对的可选值，第一项是缺省：第一个键向前、第二个向后。
-/// 缺省不用 `,` `.`：组句中敲逗号句号应该把首选上屏再补一个全角标点（`nihao,zaima` 一气打完），
-/// 拿它们翻页就得先按空格再敲标点。选 `-` `=` 时组句中的 `-` 是翻页，不再进英文直输段（#43）。
+/// 缺省不用 `,` `.`：组句中敲逗号句号该进英文直输段（`hello,`），拿它们翻页就得先把这段拼音上屏。
+/// 选 `-` `=` 时组句中的 `-` 是翻页，不再进英文直输段（#43）。
 pub const PAGE_KEY_OPTIONS: [&str; 3] = ["[]", ",.", "-="];
 
 /// 缺省翻页键对，与 [`PAGE_KEY_OPTIONS`] 第一项一致。
@@ -74,6 +74,12 @@ pub struct GeneralConfig {
 
     /// 英文模式下的同一件事，中英各记一份；缺省半角。只有 Windows 用（macOS 英文模式一律半角）。
     pub english_full_width_punctuation: bool,
+
+    /// 组句中敲半角标点（`,` `.` `?` 等）先把高亮候选上屏、再补上这个标点（按上面的全角开关转），
+    /// 打完拼音不必先按空格（`nihao,zaima` 一气打完）：`nihao,` 出「你好，」。
+    /// 缺省关：标点仍进英文直输段（`no-way` `hello,`），中文模式下也能直接打带标点的英文。
+    /// 表达式 / 问字模式、已经在英文直输段里、以及配成翻页键的标点都不受它影响。
+    pub punctuation_first: bool,
 
     /// 辅码触发键：拼音打完之后敲它进辅码态，缺省 `;`。校验 = 单字符、ASCII 可打印、
     /// 非字母数字、非翻页键（见 [`qingjian_core::is_valid_aux_code_key`]）。
@@ -141,6 +147,7 @@ impl Default for GeneralConfig {
             mode_badge: true,
             full_width_punctuation: true,
             english_full_width_punctuation: false,
+            punctuation_first: false,
             aux_code_key: qingjian_core::DEFAULT_AUX_CODE_KEY.to_string(),
             aux_code_show: false,
             aux_code_keep_empty: true,

@@ -346,3 +346,30 @@ fn shift_letters_follow_the_configuration() {
     let (_, commit, _) = press(&mut router, function_key(0x0D));
     assert_eq!(commit.as_deref(), Some("niA"));
 }
+
+/// 配 `[general] punctuation_first`：组句中敲标点先把高亮候选上屏，标点按当时的全角设置补在后面。
+#[test]
+fn punctuation_first_commits_the_candidate_then_adds_the_mark() {
+    let mut router = router_with(RouterConfig {
+        punctuation_first: true,
+        ..RouterConfig::default()
+    });
+    type_letters(&mut router, "ni");
+    let (outcome, commit, frame) = press(&mut router, punct(','));
+    assert_eq!(
+        (outcome, commit.as_deref()),
+        (KeyOutcome::Consumed, Some("你，")),
+        "拼音 + 逗号应出「你，」，逗号不再进英文直输段"
+    );
+    assert!(preedit(&frame).is_empty(), "上屏后组句结束");
+}
+
+/// 同一段拼音，`punctuation_first` 关着（缺省）时标点仍进英文直输段：这是升级前的行为。
+#[test]
+fn punctuation_without_the_switch_still_enters_the_raw_segment() {
+    let mut router = router();
+    type_letters(&mut router, "ni");
+    let (outcome, commit, frame) = press(&mut router, punct(','));
+    assert_eq!((outcome, commit), (KeyOutcome::Consumed, None));
+    assert_eq!(preedit(&frame), "ni,", "半角标点进缓冲区成为英文直输段");
+}

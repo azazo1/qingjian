@@ -53,6 +53,9 @@ pub struct RouterConfig {
     /// 英文模式的那一份（`[general] english_full_width_punctuation`）。
     pub english_full_width: bool,
 
+    /// 组句中敲标点先上屏高亮候选再补这个标点（`[general] punctuation_first`，缺省关）。
+    pub punctuation_first: bool,
+
     /// 大千注音（[general] zhuyin）。
     pub zhuyin: bool,
 
@@ -120,6 +123,7 @@ impl From<&Config> for RouterConfig {
             switch_mode: config.shortcut.switch_mode,
             full_width: config.general.full_width_punctuation,
             english_full_width: config.general.english_full_width_punctuation,
+            punctuation_first: config.general.punctuation_first,
             zhuyin: config.general.is_zhuyin(),
             apps: config.apps.clone(),
             translation_keys: {

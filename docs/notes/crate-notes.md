@@ -35,6 +35,9 @@ TSV 解析、查询与生成工具把 `lue` / `nue` 统一成 `lve` / `nve`。
 行内 (应用侧 marked text) 那侧另有 `Query::inline_text` / `inline_cursor`: 双拼下按音节显示敲的键 (`kd'fa've`, 由 `shuangpin::Decoded::marked_keys` 经 `Query::keys_display` 传来),
 光标后的键接在末尾 (`Query::rest_keys`), 辅码段照旧拼上; 注音与全拼没有 "敲的键" 这一层, 回落到 `marked_text`.
 候选窗口的拼音行仍走 `marked_segments`; macOS 与 Windows 按 `[general] shuangpin_raw_preedit` (缺省开, 旧键 `inline_keys` 仍能读) 选行内用哪一套, Linux 只拿分段.
+组句中的标点由壳决定去留, Core 只给判据: `Engine::punctuation_commits_candidate(c)` 说这次该不该先把高亮候选上屏再把这个标点补上去
+(空缓冲区 / 非标点 / 自定义短语 / 表达式 / 问字 / 已经在英文直输段里都返回 false), 由配置 `[general] punctuation_first` (缺省关, 见 `docs/design/candidate-ui.md` 的标点一行) 决定壳问不问它.
+`Engine::punctuate` 仍只管全角映射; 注音键与微软 / 搜狗双拼的 `;` (`Engine::takes_semicolon`)、数字选词、翻页键的优先级都在壳里, 排在标点判定之前.
 
 组句里的上屏是延迟的 (`engine/pending.rs`): 一段拼音还没选完时 (`commit_with` 里 `buffer_left`), 选中的词进 `Engine.pending`,
 `commit` 返回空串表示这次不交给应用; 词里存上屏文本, 吃掉的拼音键 (`restore_keys`, 不含辅码段), 上屏链快照与这次的学习账 (`LastCommit`).

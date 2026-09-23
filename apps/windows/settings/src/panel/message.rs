@@ -19,6 +19,8 @@ pub(crate) enum Message {
     ShiftLetter(Option<usize>),
     FullWidthPunctuation(bool),
     EnglishFullWidthPunctuation(bool),
+    /// 组句中敲标点先上屏高亮候选、再补这个标点。
+    PunctuationFirst(bool),
     /// 开=写入平台默认名单，关=清空。
     EnglishOffInApps(bool),
     /// 勾上 / 去掉一个中英切换键。

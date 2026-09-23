@@ -39,6 +39,7 @@ impl Host {
         self.english_candidates = config.general.english_candidates;
         self.english_mode = config.general.english_mode;
         self.mode_badge = config.general.mode_badge;
+        self.punctuation_first = config.general.punctuation_first;
         self.mac_switch = config.shortcut.mac_switch_plan();
         self.mac_caps_lock_switch = config.shortcut.mac_caps_lock_switch;
         self.apps = config.apps.clone();

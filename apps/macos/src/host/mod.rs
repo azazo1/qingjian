@@ -162,6 +162,9 @@ pub struct Host {
     /// 切模式时光标旁闪不闪「中 / 英」徽标（配置 `[general] mode_badge`，缺省开）。
     pub mode_badge: bool,
 
+    /// 组句中敲标点先上屏高亮候选再补这个标点（配置 `[general] punctuation_first`，缺省关）。
+    pub punctuation_first: bool,
+
     /// macOS 的切换键方案（配置 `[shortcut] mac_switch` 一组）。
     pub mac_switch: MacSwitchPlan,
 
