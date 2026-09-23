@@ -314,6 +314,18 @@ impl Router {
             }
             return Effect::Changed(Some(self.commit_highlighted()));
         }
+        // 配 `[general] punctuation_first`：普通拼音组句里敲标点先把高亮候选上屏，再补上这个标点（缺省关，
+        // 标点进英文直输段）。上面几步都已经判掉了模式键与已经在直输段的情形，这里只管拼音 + 标点
+        if self.config.punctuation_first
+            && !self.engine.raw_mode()
+            && self.engine.punctuation_commits_candidate(c)
+        {
+            return with_prefix(
+                Some(self.commit_highlighted()),
+                self.apply_punctuation(c, event),
+                c,
+            );
+        }
         // 表达式 / 问字模式下的其他字符不进缓冲区（与 macOS 壳一致）：先把高亮候选上屏，再按没在组句处理这个键。
         if c != '\'' && (expression || self.engine.question_mode()) {
             let committed = self.commit_highlighted();

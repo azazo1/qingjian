@@ -40,6 +40,7 @@ description: 日期时间、算式与中文数字、按码点输入字符、中�
   U盘 因 `u` 是问字前缀，打 `youpan`（与 优盘 同读音，U盘 排前）。它们也能进整句：`wozaibzhan` → 我在B站。
 - 输入拼音时输入半角标点（`-` `,` `.` `?` 等，翻页键除外）即进入**英文直输**：`no-way` `hello,` 整段原样显示，之后的字符原样追加，
   `Space` / `Enter` 原样上屏（空格字符也一并输出），因此中文模式下可直接输入 `hello, world?`。
+  打开「标点符号自动上屏」（配置 `[general] punctuation_first`）后这条换成上屏候选加标点，见 [中文标点](../getting-started/first-input.md#中文标点)。
 
 ## emoji
 

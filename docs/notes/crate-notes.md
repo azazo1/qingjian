@@ -32,6 +32,9 @@ TSV 解析、查询与生成工具把 `lue` / `nue` 统一成 `lve` / `nve`。
 （码表在 `Engine.aux_codes`，`set_aux_codes` 注入），不命中的隐藏，命中的按「完全匹配码 > 码长降序 > 原词频序」
 重排（stable sort 保住原序），命中码（没在筛码时是词的首条码）写进 `Candidate.aux_code`；码段非空时跳过整句 / 英文 / 快捷 / emoji / 自定义短语
 与云联想。preedit 分段多出 [触发键 `Typed`][码段 `MarkedKind::AuxCode`]，见 `Query::marked_segments`。
+组句中的标点由壳决定去留, Core 只给判据: `Engine::punctuation_commits_candidate(c)` 说这次该不该先把高亮候选上屏再把这个标点补上去
+(空缓冲区 / 非标点 / 自定义短语 / 表达式 / 问字 / 已经在英文直输段里都返回 false), 由配置 `[general] punctuation_first` (缺省关, 见 `docs/design/candidate-ui.md` 的标点一行) 决定壳问不问它.
+`Engine::punctuate` 仍只管全角映射; 注音键与微软 / 搜狗双拼的 `;` (`Engine::takes_semicolon`)、数字选词、翻页键的优先级都在壳里, 排在标点判定之前.
 组句里的上屏是延迟的 (`engine/pending.rs`): 一段拼音还没选完时 (`commit_with` 里 `buffer_left`), 选中的词进 `Engine.pending`,
 `commit` 返回空串表示这次不交给应用; 词里存上屏文本, 吃掉的拼音键 (`restore_keys`, 不含辅码段), 上屏链快照与这次的学习账 (`LastCommit`).
 preedit 里它作为 `MarkedKind::Pending` 段排在拼音前面 (`Query::pending`, `marked_text` / `marked_cursor` 都从这里往后算),

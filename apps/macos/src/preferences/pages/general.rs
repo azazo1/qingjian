@@ -50,6 +50,9 @@ pub struct GeneralPage {
     /// 默认中文标点模式。
     punctuation: Retained<NSPopUpButton>,
 
+    /// 组句中敲标点先上屏高亮候选、再补这个标点。
+    punctuation_first: Retained<NSButton>,
+
     /// 中 / 英切换：单键切换开关 + 那个键，双键切换开关 + 两个键，Caps Lock 是否也切。
     mac_switch_single: Retained<NSButton>,
     mac_switch_toggle: Retained<KeyRecorder>,
@@ -143,6 +146,18 @@ impl GeneralPage {
             layout,
             mtm,
             "仅影响标点，字母和数字保持半角；自定义短语原样输出。设置会保存。 ",
+        );
+        let punctuation_first = checkbox(
+            mtm,
+            "标点符号自动上屏",
+            Setting::PunctuationFirst,
+            target,
+        );
+        row_checkbox(layout, &punctuation_first);
+        note(
+            layout,
+            mtm,
+            "勾上后 ni'hao, 出「你好，」：不必先按空格再敲标点（标点按上面的默认中文标点转全角 / 半角）。不勾（缺省）时组句中敲的标点进英文直输段，中文模式下可以直接打带标点的英文（hello, no-way）。表达式与问字模式、以及配成翻页键的标点不受影响。",
         );
         let traditional = checkbox(mtm, "繁体输出", Setting::Traditional, target);
         row_checkbox(layout, &traditional);
@@ -274,6 +289,7 @@ impl GeneralPage {
             shift_letter,
             languages: languages.to_vec(),
             punctuation,
+            punctuation_first,
             mac_switch_single,
             mac_switch_toggle,
             mac_switch_dual,
@@ -290,6 +306,7 @@ impl GeneralPage {
             &self.punctuation,
             Some(usize::from(!general.full_width_punctuation)),
         );
+        set_checked(&self.punctuation_first, general.punctuation_first);
         select(
             &self.learning_language,
             if general.learning_language_off() {

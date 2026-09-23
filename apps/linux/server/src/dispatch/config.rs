@@ -35,6 +35,10 @@ pub struct RouterConfig {
     /// 英文模式的那一份（`[general] english_full_width_punctuation`）。
     pub english_full_width: bool,
 
+    /// 组句中敲标点先上屏高亮候选再补这个标点（`[general] punctuation_first`，缺省关）。
+    /// Linux 首版没有设置界面，改配置文件生效。
+    pub punctuation_first: bool,
+
     /// 按应用的设置（`[apps]`），按宿主 exe 名认。
     pub apps: AppsConfig,
 
@@ -70,6 +74,7 @@ impl From<&Config> for RouterConfig {
             shift_letter_compose: config.general.shift_letter.compose(),
             full_width: config.general.full_width_punctuation,
             english_full_width: config.general.english_full_width_punctuation,
+            punctuation_first: config.general.punctuation_first,
             apps: config.apps.clone(),
             translation_keys: {
                 let (first, second) = config.shortcut.translation_keys();

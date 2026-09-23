@@ -163,6 +163,7 @@ pub fn init(mtm: MainThreadMarker, info: &BundleInfo) -> Result<(), HostError> {
             english_candidates: true,
             english_mode: true,
             mode_badge: true,
+            punctuation_first: false,
             mac_switch: MacSwitchPlan::default(),
             mac_caps_lock_switch: true,
             mode: ModeState::default(),

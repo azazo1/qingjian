@@ -485,6 +485,9 @@ impl Host {
             (Setting::ChineseFirst, SettingValue::Bool(on)) => {
                 self.settings.set_bool("general", "chinese_first", on);
             }
+            (Setting::PunctuationFirst, SettingValue::Bool(on)) => {
+                self.settings.set_bool("general", "punctuation_first", on);
+            }
             (Setting::ShiftLetter, SettingValue::Bool(on)) => {
                 let mode = if on {
                     ShiftLetter::Compose

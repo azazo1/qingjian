@@ -264,6 +264,9 @@ mode_badge = true
 full_width_punctuation = true
 # 英文模式下的同一件事，中英各记一份，状态条切的是当前模式那份；只有 Windows 用
 english_full_width_punctuation = false
+# 组句中敲半角标点先把高亮候选上屏、再补上这个标点（nihao, 出「你好，」），打完拼音不必先按空格；
+# 缺省 false：标点进英文直输段（hello, no-way），中文模式下也能直接打带标点的英文
+punctuation_first = false
 # 辅码触发键：拼音打完之后敲它进辅码态，之后敲的字母按码表缩小候选范围；缺省是分号
 # 单个可见字符，字母、数字与翻页键不能当触发键；微软 / 搜狗双拼里分号先当 ing 的韵母键
 aux_code_key = ";"

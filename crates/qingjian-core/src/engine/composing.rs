@@ -13,6 +13,20 @@ use std::time::Instant;
 const MAX_PENDING_PASSTHROUGH: usize = 200;
 
 impl Engine {
+    /// 组句中敲半角标点 `c` 时该不该先把高亮候选上屏、再把这个标点补上去
+    /// （配置 `[general] punctuation_first`，缺省关）。关着时壳把标点交给 [`Self::push`]，整段成为英文直输段。
+    ///
+    /// 真正作数的是壳：它先按自己的顺序判掉模式键（注音键、微软 / 搜狗双拼的 `;`、数字选词、翻页键、
+    /// 表达式与问字模式）与英文模式，只在普通拼音组句时来问这一句。这里再判一遍其中几条，是给壳漏判时兜底。
+    pub fn punctuation_commits_candidate(&self, c: char) -> bool {
+        !self.composition.is_empty()
+            && c.is_ascii_punctuation()
+            && !self.has_custom_phrase()
+            && !self.expression_mode()
+            && !self.question_mode()
+            && !self.raw_mode()
+    }
+
     /// 中文模式下把半角字符转成全角标点；不需要转换返回 `None`。
     pub fn punctuate(&mut self, c: char) -> Option<&'static str> {
         // 组句外敲的标点：辅码态到此结束（壳已经把高亮候选上屏了）

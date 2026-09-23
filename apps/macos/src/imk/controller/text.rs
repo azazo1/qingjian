@@ -157,6 +157,24 @@ impl QingjianInputController {
             && c.is_ascii_punctuation()
             && c != page_previous
             && c != page_next;
+        // 配 `[general] punctuation_first`：普通拼音组句里敲标点先把高亮候选上屏，再补上这个标点（缺省关，
+        // 标点进英文直输段）。问字 / 表达式 / 英文直输段与配成翻页键的标点都在上面的判定里排除了
+        if composing
+            && !raw
+            && host::with(|h| h.punctuation_first).unwrap_or(false)
+            && host::with(|h| h.engine.punctuation_commits_candidate(c)).unwrap_or(false)
+        {
+            self.commit_highlighted(client);
+            let mark = host::with(|h| h.engine.punctuate(c)).flatten();
+            match mark {
+                Some(full_width) => client.insert_text(full_width),
+                None => {
+                    host::with(|h| h.engine.note_passthrough(c));
+                    return false;
+                }
+            }
+            return true;
+        }
         if c.is_ascii_lowercase()
             || (composing && c == '\'')
             || semicolon
