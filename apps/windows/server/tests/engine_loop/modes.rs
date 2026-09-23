@@ -396,7 +396,27 @@ fn punctuation_first_leaves_the_page_keys_paging() {
     let (_, commit, frame) = press(&mut router, punct(','));
     assert_eq!(commit, None, "翻回上一页也不该上屏候选");
     assert_eq!(frame.page, start, "`,` 是翻页键时应翻回上一页");
-    // 不是翻页键的标点照旧：先上屏高亮候选，再补上标点
+    // 不是翻页键的标点照旧：先上屏高亮候选，再补上标点（全拼下 `;` 就是普通标点，不是 ing 键）
     let (_, commit, _) = press(&mut router, punct(';'));
     assert_eq!(commit.as_deref(), Some("你；"));
+}
+
+/// `punctuation_first` 开着时双拼的 `;` 仍是 ing 韵母键，不能被标点分支抢去上屏候选。
+/// 与翻页键同理：Core 的判据不知道双拼把 `;` 当韵母键，这层排除由壳负责。
+#[test]
+fn punctuation_first_leaves_the_shuangpin_semicolon_key_alone() {
+    let mut router = router_with(RouterConfig {
+        punctuation_first: true,
+        scheme: Scheme::Shuangpin(ShuangpinScheme::Microsoft),
+        ..RouterConfig::default()
+    });
+    type_letters(&mut router, "x");
+    // 修复前：候选被上屏（`commit` 有值）。修复后：`;` 进缓冲区当 ing 键，候选留着继续打。
+    let (outcome, commit, frame) = press(&mut router, punct(';'));
+    assert_eq!((outcome, commit), (KeyOutcome::Consumed, None));
+    assert_ne!(
+        preedit(&frame),
+        "x",
+        "`;` 应当进了缓冲区，而不是被当标点用掉"
+    );
 }

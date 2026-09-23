@@ -158,10 +158,12 @@ impl QingjianInputController {
             && c != page_previous
             && c != page_next;
         // 配 `[general] punctuation_first`：普通拼音组句里敲标点先把高亮候选上屏，再补上这个标点（缺省关，
-        // 标点进英文直输段）。翻页键必须在这里排掉：Core 的判据只知道标点，不知道 `[general] page_keys`，
-        // 漏了它 `-` `=` 这类翻页键就会先上屏候选再交给应用（中文模式的翻页判定在后面）
+        // 标点进英文直输段）。翻页键与双拼的 `;` 必须在这里排掉：Core 的判据只知道标点，不知道
+        // `[general] page_keys` 与微软 / 搜狗双拼把 `;` 当 ing 韵母键，漏了它们这些键就会先上屏候选、
+        // 键本身再交给应用（中文模式的翻页判定与 push 分支都在后面）
         if composing
             && !raw
+            && !semicolon
             && c != page_previous
             && c != page_next
             && host::with(|h| h.punctuation_first).unwrap_or(false)
