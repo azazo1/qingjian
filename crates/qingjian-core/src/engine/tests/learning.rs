@@ -771,6 +771,28 @@ fn adjusting_a_candidate_frequency_counts_like_one_more_choice_and_stops_at_zero
 }
 
 #[test]
+fn adjusting_frequency_counts_on_the_prefix_the_candidate_covers() {
+    // 输入比候选长时 (`mokuaihua` 里的 模块 只覆盖 `mokuai`), 次数记在候选覆盖的那段拼音上,
+    // 与排序查的键一致; 记到整段 `mokuaihua` 上与排序对不上, 等于白调
+    let dict = Dictionary::parse("模块\tmo kuai\t1071\n莫快\tmo kuai\t5000\n").unwrap();
+    let mut engine = Engine::new(dict).with_learner(Box::new(CountingLearner(HashMap::new())));
+    engine.set_input("mokuaihua");
+    assert_eq!(texts_of(&engine)[0], "莫快");
+    let word = engine
+        .query()
+        .unwrap()
+        .candidates
+        .items
+        .into_iter()
+        .find(|c| c.text == "模块")
+        .unwrap();
+    assert!(engine.adjust_frequency(&word, true).changed);
+    assert_eq!(engine.learner().choice_weight("mokuai", "模块"), 1);
+    assert_eq!(engine.learner().choice_weight("mokuaihua", "模块"), 0);
+    assert_eq!(texts_of(&engine)[0], "模块");
+}
+
+#[test]
 fn only_candidates_with_a_word_frequency_can_be_adjusted() {
     let mut engine = engine().with_learner(Box::new(CountingLearner(HashMap::new())));
     engine.set_input("kaifa");
@@ -786,4 +808,57 @@ fn only_candidates_with_a_word_frequency_can_be_adjusted() {
     let change = engine.adjust_frequency(&sentence, true);
     assert!(!change.changed);
     assert_eq!(change.frequency, WordFrequency::default());
+}
+
+/// 语言模型偏向拆字读法: 没 + 会 / 没 + 人 / 那 + 不 / 的 + 一 + 个 这些接续给高分,
+/// 整词 (模块 / 默认 / 内部 / 第一个) 不认识, 退回词库词频的兜底分
+struct CharSplitModel;
+
+impl LanguageModel for CharSplitModel {
+    fn log_prob(&self, previous: Option<&str>, word: &str) -> Option<f64> {
+        match (previous, word) {
+            (None, "没" | "那" | "的") => Some(-1.0),
+            (Some("没"), "会" | "人") => Some(-0.5),
+            (Some("那"), "不") => Some(-0.5),
+            (Some("的"), "一") => Some(-0.5),
+            (Some("一"), "个") => Some(-0.5),
+            _ => None,
+        }
+    }
+}
+
+#[test]
+fn learned_char_counts_do_not_lift_a_char_split_over_an_exact_word() {
+    // 高频字的全局次数到顶 (没 会 人 那 不 的 一 个 都选过几千次), 语言模型也偏向拆字读法,
+    // 拆字读法仍然压不过词库里读音正好对得上的整词: 整段是原样读音的精确整词时压根不出整段拼音的
+    // 整句候选 (见 `Engine::insert_sentence`), 用户报的 没会 / 没人 / 那不 / 的一个 不再出现
+    let dict = Dictionary::parse(
+        "模块\tmo kuai\t1071\n默认\tmo ren\t2000\n内部\tnei bu\t3000\n第一个\tdi yi ge\t1000\n\
+         没\tmo\t7315\n没\tmei\t929226\n会\tkuai\t1255\n人\tren\t1060110\n那\tnei\t31387\n\
+         不\tbu\t3368674\n的\tdi\t21162\n一\tyi\t500000\n个\tge\t100000\n",
+    )
+    .unwrap();
+    let counts: HashMap<String, u32> = ["没", "会", "人", "那", "不", "的", "一", "个"]
+        .into_iter()
+        .map(|text| (text.to_owned(), 5000))
+        .collect();
+    let mut engine = Engine::new(dict)
+        .with_language_model(Box::new(CharSplitModel))
+        .with_learner(Box::new(CountingLearner(counts)));
+    engine.set_shuangpin(Some(Scheme::Xiaohe));
+    for (input, word) in [
+        ("mokk", "模块"),
+        ("morf", "默认"),
+        ("nwbu", "内部"),
+        ("diyige", "第一个"),
+    ] {
+        engine.set_input(input);
+        let items = engine.query().unwrap().candidates.items;
+        assert_eq!(items[0].text, word, "{input}");
+        assert_eq!(items[0].kind, CandidateKind::Chinese, "{input}");
+        assert!(
+            items.iter().all(|c| c.kind != CandidateKind::Sentence),
+            "{input} 不该出整句候选"
+        );
+    }
 }

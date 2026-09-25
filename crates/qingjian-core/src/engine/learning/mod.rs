@@ -188,20 +188,22 @@ impl Engine {
 
     /// 一个候选的学习计数（调频键按住时候选窗口里的预览）；整句、快捷、emoji、自定义规则没有词频可调，返回 `None`。
     /// 空文本的占位格（Linux 面板用空候选占住位置）同样没有。
+    /// 计数按候选覆盖的那段拼音查 ([`Self::choice_key_of`]), 与上屏记账和排序同一把键.
     pub fn frequency_of(&self, candidate: &Candidate) -> Option<WordFrequency> {
         if candidate.text.is_empty() || !frequency::adjustable(candidate.kind) {
             return None;
         }
-        let input = self.composition.scope();
+        let input = self.choice_key_of(candidate);
         Some(WordFrequency {
             total: self.learner.weight(&candidate.text),
-            selected: self.learner.choice_weight(input, &candidate.text),
+            selected: self.learner.choice_weight(&input, &candidate.text),
         })
     }
 
     /// 用户在候选窗口里手动调频（调频键 + K / J）：升频算「又选了一次」，降频算「撤销一次选择」，
     /// 降到底（两个计数都已经是 0）就不再变，返回的 [`FrequencyChange::changed`] 是 `false`。
-    /// 计数一变，整句格子候选与纠错缓存作废，下一次查询就按新次序排。
+    /// 记的是候选覆盖的那段拼音 ([`Self::choice_key_of`], 双拼按解出的全拼算), 与上屏记账和排序是同一把键.
+    /// 计数一变, 整句格子候选与纠错缓存作废, 下一次查询就按新次序排.
     ///
     /// 与 [`Self::forget`] 一样，这是用户在候选窗口里明确要求的管理操作，私密输入里照做。
     pub fn adjust_frequency(&mut self, candidate: &Candidate, up: bool) -> FrequencyChange {
@@ -217,7 +219,7 @@ impl Engine {
         }
         let candidate = &candidate_owned;
         let before = self.frequency_of(candidate).unwrap_or_default();
-        let input = self.composition.scope().to_owned();
+        let input = self.choice_key_of(candidate);
         let (total, selected) = self.learner.adjust_frequency(&input, &candidate.text, up);
         let frequency = WordFrequency { total, selected };
         let changed = frequency != before;

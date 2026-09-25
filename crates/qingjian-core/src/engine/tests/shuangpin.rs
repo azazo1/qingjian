@@ -179,3 +179,26 @@ fn shuangpin_raw_commit_does_not_learn_decodable_keys_as_english() {
     engine.set_input("gist");
     assert!(looks_like_english_word_in(&engine));
 }
+
+#[test]
+fn adjusting_frequency_under_shuangpin_counts_on_the_decoded_pinyin() {
+    // 排序查 "这个输入串下选过什么" 用的是解出的全拼 (`mokuai`), 调频也得记到那把键上:
+    // 记到原始按键 (`mokk`) 上的次数排序看不到, 双拼下调频就完全不起作用
+    let dict = Dictionary::parse("模块\tmo kuai\t1071\n莫快\tmo kuai\t5000\n").unwrap();
+    let mut engine = Engine::new(dict).with_learner(Box::new(CountingLearner(HashMap::new())));
+    engine.set_shuangpin(Some(Scheme::Xiaohe));
+    engine.set_input("mokk");
+    assert_eq!(texts_of(&engine)[0], "莫快");
+    let word = engine
+        .query()
+        .unwrap()
+        .candidates
+        .items
+        .into_iter()
+        .find(|c| c.text == "模块")
+        .unwrap();
+    assert!(engine.adjust_frequency(&word, true).changed);
+    assert_eq!(engine.learner().choice_weight("mokuai", "模块"), 1);
+    assert_eq!(engine.learner().choice_weight("mokk", "模块"), 0);
+    assert_eq!(texts_of(&engine)[0], "模块");
+}

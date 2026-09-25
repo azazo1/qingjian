@@ -274,6 +274,17 @@ impl Engine {
             );
             (choice, log_prob)
         });
+        // 整段输入有没有 "按原样读音精确匹配的整词": 有就不出整句候选 (见 `Self::insert_sentence`).
+        // `full_last` 排除末尾音节只是更长音节前缀的命中 (`ganxi` 的 感谢 是 `gan xie` 对上前缀 `xi`, 不算整段就是这个词),
+        // 模糊音 / 敲错命中的不算原样 (librime 同样把 correction match 排除在 reliable phrase 之外),
+        // 整段纠错生效时命中的是纠正后的拼音, 也不算
+        let exact_word = correction.is_none()
+            && scored.iter().any(|item| {
+                item.hit.exact
+                    && item.coverage == letters.len()
+                    && item.full_last
+                    && !item.altered()
+            });
         // 辅码态：词库候选按码段**反向**过滤（逐个问「有没有以码段开头的码」），无码词直接隐藏；
         // 命中的按「完全匹配码 > 码长降序 > 原词频序」重排（stable sort 保住 rank 排好的原序）。
         // 码段为空（刚敲下触发键）时不过滤，候选与纯拼音态一模一样。
@@ -319,6 +330,7 @@ impl Engine {
                     correction.is_none(),
                     english_tail.as_ref().filter(|_| correction.is_none()),
                     head_wins,
+                    exact_word,
                 );
                 self.insert_english(&mut items, unlikely);
             } else {
@@ -329,6 +341,7 @@ impl Engine {
                     correction.is_none(),
                     english_tail.as_ref().filter(|_| correction.is_none()),
                     head_wins,
+                    exact_word,
                 );
             }
             // 快捷候选按敲的键认（`rq` 日期），双拼下也是
@@ -531,6 +544,9 @@ impl Engine {
     /// 整段也能读成拼音的再把拼音读法的整句放在第二；英文读法输了就不出（`diaoyong` 不出 掉Yong），
     /// 免得把真正要的候选往后挤。
     /// `typos` 为假时词图里不加敲错边（整段一处编辑的纠错已经生效，不在纠正后的拼音上再猜第二处）。
+    /// `exact_word` 为真 (整段输入正好是词库里一个原样读音的整词) 时不出整段拼音的整句候选:
+    /// librime 的 `script_translator` 就是这条判据 (`make sentences when there is no exact-matching phrase candidate`),
+    /// 词库里明明白白存在的整词比拆字读法可信. 头段 + 英文词那条不受影响.
     pub(super) fn insert_sentence(
         &self,
         items: &mut Vec<Candidate>,
@@ -538,6 +554,7 @@ impl Engine {
         typos: bool,
         english_tail: Option<&EnglishTail>,
         head_wins: bool,
+        exact_word: bool,
     ) {
         let Some(best) = segmentations.first() else {
             return;
@@ -549,7 +566,8 @@ impl Engine {
                 if let Some(mixed) = self.mixed_sentence(best, tail, typos) {
                     items.insert(0, mixed);
                 }
-                if tail.competes
+                if !exact_word
+                    && tail.competes
                     && let Some(full) = first_segmentation(keys)
                     && let Some(plain) = self.plain_sentence(items, &full, typos)
                 {
@@ -558,6 +576,9 @@ impl Engine {
                 }
             }
             _ => {
+                if exact_word {
+                    return;
+                }
                 if let Some(plain) = self.plain_sentence(items, best, typos) {
                     let position = leading_english(items);
                     items.insert(position, plain);

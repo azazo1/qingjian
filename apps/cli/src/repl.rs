@@ -1,4 +1,4 @@
-//! 交互模式：拼音 → 候选；数字 → 上屏；`:raw` 把上一次输入原样上屏（相当于回车）；`:q` 退出。
+//! 交互模式: 拼音 -> 候选; 数字 -> 上屏; `:raw` 把上一次输入原样上屏 (相当于回车); `:up N` / `:down N` 调频; `:q` 退出.
 
 use std::io::{self, BufRead, Write};
 
@@ -9,7 +9,7 @@ use crate::error::CliError;
 
 pub fn run(engine: &mut Engine, limit: usize) -> Result<(), CliError> {
     eprintln!(
-        "输入拼音查询候选，输入序号上屏，:raw 原样上屏上一次输入（回车），:del N 删掉第 N 个候选，:q 退出。"
+        "输入拼音查询候选, 输入序号上屏, :raw 原样上屏上一次输入 (回车), :del N 删掉第 N 个候选, :up N / :down N 调频 (升 / 降第 N 个候选), :q 退出."
     );
     let stdin = io::stdin();
     let mut stdout = io::stdout();
@@ -35,6 +35,31 @@ pub fn run(engine: &mut Engine, limit: usize) -> Result<(), CliError> {
         if line == ":raw" {
             last = None;
             println!("原样上屏: {}", engine.take_raw());
+            continue;
+        }
+        // 调频: `:up N` / `:down N` 把上一次查询的第 N 个 (从 1 数) 候选升 / 降一次, 等价于输入法里调频键 + K / J
+        if let Some((up, index)) = line
+            .strip_prefix(":up ")
+            .map(|rest| (true, rest))
+            .or_else(|| line.strip_prefix(":down ").map(|rest| (false, rest)))
+            && let Ok(index) = index.trim().parse::<usize>()
+        {
+            let typed = last.as_ref().map(|q| q.text.clone());
+            match last
+                .as_ref()
+                .and_then(|q| q.candidates.items.get(index.wrapping_sub(1)))
+                .cloned()
+            {
+                Some(candidate) => {
+                    let change = engine.adjust_frequency(&candidate, up);
+                    println!("调频 {}: {change:?}", candidate.text);
+                }
+                None => println!("没有第 {index} 个候选"),
+            }
+            // 计数变了次序就会变, 重新查一遍给用户看
+            if let Some(typed) = typed {
+                last = display::show(engine, &typed, limit);
+            }
             continue;
         }
         if let Some(index) = line

@@ -188,7 +188,10 @@ pub fn convert_paths(
             }
             any = true;
             for hit in hits.iter() {
-                let bonus = weight_bonus(weight(&hit.text));
+                // 用户加分按这个词覆盖的音节占整段的比例折算: 每个词各自封顶 1.52, 不折算的话
+                // 一段拼音拆成 k 个词就能拿 k 倍加分, 拆得越碎越占便宜, 覆盖同样多音节的整词却只有一个词的加分
+                let bonus =
+                    weight_bonus(weight(&hit.text)) * hit.syllables.len() as f64 / n as f64;
                 let fallback = fallback_log_prob(hit.frequency, log_total);
                 let (score, back) =
                     best_predecessor(&nodes, start, &hit.text, model, personal, fallback);
@@ -445,7 +448,8 @@ mod tests {
         };
         assert_eq!(lifted(20), "我去");
         assert_eq!(lifted(500), "我去");
-        // 去 / 区 差 4 倍（log 差 1.4）：选过十几次就翻过来
+        // 加分按覆盖的音节占整段的比例折算: 2 个音节的句子里单字最多 1.522 / 2 = 0.761,
+        // 去 / 区 差 4 倍 (log 差 1.386) 就翻不过来, 选多少次都是 我去
         let patterns = complete(&["wo", "qu"]);
         let lifted = |count: u32| {
             convert(
@@ -461,6 +465,25 @@ mod tests {
             .text
         };
         assert_eq!(lifted(2), "我去");
+        assert_eq!(lifted(20), "我去");
+        assert_eq!(lifted(500), "我去");
+        // 差 2 倍 (log 差 0.47) 的平手还是抬得起来: 选够 20 次 (0.761 > 0.47)
+        let dictionary = Dictionary::parse("我\two\t900000\n去\tqu\t4000\n区\tqu\t2500\n").unwrap();
+        let patterns = complete(&["wo", "qu"]);
+        let lifted = |count: u32| {
+            convert(
+                &[&dictionary],
+                &patterns,
+                &NoLanguageModel,
+                Personal::NONE,
+                |t| if t == "区" { count } else { 0 },
+                |_, _| 0.0,
+                &mut SpanCache::default(),
+            )
+            .unwrap()
+            .text
+        };
+        assert_eq!(lifted(0), "我去");
         assert_eq!(lifted(20), "我区");
     }
 

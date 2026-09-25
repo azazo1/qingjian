@@ -322,8 +322,8 @@ impl LanguageModel for XianModel {
 }
 
 #[test]
-fn a_word_spelling_the_sentence_keeps_its_rank_unless_its_reading_differs() {
-    // 词级排序里 开发线 在 开发先 前面；整句转换读出的是 开发 + 先，与词 开发先 同文本同读音：不重复插，词留在原位
+fn a_word_spelling_the_whole_input_suppresses_the_sentence() {
+    // 词级排序里 开发线 在 开发先 前面; 词库里 开发线 是原样读音的精确整词, 按 librime 的判据不出整句候选
     let sample = format!("{SAMPLE}开发线\tkai fa xian\t5000\n开发先\tkai fa xian\t1\n");
     let mut engine =
         Engine::new(Dictionary::parse(&sample).unwrap()).with_language_model(Box::new(XianModel));
@@ -332,7 +332,8 @@ fn a_word_spelling_the_sentence_keeps_its_rank_unless_its_reading_differs() {
     assert_eq!(&all[..2], ["开发线", "开发先"]);
     assert_eq!(all.iter().filter(|t| *t == "开发先").count(), 1);
 
-    // 同文本的词是按别的读音（xiang，靠模糊音 an-ang 对上）收的：那条错读音的词让位，整句以正确读音排最前
+    // 同文本的词是按别的读音 (xiang, 靠模糊音 an-ang 对上) 收的: 它不算原样读音的整词,
+    // 但仍然不出整句候选 (开发线 在), 那条错读音的词带模糊音代价留在词级候选里
     let sample = format!("{SAMPLE}开发线\tkai fa xian\t5000\n开发先\tkai fa xiang\t1\n");
     let mut engine =
         Engine::new(Dictionary::parse(&sample).unwrap()).with_language_model(Box::new(XianModel));
@@ -342,9 +343,11 @@ fn a_word_spelling_the_sentence_keeps_its_rank_unless_its_reading_differs() {
     });
     engine.set_input("kaifaxian");
     let items = engine.query().unwrap().candidates.items;
-    assert_eq!(items[0].text, "开发先");
-    assert_eq!(items[0].kind, CandidateKind::Sentence);
-    assert_eq!(items[0].syllables, ["kai", "fa", "xian"]);
+    assert_eq!(items[0].text, "开发线");
+    assert_eq!(items[0].kind, CandidateKind::Chinese);
+    let wrong_reading = items.iter().find(|c| c.text == "开发先").unwrap();
+    assert_eq!(wrong_reading.kind, CandidateKind::Chinese);
+    assert_eq!(wrong_reading.syllables, ["kai", "fa", "xiang"]);
     assert_eq!(items.iter().filter(|c| c.text == "开发先").count(), 1);
 }
 

@@ -602,6 +602,17 @@ impl Engine {
         steps
     }
 
+    /// 一个候选的学习键 (`Learner::record_choice` 的输入串, 也是排序里查 "同一个输入串下选过什么" 用的键):
+    /// 与上屏记账取的完全一致, 由 [`Self::consumed_by`] / [`Self::whole_scope`] 决定,
+    /// 也就是候选覆盖的那段拼音 (双拼按解出的全拼算, 不含分隔符). 调频 ([`Self::adjust_frequency`]) 也走它:
+    /// 键对不上时调出来的次数排序时看不到, `mokk` 下就会按原始按键记, 排序却按 `mokuai` 查.
+    pub(super) fn choice_key_of(&self, candidate: &Candidate) -> String {
+        match candidate.kind {
+            CandidateKind::Chinese => self.consumed_by(candidate).1,
+            _ => self.whole_scope().1,
+        }
+    }
+
     /// 整段作用域对应的候选（英文词、云端词、快捷候选）：吃掉全部键，学习键是整段全拼。
     pub(super) fn whole_scope(&self) -> (usize, String) {
         let keys = self.composition.scope();

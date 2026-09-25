@@ -57,6 +57,14 @@ Windows / Linux 的 `settle_pending` (同上两种情形) 与 `Effect::Passthrou
 - 中英混输的英文词位置：`Engine::set_chinese_first`（配置 `[general] chinese_first`，缺省关）关着时拼音不像话的输入英文排第一（`extras::insert_english`，
   用户老选中文词时仍让中文在前），开着时整句先插、英文词紧随其后排第二（`query_inner` 里两步的先后按开关掉转）；句末英文词并入整句（`EnglishTail`）不受它影响。
   缺省关是回放定的（9241 词 / 269 条英文上屏：缺省开英文首选 82.5% → 7.1%）。
+- 整段拼音的整句候选只在 "整段不是词库里一个原样读音的整词" 时才出: `query_phonetic` 算 `exact_word`
+  (`hit.exact` + 覆盖整段字母 + `full_last` + 不是模糊音 / 敲错命中 + 整段没有纠错生效), `insert_sentence` 收这个开关, 为真就不插整段拼音的整句候选.
+  判据取自 librime 的 `script_translator` (`make sentences when there is no exact-matching phrase candidate`, 那边同样把 correction match 排除在 reliable phrase 之外):
+  词库里明明白白存在的整词比拆字读法可信, `mokk` 出 模块 而不是 没会. `full_last` 排除末尾音节只是更长音节前缀的命中 (`ganxi` 的 感谢 是 `gan xie` 对上前缀 `xi`, 不算整段就是这个词).
+  头段 + 英文词那条 (`woxiangxuehaorust`) 不受影响.
+- 整句路径上的用户加分按 "这个词覆盖的音节数 ÷ 整段音节数" 折算 (`sentence::viterbi`): 每个词各自封顶 1.52, 不折算的话一段拼音拆成 k 个词就能拿 k 倍加分,
+  拆得越碎越占便宜 (`没` + `会` 3.04 压过 `模块` 的 1.52), 20 个音节的句子能堆到 30 分压过语言模型. 折算之后一条路径的加分总和不超过 1.52,
+  代价是单字在整句里的分量封顶 1.52 ÷ 音节数 (2 音节时 0.761): `sentence::viterbi` 那条 "选十几次就翻过来" 的用例因此改成 "选多少次都翻不过来", 另补了词频差 2 倍的用例.
 - `custom_phrase::merge_replacements` 把平台给的「输入码 → 短语」表（macOS 系统文本替换）并进配置里的自定义短语：每条占该码最靠前的空位（1–9），
   输入码不是小写字母、已有同码同文本、九位都满的跳过；Core 不管数据从哪来。
 - 拼写纠错（`correction`）：整段一处编辑的变体里相邻换位允许末尾音节没敲完（`loose_segmentation`，`mignt` → `ming t…`；
@@ -83,8 +91,10 @@ Windows / Linux 的 `settle_pending` (同上两种情形) 与 `Effect::Passthrou
   个人敲错表（`user-typos.tsv`，接受过的 (敲的, 要的) 音节对，词图敲错边与整段纠错的代价按它打折）与个人 n-gram（`user-ngram.tsv`，Core `sentence::UserNgram`，
   二元 + 三元在线计数，整句转换与词级排序里与静态模型插值；Tab 接受的云端整句按 `sentence::segment_text` 切词后也记；
   连着选出的两个词记够次数自动造词进用户词，一段拼音分几次选完的合成词记两次也造）。
-  候选窗口里的调频键（`[shortcut] adjust_frequency`）改的就是前两张表：`Learner::adjust_frequency` 升频记一次选择、降频撤销一次（到 0 删条目），
-  Engine 侧读数给预览用（`Engine::frequency_of`，返回 `WordFrequency { total, selected }`），落盘时机不变。
+  候选窗口里的调频键 (`[shortcut] adjust_frequency`) 改的就是前两张表: `Learner::adjust_frequency` 升频记一次选择, 降频撤销一次 (到 0 删条目),
+  记的输入串是候选覆盖的那段拼音 (`Engine::choice_key_of`, 双拼按解出的全拼算, 输入比候选长时只算覆盖的前缀),
+  与上屏记账和词级排序查 "这个输入串下选过什么" 用的是同一把键: 键对不上时调出来的次数排序看不到 (`mokk` 下记到原始按键上就永远不挪位).
+  Engine 侧读数给预览用 (`Engine::frequency_of`, 返回 `WordFrequency { total, selected }`, 同样按那把键查), 落盘时机不变.
 - `InputLog`：输入日志（`input-log.jsonl`，每次上屏一行：敲的键、切分、看到的前几个候选、选了第几个、来源、纠错、撤销，
   Core `InputLogger` trait 的落盘实现，`[general] input_log` 缺省开，只写本机，给离线回归评测与个人模型用）。
 - `UsageStats`：输入统计（`usage.tsv`，按天记汉字 / 中文词 / 英文词 / 上屏次数，Core `UsageMeter` trait 的实现，Engine 每次上屏 `Usage::of_text` + 按来源定词数，
@@ -213,6 +223,8 @@ v7 同时加任务栏图标右键菜单的 `Indicator`; `Frame.aux_code_show` �
   并多打一行「辅码选词 N 条，其中同拼音纯输入首选命中 M 条」（学习闭环的尺子）。
 - `--aux-table <路径>`（可多次）装辅码码表（`.qj` 或 `词<Tab>码` TSV）；交互模式与查询模式都按壳的方式逐键喂入，
   配的触发键进辅码态、之后的字母进码段，候选行会带上命中的码。
+- 交互模式的 `:up N` / `:down N` 把上一次查询的第 N 个 (从 1 数) 候选升 / 降一次, 等价于输入法里调频键 + K / J,
+  调完重新查一遍打印新次序: 调频的键与排序对不对得上, 靠它一眼看出来.
 - `--tune 名=值`（逗号分隔）覆盖个人 n-gram 插值与敲错代价的常数扫网格（名字见 `apps/cli/src/tuning.rs`，Core 侧是 `Engine::set_interpolation` / `set_typo_costs`，壳只用缺省值）。
 - `--eval-text <文本>...` 装了码表（`--aux-table`）时多打一行码表覆盖率：词频前 10,000 与全库两段命中比例（与导入统计同源）。
 - `--eval-text <文本>...` 整句评测：把用户自己写的中文文本按标点切句、按词库读音转成全拼，冷启动喂给引擎看整句能不能还原原句
