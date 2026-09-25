@@ -190,8 +190,7 @@ pub fn convert_paths(
             for hit in hits.iter() {
                 // 用户加分按这个词覆盖的音节占整段的比例折算: 每个词各自封顶 1.52, 不折算的话
                 // 一段拼音拆成 k 个词就能拿 k 倍加分, 拆得越碎越占便宜, 覆盖同样多音节的整词却只有一个词的加分
-                let bonus =
-                    weight_bonus(weight(&hit.text)) * hit.syllables.len() as f64 / n as f64;
+                let bonus = weight_bonus(weight(&hit.text)) * hit.syllables.len() as f64 / n as f64;
                 let fallback = fallback_log_prob(hit.frequency, log_total);
                 let (score, back) =
                     best_predecessor(&nodes, start, &hit.text, model, personal, fallback);
