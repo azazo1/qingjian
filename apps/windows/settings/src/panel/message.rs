@@ -27,6 +27,8 @@ pub(crate) enum Message {
     SwitchKey(qingjian_platform::SwitchKey, bool),
     /// 内置英文模式总开关。
     EnglishMode(bool),
+    /// 切换中 / 英时在光标旁闪一下当前模式。
+    ModeBadge(bool),
 
     // 候选窗口页
     Theme(Option<usize>),

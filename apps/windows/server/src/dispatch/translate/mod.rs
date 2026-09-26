@@ -48,6 +48,7 @@ impl Router {
             return empty;
         }
         self.last_rect = Some(rect);
+        self.badge_anchor = Some(rect);
         self.translation = Some(Translation { result: None });
         self.engine.request_translation(text);
         tracing::debug!(chars = text.chars().count(), "翻译选中文字：已发翻译请求");

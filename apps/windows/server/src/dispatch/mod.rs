@@ -34,7 +34,7 @@ pub use self::reload::{DataDirs, attach_cloud};
 pub use self::rescore::find_model;
 use self::rescore::{ModelLoader, RescoreState};
 use self::session::SessionInfo;
-pub use self::status::{NoopStatusSink, StatusEvent, StatusSink, StatusView};
+pub use self::status::{BadgeView, NoopStatusSink, StatusEvent, StatusSink, StatusView};
 use self::translate::Translation;
 
 /// 学习数据落盘间隔（与 macOS 壳一致）；Server 没有定时器，借消息节拍看时间。
@@ -104,6 +104,9 @@ pub struct Router {
     /// 聚焦会话最近报来的光标矩形；云联想异步到达时按它原地重摆候选窗口。
     last_rect: Option<ScreenRect>,
 
+    /// 最近一次光标矩形，组句结束也不清：模式徽标按它摆在光标旁（没有就用鼠标位置兜底）。
+    badge_anchor: Option<ScreenRect>,
+
     /// 上次真正显示的帧与位置：没变就不重画（组字期间的空转 Poll 很多）。
     last_shown: Option<(Frame, ScreenRect)>,
 
@@ -149,6 +152,7 @@ impl Router {
             english: false,
             ime_active: false,
             last_rect: None,
+            badge_anchor: None,
             last_shown: None,
             model_path: None,
             code_table: None,

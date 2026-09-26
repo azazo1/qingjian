@@ -2,6 +2,7 @@
 //! `SyncMode` 取走（取的同时说明青简是当前输入法，状态条显示）；切成别的输入法时 DLL 发 `ImeSwitched` 收起。
 //! 会话关闭（应用退出）不收——状态条常驻桌面。状态条上的点击经 [`StatusEvent`] 回到这里：
 //! 切模式直接改全局模式，各 DLL 下一拍取走；切标点 / 拖动写回配置文件（热加载会再读回来）。
+//! 模式真的变了的那一下还会在光标旁闪一下模式徽标（[`BadgeView`]，配置 `[general] mode_badge`）。
 
 mod event;
 mod sink;
@@ -12,14 +13,19 @@ use qingjian_platform::{Config, Scheme, scheme_label};
 
 pub use self::event::StatusEvent;
 pub use self::sink::{NoopStatusSink, StatusSink};
-pub use self::view::StatusView;
+pub use self::view::{BadgeView, StatusView};
 use super::Router;
 
 impl Router {
-    /// DLL 那边用户切了模式：成为全局模式。内置英文模式关着时不收英文。
+    /// DLL 那边用户切了模式：成为全局模式。内置英文模式关着时不收英文。真的变了才闪模式徽标。
     pub(super) fn handle_mode_changed(&mut self, english: bool) {
-        self.english = english && self.config.english_mode;
+        let next = english && self.config.english_mode;
+        let changed = next != self.english;
+        self.english = next;
         self.ime_active = true;
+        if changed {
+            self.flash_mode_badge();
+        }
         self.reconcile_status();
     }
 
@@ -50,6 +56,7 @@ impl Router {
                 }
                 self.english = !self.english;
                 tracing::debug!(english = self.english, "状态条：切换中英模式");
+                self.flash_mode_badge();
             }
             StatusEvent::TogglePunctuation => {
                 // 中英各记一份，切的是当前模式那份；还没报过模式时按中文算。
@@ -107,6 +114,19 @@ impl Router {
         } else {
             self.config.full_width
         }
+    }
+
+    /// 模式真的变了：在光标旁闪一下「中」/「英」（配置 `[general] mode_badge`，缺省开）。
+    /// 锚点用最近一次光标矩形，没有就让 UI 线程拿鼠标位置兜底。
+    fn flash_mode_badge(&self) {
+        if !self.config.mode_badge {
+            return;
+        }
+        self.status.flash_badge(BadgeView {
+            english: self.english,
+            anchor: self.badge_anchor,
+            theme: self.config.theme,
+        });
     }
 
     /// 开着且青简在前台就显示，否则收起。热加载后也调一次。

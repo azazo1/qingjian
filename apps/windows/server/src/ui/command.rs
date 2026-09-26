@@ -2,7 +2,7 @@
 
 use qingjian_platform::protocol::{Frame, ScreenRect};
 
-use crate::dispatch::{RenderSettings, StatusView};
+use crate::dispatch::{BadgeView, RenderSettings, StatusView};
 
 /// 交给 UI 线程执行的命令。`Frame` 较大，装箱免得枚举过胖。
 pub(super) enum UiCommand {
@@ -17,6 +17,9 @@ pub(super) enum UiCommand {
 
     /// 收起悬浮状态条。
     StatusHide,
+
+    /// 闪一下模式徽标：`anchor` 是光标矩形，`None` 时拿鼠标位置兜底。
+    BadgeShow(Box<BadgeView>),
 
     /// 换画法（渲染器 / 字体）。
     Configure(RenderSettings),

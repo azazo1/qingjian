@@ -92,6 +92,7 @@ impl Component for Settings {
                 self.save_array("shortcut", "switch_mode", &values);
             }
             Message::EnglishMode(on) => self.save("general", "english_mode", on),
+            Message::ModeBadge(on) => self.save("general", "mode_badge", on),
 
             // 候选窗口页
             Message::Theme(Some(i)) if i < ThemeMode::ALL.len() => {

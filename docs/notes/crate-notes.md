@@ -307,6 +307,10 @@ TSF 原有数字 / OEM 标点 / 空格键码按当前布局用 `ToUnicodeEx` 解
 词库导入（设置「词库」页）走 `qingjian-dictionary::import` 转成 `.qj`（空词库拒绝），多选批量、成功的从 `[dictionaries] disabled` 摘掉、页面显示每个文件的结果；
 Server 每次轮询比对用户 `dicts` 的路径 / mtime / 长度快照，配置没变也重载新增、同名更新与移除；配置解析失败时词库沿用上次有效的开关（#36）。
 
+- 模式徽标（`ui/badge/`）只在模式真的变了的那一下出现（`Router::handle_mode_changed` / 状态条点击，`[general] mode_badge` 缺省开，
+  与 macOS 共用同一个配置项）：`Router` 记最近一次光标矩形（`badge_anchor`，组句结束不清）当锚点，没有就让 UI 线程拿鼠标位置兜底；
+  面板一秒后由窗口自己的定时器收起（`WM_TIMER`），不吃鼠标、不抢焦点、不进任务栏。
+
 中英切换键（`[shortcut] switch_mode`）与内置英文模式开关（`[general] english_mode`）得在**按键到达之前**就知道
 （单击判定在 `OnTestKeyUp`、是否登记语言栏按钮），但 DLL 跑在每个应用进程里、拿不到 Server 那份配置，
 `%APPDATA%\Qingjian` 对 AppContainer 里的商店应用也读不到（那是给输入日志和 `.env` 用的目录，不该加 ACE）。

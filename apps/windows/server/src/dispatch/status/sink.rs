@@ -1,10 +1,13 @@
-use super::StatusView;
+use super::{BadgeView, StatusView};
 
 /// 状态条输出端。Router 在工人线程上调，窗口在 UI 线程上，故要 `Send`。
 pub trait StatusSink: Send {
     fn show_status(&self, view: StatusView);
 
     fn hide_status(&self);
+
+    /// 模式真的变了的那一下闪一下徽标（配置 `[general] mode_badge`）；UI 线上一秒后自己收。
+    fn flash_badge(&self, _view: BadgeView) {}
 
     /// 起设置程序（任务栏图标右键菜单用；悬浮条上的齿轮在 UI 线程直接起）。
     fn open_settings(&self) {}

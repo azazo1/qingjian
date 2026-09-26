@@ -1,4 +1,5 @@
 use qingjian_platform::ThemeMode;
+use qingjian_platform::protocol::ScreenRect;
 
 /// 状态条一次要显示的内容。
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -20,4 +21,17 @@ pub struct StatusView {
 
     /// 配置里记住的内容左上角物理像素；`None` 首次按屏幕右下角摆。
     pub anchor: Option<(i32, i32)>,
+}
+
+/// 模式徽标一次要显示的内容。
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct BadgeView {
+    /// 英文模式（`false` 中文）。
+    pub english: bool,
+
+    /// 光标矩形（组句范围或选区）；`None` 时 UI 线程拿鼠标位置兜底。
+    pub anchor: Option<ScreenRect>,
+
+    /// 外观模式。
+    pub theme: ThemeMode,
 }

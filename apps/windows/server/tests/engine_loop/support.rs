@@ -13,7 +13,7 @@ pub use qingjian_platform::{
     AppsConfig, DEFAULT_ENGLISH_CANDIDATES_OFF_WINDOWS, PreeditMode, Scheme,
 };
 pub use qingjian_windows_server::dispatch::{
-    CandidateSink, RenderSettings, StatusEvent, StatusSink, StatusView,
+    BadgeView, CandidateSink, RenderSettings, StatusEvent, StatusSink, StatusView,
 };
 pub use qingjian_windows_server::{AssemblySpec, Router, RouterConfig, assembly};
 
@@ -233,13 +233,24 @@ pub fn preedit(frame: &Frame) -> String {
     frame.preedit.iter().map(|s| s.text.as_str()).collect()
 }
 
-/// 记录状态条调用：`Some(模式格文字)` 是显示、`None` 是收起。
+/// 一条模式徽标记录：英文模式 + 锚点（`None` 表示还没收到光标矩形）。
+pub type BadgeCall = (bool, Option<ScreenRect>);
+
+/// 记录状态条与模式徽标的调用：`Some(模式格文字)` 是显示、`None` 是收起；
+/// 徽标另记 [`BadgeCall`]，锚点用来看有没有跟上最近的光标矩形。
 #[derive(Clone, Default)]
-pub struct RecordingStatus(pub Arc<Mutex<Vec<Option<String>>>>);
+pub struct RecordingStatus {
+    calls: Arc<Mutex<Vec<Option<String>>>>,
+    badges: Arc<Mutex<Vec<BadgeCall>>>,
+}
 
 impl RecordingStatus {
     pub fn calls(&self) -> Vec<Option<String>> {
-        self.0.lock().unwrap().clone()
+        self.calls.lock().unwrap().clone()
+    }
+
+    pub fn badges(&self) -> Vec<BadgeCall> {
+        self.badges.lock().unwrap().clone()
     }
 }
 
@@ -250,11 +261,18 @@ impl StatusSink for RecordingStatus {
             (false, Some(scheme)) => format!("中 · {scheme}"),
             (false, None) => "中".to_owned(),
         };
-        self.0.lock().unwrap().push(Some(label));
+        self.calls.lock().unwrap().push(Some(label));
     }
 
     fn hide_status(&self) {
-        self.0.lock().unwrap().push(None);
+        self.calls.lock().unwrap().push(None);
+    }
+
+    fn flash_badge(&self, view: BadgeView) {
+        self.badges
+            .lock()
+            .unwrap()
+            .push((view.english, view.anchor));
     }
 }
 

@@ -170,6 +170,13 @@ pub(crate) fn view(settings: &Settings, context: &mut ViewContext<Settings>) -> 
                 .is_on(g.english_mode)
                 .on_toggled(context.callback(Message::EnglishMode)),
         ),
+        field(
+            "切换中 / 英时闪一下当前模式",
+            "切换的那一刻在光标旁闪一块小面板（「中」/「英」），一秒后自己收；任务栏图标与悬浮状态条是同一件事的另两种显示。",
+            ToggleSwitch::new()
+                .is_on(g.mode_badge)
+                .on_toggled(context.callback(Message::ModeBadge)),
+        ),
     ];
     page("通用", StackPanel::new().spacing(16.0).children(rows))
 }

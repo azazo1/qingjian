@@ -1,9 +1,11 @@
-//! Server 进程内的 UI 线程：候选窗口与悬浮状态条都在这条线程上自绘（普通置顶窗会被商店 / 任务栏搜索
+//! Server 进程内的 UI 线程：候选窗口、悬浮状态条与模式徽标都在这条线程上自绘（普通置顶窗会被商店 / 任务栏搜索
 //! 这些高 z-band 宿主盖住，只有本进程配合 uiAccess 签名才能盖过）。
 //!
 //! HWND 线程亲和：Router 在工人线程上产出内容，经通道 + `PostThreadMessageW` 唤醒交给 UI 线程应用。
-//! 线程句柄是 [`UiHandle`]，命令在 [`command`]，候选窗口在 [`candidates`]，状态条在 [`status`]，分层窗口合成在 [`layered`]。
+//! 线程句柄是 [`UiHandle`]，命令在 [`command`]，候选窗口在 [`candidates`]，状态条在 [`status`]，
+//! 模式徽标在 [`badge`]，分层窗口合成在 [`layered`]。
 
+mod badge;
 mod candidates;
 mod command;
 mod layered;
@@ -31,11 +33,14 @@ use windows::core::{Error, Result};
 
 use qingjian_platform::protocol::{Frame, ScreenRect};
 
+use self::badge::Badge;
 use self::candidates::CandidateWindow;
 use self::command::UiCommand;
 use self::painter::{Painter, SharedPainter};
 use self::status::StatusBar;
-use crate::dispatch::{CandidateSink, RenderSettings, StatusEvent, StatusSink, StatusView};
+use crate::dispatch::{
+    BadgeView, CandidateSink, RenderSettings, StatusEvent, StatusSink, StatusView,
+};
 
 /// 状态条上的操作（点格子 / 拖动结束）回给 Router 的回调，UI 线程上调。
 pub type StatusEvents = Box<dyn Fn(StatusEvent) + Send>;
@@ -75,7 +80,7 @@ impl UiHandle {
     /// 线程已退出（通道断）时静默丢弃。
     fn post(&self, command: UiCommand) {
         if self.sender.send(command).is_ok() {
-            let _ = unsafe { PostThreadMessageW(self.thread_id, WM_WAKE, WPARAM(0), LPARAM(0)) };
+            wake_thread(self.thread_id);
         }
     }
 }
@@ -101,6 +106,10 @@ impl StatusSink for UiHandle {
 
     fn hide_status(&self) {
         self.post(UiCommand::StatusHide);
+    }
+
+    fn flash_badge(&self, view: BadgeView) {
+        self.post(UiCommand::BadgeShow(Box::new(view)));
     }
 
     fn open_settings(&self) {
@@ -134,6 +143,11 @@ pub(super) fn module_handle() -> HINSTANCE {
     HINSTANCE(module.0)
 }
 
+/// 叫 UI 线程醒过来排空命令队列。
+pub(crate) fn wake_thread(thread_id: u32) {
+    let _ = unsafe { PostThreadMessageW(thread_id, WM_WAKE, WPARAM(0), LPARAM(0)) };
+}
+
 /// UI 线程主体：建窗口、报回线程 id、跑消息循环。
 fn run(commands: Receiver<UiCommand>, ready: &Sender<Option<u32>>, on_status: StatusEvents) {
     // 按物理像素定位，与应用报来的组句屏幕矩形对齐；已设过会失败，忽略。
@@ -157,6 +171,13 @@ fn run(commands: Receiver<UiCommand>, ready: &Sender<Option<u32>>, on_status: St
             None
         }
     };
+    let badge = match Badge::new() {
+        Ok(badge) => Some(badge),
+        Err(error) => {
+            tracing::error!(%error, "建模式徽标窗口失败，切换中 / 英时不闪");
+            None
+        }
+    };
     if ready.send(Some(thread_id)).is_err() {
         return;
     }
@@ -169,7 +190,7 @@ fn run(commands: Receiver<UiCommand>, ready: &Sender<Option<u32>>, on_status: St
         if msg.message == WM_WAKE {
             // 一次唤醒排空整个队列，保住 Hide→Show 的先后。
             while let Ok(command) = commands.try_recv() {
-                apply(&window, status.as_ref(), &painter, command);
+                apply(&window, status.as_ref(), badge.as_ref(), &painter, command);
             }
             continue;
         }
@@ -183,6 +204,7 @@ fn run(commands: Receiver<UiCommand>, ready: &Sender<Option<u32>>, on_status: St
 fn apply(
     window: &CandidateWindow,
     status: Option<&StatusBar>,
+    badge: Option<&Badge>,
     painter: &SharedPainter,
     command: UiCommand,
 ) {
@@ -201,6 +223,11 @@ fn apply(
         UiCommand::StatusHide => {
             if let Some(status) = status {
                 status.hide();
+            }
+        }
+        UiCommand::BadgeShow(view) => {
+            if let Some(badge) = badge {
+                badge.flash(*view);
             }
         }
         UiCommand::Configure(settings) => Painter::configure(painter, &settings),

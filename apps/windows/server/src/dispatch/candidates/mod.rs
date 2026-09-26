@@ -35,6 +35,7 @@ impl Router {
             return;
         }
         self.last_rect = Some(rect);
+        self.badge_anchor = Some(rect);
         // 自绘窗吃未降级的帧（降级只作用于发给 DLL 的那份）
         let frame = self.self_drawn_frame();
         self.reconcile_candidates(&frame);

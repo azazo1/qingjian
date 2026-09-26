@@ -169,3 +169,89 @@ fn synced_mode(router: &mut Router, session: SessionId) -> Option<bool> {
         other => panic!("SyncMode 应回 ModeSync，实际 {other:?}"),
     }
 }
+
+/// 模式徽标只在模式真的变了的那一下闪。
+#[test]
+fn mode_badge_flashes_only_when_the_mode_really_changes() {
+    let config = RouterConfig {
+        mode_badge: true,
+        ..RouterConfig::default()
+    };
+    let mut router = router_with(config);
+    let recorder = RecordingStatus::default();
+    router.set_status_sink(Box::new(recorder.clone()));
+
+    // 第一次报「中文」：本来就是中文，没变，不闪。
+    router.handle(ClientMessage::ModeChanged {
+        session: SESSION,
+        english: false,
+    });
+    assert!(recorder.badges().is_empty(), "没变模式不该闪");
+
+    // 切成英文：闪一下；还没报过光标矩形，锚点是 `None`（UI 线程拿鼠标位置兜底）。
+    router.handle(ClientMessage::ModeChanged {
+        session: SESSION,
+        english: true,
+    });
+    assert_eq!(recorder.badges(), vec![(true, None)]);
+
+    // 再报一次英文：没变，不闪。
+    router.handle(ClientMessage::ModeChanged {
+        session: SESSION,
+        english: true,
+    });
+    assert_eq!(recorder.badges().len(), 1);
+
+    // 状态条上点「英」切回中文：闪一下。
+    router.handle_status_event(StatusEvent::ToggleMode);
+    assert_eq!(recorder.badges().last(), Some(&(false, None)));
+}
+
+/// 徽标锚点跟着最近的光标矩形，组句结束后也留着。
+#[test]
+fn mode_badge_follows_the_last_caret_rect() {
+    let config = RouterConfig {
+        mode_badge: true,
+        ..RouterConfig::default()
+    };
+    let mut router = router_with(config);
+    let recorder = RecordingStatus::default();
+    router.set_status_sink(Box::new(recorder.clone()));
+
+    // 先敲一个键让这个会话成为聚焦会话，DLL 报来光标矩形后徽标按它摆。
+    type_letters(&mut router, "ni");
+    router.handle(ClientMessage::PositionCandidates {
+        session: SESSION,
+        rect: rect(),
+    });
+    router.handle(ClientMessage::ModeChanged {
+        session: SESSION,
+        english: true,
+    });
+    assert_eq!(recorder.badges(), vec![(true, Some(rect()))]);
+
+    // 组句收掉（空帧）之后光标矩形仍留着：徽标还摆在同一处。
+    router.handle(ClientMessage::ModeChanged {
+        session: SESSION,
+        english: false,
+    });
+    assert_eq!(recorder.badges().last(), Some(&(false, Some(rect()))));
+}
+
+/// 关掉 `[general] mode_badge` 就不闪。
+#[test]
+fn mode_badge_is_silent_when_turned_off() {
+    let config = RouterConfig {
+        mode_badge: false,
+        ..RouterConfig::default()
+    };
+    let mut router = router_with(config);
+    let recorder = RecordingStatus::default();
+    router.set_status_sink(Box::new(recorder.clone()));
+
+    router.handle(ClientMessage::ModeChanged {
+        session: SESSION,
+        english: true,
+    });
+    assert!(recorder.badges().is_empty());
+}
