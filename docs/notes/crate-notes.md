@@ -315,7 +315,8 @@ Server 每次轮询比对用户 `dicts` 的路径 / mtime / 长度快照，配�
   （`ui::run` 的 `WM_WAKE` 分支排空答复通道）。拼音框被用户手改过就不再覆盖（清空词组解除），`WM_CLOSE` 只隐藏窗口，进程活着一直复用同一个。
   菜单项在 DLL 侧（`tsf/src/com/mode/menu.rs`），经 `IndicatorCommand::LearnPhrase` 交给 Server；协议没加版本号（老 DLL 不发它，DLL 与 Server 同包升级）。
 - 模式徽标（`ui/badge/`）只在模式真的变了的那一下出现（`Router::handle_mode_changed` / 状态条点击，`[general] mode_badge` 缺省开，
-  与 macOS 共用同一个配置项）：`Router` 记最近一次光标矩形（`badge_anchor`，组句结束不清）当锚点，没有就让 UI 线程拿鼠标位置兜底；
+  与 macOS 共用同一个配置项）：锚点优先用最近一次光标矩形（`badge_anchor`，组句结束不清）—— 组句期间由 `composition` 那条路报，
+  按切换键切中 / 英时由 DLL 的 `com/edit/caret.rs`（只读编辑会话量插入点）另报一次；从状态条或菜单切时手上没有输入上下文，才退到鼠标位置。
   面板一秒后由窗口自己的定时器收起（`WM_TIMER`），不吃鼠标、不抢焦点、不进任务栏。
 
 中英切换键（`[shortcut] switch_mode`）与内置英文模式开关（`[general] english_mode`）得在**按键到达之前**就知道

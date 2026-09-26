@@ -53,14 +53,14 @@ impl ITfKeyEventSink_Impl for TextService_Impl {
         Ok(self.handle_key(pic, event).into())
     }
 
-    fn OnTestKeyUp(&self, _pic: Ref<ITfContext>, wparam: WPARAM, _lparam: LPARAM) -> Result<BOOL> {
-        self.note_key_up(wparam.0 as u32);
+    fn OnTestKeyUp(&self, pic: Ref<ITfContext>, wparam: WPARAM, _lparam: LPARAM) -> Result<BOOL> {
+        self.note_key_up(&pic, wparam.0 as u32);
         Ok(FALSE)
     }
 
     fn OnKeyUp(&self, pic: Ref<ITfContext>, wparam: WPARAM, _lparam: LPARAM) -> Result<BOOL> {
         let vk = wparam.0 as u32;
-        self.note_key_up(vk);
+        self.note_key_up(&pic, vk);
         self.forward_adjust_release(pic, vk);
         Ok(FALSE)
     }
@@ -75,6 +75,7 @@ impl ITfKeyEventSink_Impl for TextService_Impl {
                 return Ok(FALSE);
             }
             self.set_english_mode(!self.mode_state.english());
+            self.report_caret(&pic);
             return Ok(true.into());
         }
         if guid != preserved::GUID_TRANSLATE || self.keyboard_disabled(&pic) {
@@ -109,17 +110,31 @@ impl TextService_Impl {
         to_key_event(vk, self.mode_state.english())
     }
 
+    /// 切完中 / 英报一次插入点：Server 按它给模式徽标当锚点 —— 不报的话那边只知道自己上次组句的位置，
+    /// 从没组过句时就只剩鼠标位置，徽标会画到指针旁边去。组句期间的定位另走 `composition` 那条路。
+    fn report_caret(&self, pic: &Ref<ITfContext>) {
+        let Ok(context) = pic.ok() else {
+            return;
+        };
+        if let Err(error) =
+            crate::com::edit::request_caret(context, self.client_id.get(), self.engine.clone())
+        {
+            log(&format!("请求上报光标位置失败: {error}"));
+        }
+    }
+
     fn note_key_down(&self, vk: u32, lparam: LPARAM) {
         self.key_tap
             .key_down(vk, lparam, self.mode_state.switch_keys());
     }
 
-    fn note_key_up(&self, vk: u32) {
+    fn note_key_up(&self, pic: &Ref<ITfContext>, vk: u32) {
         if vk == u32::from(VK_CAPITAL.0) {
             self.mode_state.notify();
         }
         if self.key_tap.key_up(vk, self.mode_state.switch_keys()) {
             self.set_english_mode(!self.mode_state.english());
+            self.report_caret(pic);
         }
     }
 
