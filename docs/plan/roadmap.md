@@ -169,6 +169,8 @@
   - [x] 中英切换可配置（2026-09-15，issue #81）：`[shortcut] switch_mode` 选单击 Shift / 单击 Ctrl / 不切换，
     `[general] english_mode` 关掉则内置英文模式整体停用（固定中文、不再登记语言栏按钮、状态条也不切）；
     四项都在「设置 → 通用」，DLL 激活时读一次配置
+  - [x] 任务栏图标右键菜单加「录入词组…」（2026-09-25）：Server 弹录入窗口，词组自动反查拼音、可手改，
+    确认后调 Core `learn_phrase` 写入并立刻落盘；窗口在 UI 线程、Engine 在工人线程，一问一答走 `Work::LearnPhrase`
   - [x] 切换中 / 英时在光标旁闪一下模式徽标（2026-09-25）：`[general] mode_badge`（缺省开，与 macOS 共用同一个配置项），
     Server 的 UI 线程画一块一秒后自收的面板，锚点取最近一次光标矩形，没有就用鼠标位置
   - [ ] 发版：Certum 开源代码签名证书、`windows-v<版本>` 标签与 CI

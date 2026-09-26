@@ -111,9 +111,6 @@
   - [~] **⑤ 任务栏点中/英反同步**（★☆☆ / 低 / 0.5 天）：**代码完成，待真机测**（2026-09-11）。
     激活时对转换模式 compartment 挂 `ITfCompartmentEventSink`（`com/conversion.rs`），`OnChange` 读回 `NATIVE` 位、与当前模式不同才翻转
     （防回环），顺带刷指示器 + 上报 Server 让悬浮状态条也同步。纯 DLL 改动、无新协议。
-  - [ ] **⑥ 录入词组** (中 / 待估): macOS 输入法菜单已有「录入词组…」 (2026-09-23, `6f7e56d`), Core 侧的 `Engine::suggest_pinyin` /
-    `parse_phrase_pinyin` / `learn_phrase` 与 `engine/learning/phrase/` 平台无关且已就绪, Windows 只是缺入口:
-    设置程序加录入界面 (填词 → 自动出拼音, 可手改 → 确认后写用户词并记一次选择), 拆音节沿用 Core 那套; Linux 的 Fcitx5 面板同样没接.
   - [ ] **⑧ 组句里 Ctrl+P / Ctrl+N 会泄漏给正在使用的应用** (中 / 待估): 高亮上下挪 (`[shortcut] highlight_down` /
     `highlight_up`, 缺省 Ctrl+N / Ctrl+P, 见 `f1845ec`) 在组句、候选还开着时按下, 候选高亮会跟着挪, 但键同时也到达了
     应用 —— 在 DeepSeek Harness 桌面应用 (Electron) 里按 Ctrl+N 会直接新建一个会话; 换其它应用还没复现.

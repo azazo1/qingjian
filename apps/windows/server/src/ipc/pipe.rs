@@ -74,6 +74,11 @@ pub fn serve_pipe(
                 let _ = reply.send(router.handle(message));
             }
             Ok(Work::Status(event)) => router.handle_status_event(event),
+            Ok(Work::LearnPhrase { work, reply, wake }) => {
+                let answer = router.learn_phrase(work);
+                let _ = reply.send(answer);
+                crate::ui::wake_thread(wake);
+            }
             Err(RecvTimeoutError::Timeout) => continue,
             Err(RecvTimeoutError::Disconnected) => break,
         }

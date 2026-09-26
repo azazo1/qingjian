@@ -94,7 +94,15 @@ impl Router {
             }
             IndicatorCommand::OpenSettings => self.status.open_settings(),
             IndicatorCommand::OpenDownload => self.status.open_download(),
+            IndicatorCommand::LearnPhrase => self.open_learn_phrase(),
         }
+    }
+
+    /// 菜单里的「录入词组…」：先把反查表建好（第一个字就不必在按键回调里扫整本词库），
+    /// 再让 UI 线程弹窗；窗口与 Engine 的往返走 `Work::LearnPhrase`。
+    fn open_learn_phrase(&self) {
+        self.prepare_learn_phrase();
+        self.status.open_learn_phrase();
     }
 
     /// 写回配置文件一个键；没有配置路径（测试）就只改内存。

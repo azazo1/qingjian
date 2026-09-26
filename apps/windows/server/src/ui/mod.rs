@@ -1,14 +1,17 @@
-//! Server 进程内的 UI 线程：候选窗口、悬浮状态条与模式徽标都在这条线程上自绘（普通置顶窗会被商店 / 任务栏搜索
-//! 这些高 z-band 宿主盖住，只有本进程配合 uiAccess 签名才能盖过）。
+//! Server 进程内的 UI 线程：候选窗口、悬浮状态条、模式徽标与「录入词组」窗口都在这条线程上
+//! （普通置顶窗会被商店 / 任务栏搜索这些高 z-band 宿主盖住，只有本进程配合 uiAccess 签名才能盖过）。
 //!
 //! HWND 线程亲和：Router 在工人线程上产出内容，经通道 + `PostThreadMessageW` 唤醒交给 UI 线程应用。
 //! 线程句柄是 [`UiHandle`]，命令在 [`command`]，候选窗口在 [`candidates`]，状态条在 [`status`]，
-//! 模式徽标在 [`badge`]，分层窗口合成在 [`layered`]。
+//! 模式徽标在 [`badge`]，录入词组在 [`learn_phrase`]，分层窗口合成在 [`layered`]。
+//! 录入窗口反过来要问工人线程（词库与 Engine 在那），走 [`Work::LearnPhrase`](crate::ipc::Work)，
+//! 答完由工人线程调 [`wake_thread`] 叫本线程回来读。
 
 mod badge;
 mod candidates;
 mod command;
 mod layered;
+mod learn_phrase;
 mod monitor;
 mod painter;
 mod status;
@@ -36,11 +39,13 @@ use qingjian_platform::protocol::{Frame, ScreenRect};
 use self::badge::Badge;
 use self::candidates::CandidateWindow;
 use self::command::UiCommand;
+use self::learn_phrase::LearnPhraseWindow;
 use self::painter::{Painter, SharedPainter};
 use self::status::StatusBar;
 use crate::dispatch::{
-    BadgeView, CandidateSink, RenderSettings, StatusEvent, StatusSink, StatusView,
+    BadgeView, CandidateSink, LearnPhraseReply, RenderSettings, StatusEvent, StatusSink, StatusView,
 };
+use crate::ipc::Work;
 
 /// 状态条上的操作（点格子 / 拖动结束）回给 Router 的回调，UI 线程上调。
 pub type StatusEvents = Box<dyn Fn(StatusEvent) + Send>;
@@ -60,13 +65,14 @@ pub struct UiHandle {
 
 impl UiHandle {
     /// 起 UI 线程并等它建好候选窗口。失败返回 `Err`，调用方退化为不画。
-    pub fn spawn(on_status: StatusEvents) -> Result<Self> {
+    /// `work` 是工人线程的活通道：录入窗口要借它问词库（Engine 只在那边）。
+    pub fn spawn(on_status: StatusEvents, work: Sender<Work>) -> Result<Self> {
         // 用 Option<u32> 而非 Result 回报，免得 windows Error 跨线程。
         let (ready_tx, ready_rx) = mpsc::channel::<Option<u32>>();
         let (command_tx, command_rx) = mpsc::channel::<UiCommand>();
         thread::Builder::new()
             .name("qingjian-candidates".to_owned())
-            .spawn(move || run(command_rx, &ready_tx, on_status))
+            .spawn(move || run(command_rx, &ready_tx, on_status, work))
             .map_err(|_| Error::from(E_FAIL))?;
         match ready_rx.recv() {
             Ok(Some(thread_id)) => Ok(Self {
@@ -112,6 +118,10 @@ impl StatusSink for UiHandle {
         self.post(UiCommand::BadgeShow(Box::new(view)));
     }
 
+    fn open_learn_phrase(&self) {
+        self.post(UiCommand::LearnPhraseOpen);
+    }
+
     fn open_settings(&self) {
         open_settings();
     }
@@ -143,13 +153,18 @@ pub(super) fn module_handle() -> HINSTANCE {
     HINSTANCE(module.0)
 }
 
-/// 叫 UI 线程醒过来排空命令队列。
+/// 叫 UI 线程醒过来排空通道（命令或录入窗口的答复）。工人线程也用它。
 pub(crate) fn wake_thread(thread_id: u32) {
     let _ = unsafe { PostThreadMessageW(thread_id, WM_WAKE, WPARAM(0), LPARAM(0)) };
 }
 
 /// UI 线程主体：建窗口、报回线程 id、跑消息循环。
-fn run(commands: Receiver<UiCommand>, ready: &Sender<Option<u32>>, on_status: StatusEvents) {
+fn run(
+    commands: Receiver<UiCommand>,
+    ready: &Sender<Option<u32>>,
+    on_status: StatusEvents,
+    work: Sender<Work>,
+) {
     // 按物理像素定位，与应用报来的组句屏幕矩形对齐；已设过会失败，忽略。
     let _ = unsafe { SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2) };
     let thread_id = unsafe { GetCurrentThreadId() };
@@ -178,6 +193,15 @@ fn run(commands: Receiver<UiCommand>, ready: &Sender<Option<u32>>, on_status: St
             None
         }
     };
+    // 录入窗口的答复通道：本线程读，窗口把发送端塞进 Work 交给工人线程。
+    let (learn_reply_tx, learn_reply_rx) = mpsc::channel::<LearnPhraseReply>();
+    let learn = match LearnPhraseWindow::new(work, learn_reply_tx, thread_id) {
+        Ok(learn) => Some(learn),
+        Err(error) => {
+            tracing::error!(%error, "建「录入词组」窗口失败，菜单里那一项打不开");
+            None
+        }
+    };
     if ready.send(Some(thread_id)).is_err() {
         return;
     }
@@ -190,7 +214,20 @@ fn run(commands: Receiver<UiCommand>, ready: &Sender<Option<u32>>, on_status: St
         if msg.message == WM_WAKE {
             // 一次唤醒排空整个队列，保住 Hide→Show 的先后。
             while let Ok(command) = commands.try_recv() {
-                apply(&window, status.as_ref(), badge.as_ref(), &painter, command);
+                apply(
+                    &window,
+                    status.as_ref(),
+                    badge.as_ref(),
+                    learn.as_ref(),
+                    &painter,
+                    command,
+                );
+            }
+            // 录入窗口请工人线程办的活答回来了（工人线程发 WM_WAKE 叫我们读）。
+            while let Ok(reply) = learn_reply_rx.try_recv() {
+                if let Some(learn) = learn.as_ref() {
+                    learn.apply_reply(reply);
+                }
             }
             continue;
         }
@@ -205,6 +242,7 @@ fn apply(
     window: &CandidateWindow,
     status: Option<&StatusBar>,
     badge: Option<&Badge>,
+    learn: Option<&Rc<LearnPhraseWindow>>,
     painter: &SharedPainter,
     command: UiCommand,
 ) {
@@ -228,6 +266,11 @@ fn apply(
         UiCommand::BadgeShow(view) => {
             if let Some(badge) = badge {
                 badge.flash(*view);
+            }
+        }
+        UiCommand::LearnPhraseOpen => {
+            if let Some(learn) = learn {
+                learn.open();
             }
         }
         UiCommand::Configure(settings) => Painter::configure(painter, &settings),

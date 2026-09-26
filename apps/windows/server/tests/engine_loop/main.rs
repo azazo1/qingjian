@@ -3,6 +3,7 @@
 mod aux_code;
 mod composing;
 mod english;
+mod learn_phrase;
 mod modes;
 mod rescoring;
 mod shortcuts;

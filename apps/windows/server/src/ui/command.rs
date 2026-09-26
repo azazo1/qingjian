@@ -18,6 +18,9 @@ pub(super) enum UiCommand {
     /// 收起悬浮状态条。
     StatusHide,
 
+    /// 弹出「录入词组」窗口（任务栏图标右键菜单那一项）。
+    LearnPhraseOpen,
+
     /// 闪一下模式徽标：`anchor` 是光标矩形，`None` 时拿鼠标位置兜底。
     BadgeShow(Box<BadgeView>),
 

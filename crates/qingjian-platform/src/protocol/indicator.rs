@@ -14,6 +14,11 @@ pub enum IndicatorCommand {
 
     /// 查到新版本时菜单里的「有新版本」：打开下载页，同样交给 Server。
     OpenDownload,
+
+    /// 菜单里的「录入词组…」：Server 弹出录入窗口（Engine 只在 Server 进程里，
+    /// 反查拼音与写入用户词都得在那做）。DLL 与 Server 同包升级，故这个变体不动
+    /// [`super::PROTOCOL_VERSION`]：老 DLL 不发它，新 DLL 配老 Server 才会读不出来。
+    LearnPhrase,
 }
 
 /// 右键菜单打勾用的开关状态。DLL 不读配置文件（UWP 沙箱里读不到），由 Server 随

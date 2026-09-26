@@ -14,6 +14,10 @@ pub trait StatusSink: Send {
 
     /// 用浏览器打开下载页（右键菜单的「有新版本」）。
     fn open_download(&self) {}
+
+    /// 弹出「录入词组」窗口（右键菜单那一项）。Engine 的活在工人线程，见
+    /// [`crate::dispatch::LearnPhraseWork`]。
+    fn open_learn_phrase(&self) {}
 }
 
 /// 不画状态条的空实现。

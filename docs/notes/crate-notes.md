@@ -307,6 +307,13 @@ TSF 原有数字 / OEM 标点 / 空格键码按当前布局用 `ToUnicodeEx` 解
 词库导入（设置「词库」页）走 `qingjian-dictionary::import` 转成 `.qj`（空词库拒绝），多选批量、成功的从 `[dictionaries] disabled` 摘掉、页面显示每个文件的结果；
 Server 每次轮询比对用户 `dicts` 的路径 / mtime / 长度快照，配置没变也重载新增、同名更新与移除；配置解析失败时词库沿用上次有效的开关（#36）。
 
+「录入词组…」（任务栏图标右键菜单那一项）与模式徽标都在 Server 的 UI 线程上做，而 Engine 只在工人线程，所以两者都要跨线程：
+
+- 录入窗口（`ui/learn_phrase/`）是普通 Win32 窗（两个 EDIT 框加一个按钮），自己不做词库的事：每次询问（词组变了 / 点「录入」）
+  投给工人线程（`Work::LearnPhrase`，带上答复通道与 UI 线程 id），工人线程用 `Router::learn_phrase` 调 Core
+  （`suggest_pinyin` 反查、`parse_phrase_pinyin` 校验、`learn_phrase` 写入并 `flush_learning`），答完唤醒 UI 线程去读答复
+  （`ui::run` 的 `WM_WAKE` 分支排空答复通道）。拼音框被用户手改过就不再覆盖（清空词组解除），`WM_CLOSE` 只隐藏窗口，进程活着一直复用同一个。
+  菜单项在 DLL 侧（`tsf/src/com/mode/menu.rs`），经 `IndicatorCommand::LearnPhrase` 交给 Server；协议没加版本号（老 DLL 不发它，DLL 与 Server 同包升级）。
 - 模式徽标（`ui/badge/`）只在模式真的变了的那一下出现（`Router::handle_mode_changed` / 状态条点击，`[general] mode_badge` 缺省开，
   与 macOS 共用同一个配置项）：`Router` 记最近一次光标矩形（`badge_anchor`，组句结束不清）当锚点，没有就让 UI 线程拿鼠标位置兜底；
   面板一秒后由窗口自己的定时器收起（`WM_TIMER`），不吃鼠标、不抢焦点、不进任务栏。
