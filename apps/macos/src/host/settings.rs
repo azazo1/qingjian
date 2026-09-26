@@ -476,6 +476,9 @@ impl Host {
             (Setting::CloudSlots, SettingValue::Index(index)) => {
                 self.settings.set_value("predict", "slots", index as i64);
             }
+            (Setting::CloudSentence, SettingValue::Bool(on)) => {
+                self.settings.set_bool("predict", "sentence", on);
+            }
             (Setting::Traditional, SettingValue::Bool(on)) => {
                 self.settings.set_bool("general", "traditional", on);
             }

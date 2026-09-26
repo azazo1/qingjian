@@ -1,5 +1,5 @@
 //! "云服务" 页: 本地整句模型开关, 决策模型 (laya / jev) 开关与后端配置, 云联想开关, 云端词格数,
-//! 接口地址 / 模型 / 推理强度 / 输出额度 / 密钥, 测试连接.
+//! 整句补全开关, 接口地址 / 模型 / 推理强度 / 输出额度 / 密钥, 测试连接.
 
 use objc2::MainThreadMarker;
 use objc2::rc::Retained;
@@ -40,6 +40,9 @@ pub struct CloudPage {
 
     /// 云端词槽位数（0–4）。
     slots: Retained<NSPopUpButton>,
+
+    /// 整句补全开关 (`[predict] sentence`).
+    sentence: Retained<NSButton>,
 
     /// 接口地址。
     base_url: Retained<NSTextField>,
@@ -123,6 +126,13 @@ impl CloudPage {
             mtm,
             "云端词到了只补进第一页末尾这几格（比如 2 就是 8、9），前面的本地候选不动；没到就什么都不变，翻页后全是本地候选。",
         );
+        let sentence = checkbox(mtm, "整句补全", Setting::CloudSentence, target);
+        row_checkbox(layout, &sentence);
+        note(
+            layout,
+            mtm,
+            "拼音行右侧给出以当前输入开头的完整说法, 按 Tab 采用; 关掉就只要云端词.",
+        );
         let base_url = text_field(mtm, Setting::BaseUrl, target);
         row_control(layout, mtm, "接口地址", &base_url);
         let model = text_field(mtm, Setting::Model, target);
@@ -164,6 +174,7 @@ impl CloudPage {
             decision_key,
             enabled,
             slots,
+            sentence,
             base_url,
             model,
             reasoning_effort,
@@ -211,6 +222,8 @@ impl CloudPage {
         set_checked(&self.enabled, config.predict.enabled);
         let cloud = config.predict.enabled;
         self.slots.setEnabled(cloud);
+        set_checked(&self.sentence, config.predict.sentence);
+        self.sentence.setEnabled(cloud);
         self.base_url.setEnabled(cloud);
         self.model.setEnabled(cloud);
         self.reasoning_effort.setEnabled(cloud);

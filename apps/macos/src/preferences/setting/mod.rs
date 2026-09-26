@@ -195,6 +195,9 @@ pub enum Setting {
     /// `[predict] slots`，弹出菜单 0–4：第一页末尾留给云端词的格数。
     CloudSlots,
 
+    /// `[predict] sentence`, 勾选框: 组句中要不要整句补全.
+    CloudSentence,
+
     /// `[apps] english_candidates_off`，勾选框：勾上写缺省的终端 / 编辑器列表，去掉写空表。
     EnglishCandidatesOffInApps,
 
@@ -279,6 +282,7 @@ impl Setting {
             Self::CopyDiagnostics => 23,
             Self::ExportLogs => 48,
             Self::CloudSlots => 24,
+            Self::CloudSentence => 72,
             Self::EnglishCandidatesOffInApps => 25,
             Self::DeleteCandidateKeys => 26,
             Self::MacSwitchSingle => 60,
@@ -361,6 +365,7 @@ impl Setting {
             23 => Self::CopyDiagnostics,
             48 => Self::ExportLogs,
             24 => Self::CloudSlots,
+            72 => Self::CloudSentence,
             25 => Self::EnglishCandidatesOffInApps,
             26 => Self::DeleteCandidateKeys,
             60 => Self::MacSwitchSingle,
@@ -459,6 +464,7 @@ mod tests {
             Setting::CopyDiagnostics,
             Setting::ExportLogs,
             Setting::CloudSlots,
+            Setting::CloudSentence,
             Setting::EnglishCandidatesOffInApps,
             Setting::DeleteCandidateKeys,
             Setting::AdjustFrequencyKeys,

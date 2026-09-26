@@ -14,6 +14,7 @@
 - 快捷键可以设成不用: `[shortcut]` 的 `translation` / `translation_second` / `delete_candidate` / `translate_selection` 四项都改走新的 `KeyBinding` 类型 (`config/key_binding.rs`), 值写 `none` 就是这项键不用 (不再占着那个组合, 事件照常交给应用); macOS 偏好设置的快捷键页录制时按 ⌫ 即清空 (按钮显示「未设置」), Windows 设置的快捷键页多一项「不使用」, 两个 Server 的匹配与 TSF 的保留键登记对关掉的项一律不认.
 - 偏好设置的「云服务」页多一项「推理强度」文本框 (配置 `[predict] reasoning_effort`), 直接对应请求里的同名字段, 换服务商时不必再手改 TOML: 接口回 400 说这个参数只认哪几个值 (例如只认 `low` / `medium` / `high` / `xhigh` / `max`, 不认缺省的 `none`) 时, 在界面上照它填或留空 (留空即请求里不带这个参数) 即可; macOS 与 Windows 两端同形.
 - 同一页再增一项「输出额度」文本框 (配置 `[predict] max_tokens`, 缺省 `200`): 填 0 或留空则请求里不带 `max_tokens`, 由服务商用自己的缺省值 —— 给不认这个参数 (新式推理模型要求 `max_completion_tokens`) 或要按服务商缺省跑的服务商. 释义兜底一次要写 8 个词的译词, 额度取配置值与自己的 600 里大的那个, 配置写 0 时它也不发.
+- macOS 偏好设置「云服务」页补上「整句补全」开关 (配置 `[predict] sentence`, 缺省开), 与 Windows 设置页同一项: 关掉后云联想只要云端词, 拼音行右侧不再出 Tab 可接受的整句.
 - 组句里的上屏改成延迟: 一段拼音还没选完时 (例如双拼 `bilw` 先选了 `避`, 还剩 `lw`), 选中的词先留在 preedit 里 (`避lw`), 等这段拼音选完、回车原样上屏、取消组句或失焦时才真正交给应用. 退格按后进先出先把这个词拆回候选 (键还回缓冲区, 候选重新按整段拼音算), 拆完再删拼音字符, 与 Rime 的退格手感一致; 见 `docs/notes/crate-notes.md` 的 Engine 一节.
 - 候选旁的模型标注: 被整句打分器重排过的候选, macOS 壳在其后标一个小字, 决策模型是 `AI 76% ↑2` (模型给这条的概率, 以及名次被抬了几位), 本地字级模型只标 `AI ↑2` (它的整句 log 概率不是概率, 折成百分比是假精度). Core 侧由 `Engine::model_hint` 给出 `ModelHint` (位移 + 置信度), 见 `docs/design/decision-models.md` 的模型标注一节.
 - macOS 候选窗 / 模式徽标的 NSPanel 层级从 `kCGPopUpMenuWindowLevel` (101) 抬到 `CGShieldingWindowLevel()`, 截屏软件标注界面里也能看到拼音行和候选 (popup menu 会被截屏覆盖层压住).
