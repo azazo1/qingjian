@@ -111,6 +111,20 @@
   - [~] **⑤ 任务栏点中/英反同步**（★☆☆ / 低 / 0.5 天）：**代码完成，待真机测**（2026-09-11）。
     激活时对转换模式 compartment 挂 `ITfCompartmentEventSink`（`com/conversion.rs`），`OnChange` 读回 `NATIVE` 位、与当前模式不同才翻转
     （防回环），顺带刷指示器 + 上报 Server 让悬浮状态条也同步。纯 DLL 改动、无新协议。
+  - [ ] **⑥ 录入词组** (中 / 待估): macOS 输入法菜单已有「录入词组…」 (2026-09-23, `6f7e56d`), Core 侧的 `Engine::suggest_pinyin` /
+    `parse_phrase_pinyin` / `learn_phrase` 与 `engine/learning/phrase/` 平台无关且已就绪, Windows 只是缺入口:
+    设置程序加录入界面 (填词 → 自动出拼音, 可手改 → 确认后写用户词并记一次选择), 拆音节沿用 Core 那套; Linux 的 Fcitx5 面板同样没接.
+  - [ ] **⑦ 切中 / 英时光标旁闪一下模式徽标** (低 / 待估): macOS 已有 (`173c413`, 2026-09-22; 配置 `[general] mode_badge` 缺省开),
+    做法是光标行旁闪一块一秒后自收的小面板. Windows 没接: `mode_badge` 不被读, 也没有这块面板; Windows 现有的中英提示只有
+    任务栏图标与悬浮状态条两处, 那是它自己早就有的做法 (2026-09-11 起), 与本条无关. 要做: 光标行旁闪一块小面板
+    (贴光标下方, 下方放不下翻到上方, 不吃鼠标、不抢焦点), 触发点与 mac 一致 (切换键命中、Caps Lock 跳变).
+  - [ ] **⑧ 组句里 Ctrl+P / Ctrl+N 会泄漏给正在使用的应用** (中 / 待估): 高亮上下挪 (`[shortcut] highlight_down` /
+    `highlight_up`, 缺省 Ctrl+N / Ctrl+P, 见 `f1845ec`) 在组句、候选还开着时按下, 候选高亮会跟着挪, 但键同时也到达了
+    应用 —— 在 DeepSeek Harness 桌面应用 (Electron) 里按 Ctrl+N 会直接新建一个会话; 换其它应用还没复现.
+    高亮挪了说明 DLL 那边确实吃到了这个键 (`tsf/src/com/service/key_sink.rs` 的 `eats_highlight` 生效), 应用是从另一条
+    路响应这个组合键的 (Electron 这类宿主常把加速键与 keydown 处理放在自己的窗口和渲染进程里, 与 TSF 的按键回调不是一条链).
+    修法方向: 这两个键改用保留键登记 (`tsf/src/com/key/preserved.rs`, 与「翻译选中文字」同一手法, 由输入法在系统层面接管);
+    或换缺省键 (Ctrl+P / Ctrl+N 在编辑器与浏览器里太常用).
   - [ ] 发版：换 **Certum 开源代码签名证书**重签（开发全程自签 + 本机受信任根，见 `installer/sign-local.ps1`）、
     `windows-v<版本>` 标签与 CI。
   - [ ] **本地整句模型上 Windows**：Server 已接（`dispatch/rescore/`，CPU 推理，设置「云服务」页有开关，安装包带 `data\model`），待真机验：每次重排的耗时（前文 + 几条路径一次前向，CPU 上可能几十到一百多毫秒，超了就缩前文长度）、模型加载时间；
