@@ -36,6 +36,7 @@ impl Host {
         self.highlight_down = highlight_down.key();
         self.highlight_up = highlight_up.key();
         self.translate_keys = config.shortcut.translate_selection.key();
+        self.learn_phrase_keys = config.shortcut.learn_phrase.key();
         self.page_size = config.general.page_size();
         self.cloud_slots = config.predict.slots;
         self.page_keys = config.general.page_keys();

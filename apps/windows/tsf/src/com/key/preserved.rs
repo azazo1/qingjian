@@ -1,9 +1,10 @@
-//! 「翻译选中文字」与「Ctrl + Alt + Space 切换中英」两个快捷键登记成 TSF **保留键**（preserved key）。
+//! 「翻译选中文字」、「录入词组」与「Ctrl + Alt + Space 切换中英」三个快捷键登记成 TSF **保留键**（preserved key）。
 //! 带 Alt 的组合是系统键，不经击键 sink（真机：Ctrl+Alt+T 在 `OnTestKeyDown` 里从没出现过）；
 //! 保留键由 TSF 在应用之前匹配、回调 `OnPreservedKey`，UWP 里也一样。翻译组合来自
 //! `[shortcut] translate_selection`，激活时读一次配置（AppContainer 读不到用户目录时用缺省 Ctrl+Alt+T；
 //! 写成 `none` 就不登记）；
-//! 切换键来自 `[shortcut] switch_mode`，那个值由 Server 经协议下发（DLL 不读配置文件），变了就地重登记。
+//! 切换键来自 `[shortcut] switch_mode`，录入词组来自 `[shortcut] learn_phrase`，这两个值由 Server 经协议下发
+//! （DLL 不读配置文件），变了就地重登记。
 
 use windows::Win32::UI::Input::KeyboardAndMouse::VK_SPACE;
 use windows::Win32::UI::TextServices::{
@@ -21,6 +22,9 @@ pub(crate) const GUID_TRANSLATE: GUID = GUID::from_u128(0x5c0a7b12_3d4e_4f60_8a9
 
 /// Ctrl + Alt + Space 中英切换键的保留键标识。
 pub(crate) const GUID_SWITCH_MODE: GUID = GUID::from_u128(0x2f6b8c51_9a34_4e7d_b2c8_5d1e0f3a7b64);
+
+/// 「录入词组」快捷键的保留键标识。
+pub(crate) const GUID_LEARN_PHRASE: GUID = GUID::from_u128(0x7d3e9a44_1b62_4c58_9f0d_6a2b8c1d5e33);
 
 /// msctf.h 的 `TF_MOD_LWIN`（windows crate 没导出）。
 const TF_MOD_LWIN: u32 = 0x08;
@@ -89,6 +93,22 @@ pub(crate) fn register(keystroke: &ITfKeystrokeMgr, tid: u32, combo: KeyCombo) -
 pub(crate) fn unregister(keystroke: &ITfKeystrokeMgr, combo: KeyCombo) {
     let key = preserved_key(combo);
     let _ = unsafe { keystroke.UnpreserveKey(&GUID_TRANSLATE, &key) };
+}
+
+/// 登记「录入词组」组合键（`[shortcut] learn_phrase`，缺省 Ctrl + Alt + P）。
+pub(crate) fn register_learn_phrase(
+    keystroke: &ITfKeystrokeMgr,
+    tid: u32,
+    combo: KeyCombo,
+) -> Result<()> {
+    let key = preserved_key(combo);
+    let description: Vec<u16> = "录入词组 (青简)".encode_utf16().collect();
+    unsafe { keystroke.PreserveKey(tid, &GUID_LEARN_PHRASE, &key, &description) }
+}
+
+pub(crate) fn unregister_learn_phrase(keystroke: &ITfKeystrokeMgr, combo: KeyCombo) {
+    let key = preserved_key(combo);
+    let _ = unsafe { keystroke.UnpreserveKey(&GUID_LEARN_PHRASE, &key) };
 }
 
 /// 保留键命中时喂给 Server 的按键：Router 按字符 + 物理修饰键与配置比对。

@@ -85,6 +85,10 @@ pub struct RouterConfig {
     /// 「翻译选中文字」快捷键（`[shortcut] translate_selection`）; `None` 是关掉了.
     pub translate_selection: Option<KeyCombo>,
 
+    /// 「录入词组」快捷键（`[shortcut] learn_phrase`, 缺省 Ctrl+Alt+P）; `None` 是关掉了.
+    /// 由 Server 经协议下发给 DLL, DLL 据此登记保留键, 命中后发 `IndicatorCommand::LearnPhrase` 回来弹窗.
+    pub learn_phrase: Option<KeyCombo>,
+
     /// 悬浮状态条开关（`[status_bar] enabled`）。
     pub status_enabled: bool,
 
@@ -155,6 +159,7 @@ impl From<&Config> for RouterConfig {
                 .key()
                 .map(KeyModifiers::from),
             translate_selection: config.shortcut.translate_selection.key(),
+            learn_phrase: config.shortcut.learn_phrase.key(),
             highlight_down: highlight_down.key(),
             highlight_up: highlight_up.key(),
             status_enabled: config.status_bar.enabled,

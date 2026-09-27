@@ -325,6 +325,17 @@ impl QingjianInputController {
         {
             return self.translate_selection(client);
         }
+        // 录入词组快捷键 (配置 `[shortcut] learn_phrase`, 缺省 ⌃⌥P): 弹出录入窗口, 与输入法菜单里的
+        // 「录入词组…」是同一件事. 与翻译快捷键一样只在没组句时认: 正在打拼音时这个组合照旧归应用
+        let combo = host::with(|h| h.learn_phrase_keys).flatten();
+        if let Some(combo) = combo
+            && pressed == combo.modifiers
+            && typed.as_deref().and_then(|t| t.chars().next()) == Some(combo.key)
+            && !host::with(|h| !h.engine.composition().is_empty()).unwrap_or(false)
+        {
+            host::with(|h| h.perform(menubar::MenuAction::LearnPhrase));
+            return true;
+        }
         // 修饰键 + 数字：按配置的两组组合上屏第一 / 第二个译词（缺省 ⌥ 与 ⇧⌥）、删候选（缺省 ⇧）。
         // 只在组句中认：不在组句时 ⇧4 就是 `$`，得走下面的标点转换（中文模式出 ￥、⇧6 出 ……、⇧1 出 ！），
         // 以前在这里被截走后原样还给应用，全角转换就没机会做了。

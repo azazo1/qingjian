@@ -216,6 +216,23 @@ impl Component for Settings {
                 };
                 self.save("shortcut", "translate_selection", value);
             }
+            Message::LearnPhrase(Some(i)) if i < shortcut::MODIFIERS.len() => {
+                let value = match shortcut::MODIFIERS[i].1 {
+                    // 「不使用」直接写 none
+                    "none" => "none".to_owned(),
+                    modifiers => {
+                        // 关着的时候再挑修饰键, 就用缺省字母把这个键重新打开
+                        let key = self
+                            .config
+                            .shortcut
+                            .learn_phrase
+                            .key()
+                            .map_or(KeyCombo::LEARN_PHRASE.key, |combo| combo.key);
+                        format!("{modifiers}+{key}")
+                    }
+                };
+                self.save("shortcut", "learn_phrase", value);
+            }
 
             // 模糊音页
             Message::Fuzzy(key, on) => self.save("fuzzy", key, on),

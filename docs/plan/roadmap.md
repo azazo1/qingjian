@@ -93,6 +93,10 @@
   （每次相当于又选一次 / 撤销一次选择，`Learner::adjust_frequency`，降到底就停并给一句提示），不在组句时这几个键一律不拦
 - [x] 候选高亮可用 `⌃P` / `⌃N` 上下挪 (2026-09-23): 新增 `[shortcut] highlight_down` / `highlight_up` (缺省 `control+n` / `control+p`, 写 `none` 关掉),
   组句里与 `↓` / `↑` 完全同义 (到页边自动翻页), 不在组句时这两个键照旧归应用; 三端一致, Windows 的 DLL 经 `InputSettings` 的 `highlight_down` / `highlight_up` 拿到这两个组合键后才在组句里吃键
+- [x] 「录入词组」也能按快捷键打开 (2026-09-27): 新增 `[shortcut] learn_phrase` (缺省 `control+option+p`, 写 `none` 关掉),
+  只在没在组句时认; macOS 壳命中后走菜单那条 `MenuAction::LearnPhrase`, Windows 由 Server 经 `InputSettings.learn_phrase`
+  把组合下发到 DLL 并登记成 TSF 保留键 (带 Alt 的组合键到不了击键 sink), 命中后发 `IndicatorCommand::LearnPhrase` 请 Server 弹窗;
+  两个设置界面的「快捷键」页各加一行 (Windows 只改修饰键).
 - [x] 拼写纠错：一处编辑（换位 / 换字母 / 多一个 / 少一个）凑出完整音节，拼音行画删除线，回车原样上屏，接受与拒绝都进学习；
   2026-09-05 挑选改成噪声信道（纠正后整句得分扣编辑代价仍高于原样才纠，末尾单字母只试换位），修掉 你后妈 / 我峡谷区 这类选错
 - [x] 词图内敲错边 + 个人敲错表（2026-09-06）：整句词图里每个完整音节按一处敲错变体（相邻键换位 / 相邻键 / 多键 / 少键）查词并扣代价，

@@ -39,6 +39,17 @@ impl KeyCombo {
         key: 'p',
     };
 
+    /// 弹出「录入词组」窗口的缺省键 (配置 `[shortcut] learn_phrase`): 与「翻译选中文字」的 ⌃⌥T 同一族, P 取 phrase.
+    pub const LEARN_PHRASE: Self = Self {
+        modifiers: Modifiers {
+            option: true,
+            shift: false,
+            control: true,
+            command: false,
+        },
+        key: 'p',
+    };
+
     /// 配置文件里的写法。
     pub fn key_string(&self) -> String {
         format!("{}+{}", self.modifiers.key(), self.key)

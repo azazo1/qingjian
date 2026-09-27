@@ -117,6 +117,14 @@ pub(crate) fn view(settings: &Settings, context: &mut ViewContext<Settings>) -> 
                 context.callback(Message::TranslateSelection),
             ),
         ),
+        field(
+            "录入词组",
+            "按这组键 + 当前字母 (缺省 Ctrl+Alt+P) 弹出「录入词组」窗口, 与任务栏中 / 英图标右键菜单里的那一项相同: 填一个词, 拼音按词库自动生成 (可改), 录入后效果等于打这段拼音再选一次. 只在没在输入拼音时认. 这里只改修饰键, 字母固定用当前的; 选「不使用」就关掉这个键.",
+            modifier_combo(
+                s.learn_phrase.map(|combo| combo.modifiers),
+                context.callback(Message::LearnPhrase),
+            ),
+        ),
     ];
     page("快捷键", StackPanel::new().spacing(16.0).children(rows))
 }

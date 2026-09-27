@@ -38,6 +38,13 @@ pub struct InputSettings {
     /// 往上挪一格 (`[shortcut] highlight_up`, 缺省 Ctrl+P); `None` 是关掉了.
     #[serde(default)]
     pub highlight_up: Option<KeyCombo>,
+
+    /// 弹出「录入词组」窗口的快捷键 (`[shortcut] learn_phrase`, 缺省 Ctrl+Alt+P); `None` 是关掉了.
+    /// DLL 据此把组合键登记成 TSF 保留键 (带 Alt 的组合键到不了击键 sink, 见 `com::key::preserved`),
+    /// 命中时发 [`IndicatorCommand::LearnPhrase`](super::IndicatorCommand::LearnPhrase) 请 Server 弹窗;
+    /// 只在没在组句时认.
+    #[serde(default)]
+    pub learn_phrase: Option<KeyCombo>,
 }
 
 impl Default for InputSettings {
@@ -49,6 +56,7 @@ impl Default for InputSettings {
             adjust_frequency: Some(KeyModifiers::from(Modifiers::CONTROL)),
             highlight_down: Some(KeyCombo::HIGHLIGHT_DOWN),
             highlight_up: Some(KeyCombo::HIGHLIGHT_UP),
+            learn_phrase: Some(KeyCombo::LEARN_PHRASE),
         }
     }
 }

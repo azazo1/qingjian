@@ -293,18 +293,20 @@ impl Host {
                     Err(error) => tracing::warn!(%error, "修饰键组合不合法，未改"),
                 }
             }
-            (Setting::TranslateSelectionKeys, SettingValue::Text(text)) => {
-                match text.parse::<KeyBinding<KeyCombo>>() {
-                    Ok(chosen) => {
-                        self.settings.set_value(
-                            "shortcut",
-                            "translate_selection",
-                            chosen.to_string(),
-                        );
-                    }
-                    Err(error) => tracing::warn!(%error, "快捷键不合法，未改"),
+            (
+                Setting::TranslateSelectionKeys | Setting::LearnPhraseKeys,
+                SettingValue::Text(text),
+            ) => match text.parse::<KeyBinding<KeyCombo>>() {
+                Ok(chosen) => {
+                    let name = match setting {
+                        Setting::LearnPhraseKeys => "learn_phrase",
+                        _ => "translate_selection",
+                    };
+                    self.settings
+                        .set_value("shortcut", name, chosen.to_string());
                 }
-            }
+                Err(error) => tracing::warn!(%error, "快捷键不合法，未改"),
+            },
             (Setting::MacSwitchSingle, SettingValue::Bool(on)) => {
                 self.settings.set_bool("shortcut", "mac_switch_single", on);
             }
@@ -359,6 +361,11 @@ impl Host {
                     "shortcut",
                     "translate_selection",
                     defaults.translate_selection.to_string(),
+                );
+                self.settings.set_value(
+                    "shortcut",
+                    "learn_phrase",
+                    defaults.learn_phrase.to_string(),
                 );
                 self.settings.set_value(
                     "shortcut",

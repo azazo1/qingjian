@@ -24,6 +24,7 @@
 - 双拼下调频不再失灵: 调频键 (缺省 Ctrl) + K / J 原来把次数记在敲的原始按键上 (双拼的 `mokk`), 词级排序查的却是解出的全拼 (`mokuai`), 两个键对不上, 所以怎么调候选都不挪位 (双拼下每个输入串都如此, 全拼下输入比候选长时也一样). 现在调频与上屏记账和排序共用同一把键 `Engine::choice_key_of` (候选覆盖的那段拼音, 双拼按解出的全拼算), 按几下就挪几下; CLI 交互模式加了 `:up N` / `:down N` 直接试调频, 见 `docs/notes/crate-notes.md`.
 - 整句候选不再抢整词的位置: 整段拼音正好是词库里一个原样读音的整词时 (`mokk` 的 `模块`), 不再出整段拼音的整句候选 (`没会`), 判据 (`hit.exact` + 覆盖整段字母 + 末尾音节完整 + 不是模糊音 / 敲错命中 + 整段没有纠错生效) 取自 librime 的 `script_translator` (那边同样是 `make sentences when there is no exact-matching phrase candidate`, 并把 correction match 排除在 reliable phrase 之外); 整句路径上的用户加分也从 "每个词各加一次, 各自封顶 1.52" (拆成 `没` + `会` 能拿 3.04, 压过整词 `模块` 的 1.52, 20 个音节的句子能堆到 30 分盖过语言模型) 改成按 "这个词覆盖的音节数 ÷ 整段音节数" 折算, 一条路径的加分总和因此不超过 1.52. 见 `docs/notes/crate-notes.md`.
 - Windows 侧补齐两项: 任务栏里的中 / 英图标右键菜单多一项「录入词组…」(Server 弹窗, 词组自动反查拼音、可手改, 确认后写入并立刻落盘), 以及切换中 / 英时在光标旁闪一块一秒后自收的模式徽标 (`[general] mode_badge`, 与 macOS 共用同一个配置项). 见 `docs/notes/crate-notes.md` 的 apps/windows 一节.
+- 「录入词组」有快捷键了: 新增 `[shortcut] learn_phrase` (缺省 macOS `⌃⌥P` / Windows `Ctrl + Alt + P`, 写 `none` 关掉, 只在没在组句时认), 按一下弹出与菜单里「录入词组…」相同的窗口. macOS 壳在按键分发里命中后走菜单那条 `MenuAction::LearnPhrase`; Windows 的组合由 Server 经 `InputSettings.learn_phrase` 下发到 DLL 并登记成 TSF 保留键 (带 Alt 的组合键到不了击键 sink, 与「翻译选中文字」同一套), 命中后发 `IndicatorCommand::LearnPhrase` 请 Server 弹窗. 两个设置界面的「快捷键」页各加一行 (Windows 只改修饰键、字母固定用当前的), macOS 的「恢复默认快捷键」把它一并复位. 见 `docs/user/getting-started/keys.md`.
 
 青简（Qingjian）是一个使用 **Rust** 开发的跨平台输入法。
 

@@ -56,6 +56,10 @@ pub struct ShortcutConfig {
 
     /// 往上挪一格 (缺省 `control+p`, 等价 ↑); 写 `none` 就是不用.
     pub highlight_up: KeyBinding<KeyCombo>,
+
+    /// 弹出「录入词组」窗口的快捷键 (缺省 `control+option+p`, 与「翻译选中文字」同一族的组合键);
+    /// 写 `none` 就是不用这个键. 只在没在组句时认: 输入拼音时这个组合照旧归应用.
+    pub learn_phrase: KeyBinding<KeyCombo>,
 }
 
 impl Default for ShortcutConfig {
@@ -83,6 +87,8 @@ impl Default for ShortcutConfig {
             // 高亮上下挪一格缺省用 ⌃N / ⌃P (emacs 的下一行 / 上一行): 与调频的 ⌃J / ⌃K 各认各的字母, 互不打扰
             highlight_down: KeyBinding::on(KeyCombo::HIGHLIGHT_DOWN),
             highlight_up: KeyBinding::on(KeyCombo::HIGHLIGHT_UP),
+            // 录入词组缺省用 ⌃⌥P: 与「翻译选中文字」的 ⌃⌥T 同一族, 两个平台同一个写法 (Windows 上是 Ctrl+Alt+P)
+            learn_phrase: KeyBinding::on(KeyCombo::LEARN_PHRASE),
         }
     }
 }
@@ -402,5 +408,24 @@ mod tests {
             toml::from_str::<ShortcutConfig>("highlight_down = \"alt+down\"\n").is_err(),
             "认不出来的键应当报错"
         );
+    }
+
+    #[test]
+    fn learn_phrase_defaults_to_control_option_p_and_can_be_switched_off() {
+        let default = ShortcutConfig::default();
+        assert_eq!(default.learn_phrase, KeyBinding::on(KeyCombo::LEARN_PHRASE));
+        assert_eq!(
+            default.learn_phrase.key().unwrap().key_string(),
+            "control+option+p"
+        );
+        let parsed: ShortcutConfig = toml::from_str("").unwrap();
+        assert_eq!(parsed.learn_phrase, default.learn_phrase);
+
+        let off: ShortcutConfig = toml::from_str("learn_phrase = \"none\"\n").unwrap();
+        assert!(off.learn_phrase.is_off());
+
+        // `alt` 与 `option` 是同一个修饰键, 写法不同读回来一样
+        let custom: ShortcutConfig = toml::from_str("learn_phrase = \"alt+ctrl+p\"\n").unwrap();
+        assert_eq!(custom.learn_phrase, default.learn_phrase);
     }
 }

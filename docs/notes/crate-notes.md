@@ -185,6 +185,8 @@ v7 同时加任务栏图标右键菜单的 `Indicator`; `Frame.aux_code_show` �
 (与候选逐项平行, 空 vec 表示不显示), `KeyEvent.release` 标记按键抬起 (Windows DLL 在组句里转发调频修饰键的按下抬起, Linux 的 fcitx5 本来就送 `release`);
 `[shortcut] highlight_down` / `highlight_up` 是组句里上下挪候选高亮的两个组合键 (缺省 `control+n` / `control+p`, 可写 `none` 关掉),
 `InputSettings.highlight_down` / `highlight_up` 随 `SessionOpened` 与每一拍 `ModeSync` 下发, TSF 据此决定组句里吃不吃这两个键;
+`[shortcut] learn_phrase` 是弹出「录入词组」窗口的组合键 (缺省 `control+option+p`, 可写 `none` 关掉, 只在没组句时认),
+`InputSettings.learn_phrase` 同样随 `SessionOpened` 与每一拍下发, TSF 据此把组合登记成保留键, 命中后发 `IndicatorCommand::LearnPhrase`;
 以上都是加字段: 老的一侧忽略未知字段, 所以不升 `PROTOCOL_VERSION`.
 
 ## crates/qingjian-render
@@ -235,6 +237,7 @@ v7 同时加任务栏图标右键菜单的 `Indicator`; `Frame.aux_code_show` �
 
 IMK 输入法, 源码按 `app / host / imk / candidates / menubar / preferences / learn_phrase` 分目录.
 - 输入法菜单「录入词组…」 (`learn_phrase/`): 独立 NSWindow, 与偏好设置共用 Accessory 激活策略 (`preferences/panel.rs` 的 `enter_accessory` / `leave_accessory`); 点确认走 `Engine::learn_phrase`, 立刻 `flush_learning`.
+  另外配了 `[shortcut] learn_phrase` (缺省 ⌃⌥P) 时按键分发里认这个组合, 走的也是菜单那条 `Host::perform(MenuAction::LearnPhrase)`, 所以两边的行为一字不差; 判定与「翻译选中文字」同一套 (只在没组句时认, 命中吃掉这个键).
 
 - 输入法菜单（状态项 + 系统输入源菜单）与偏好设置窗口都是配置文件的前端：只写 `config.toml`，`Host::apply_config` 一条通路热加载，激活期间每秒看一次文件 mtime。
   输入方案（`[general] scheme`）也在这里装配：双拼 / 注音设给引擎，形码额外按 `paths::code_table_path()` 挂码表
@@ -246,8 +249,8 @@ IMK 输入法, 源码按 `app / host / imk / candidates / menubar / preferences 
 - 配置项：云联想 `[predict]`（偏好设置「云服务」页有「测试连接」按钮：`qingjian_predict::ConnectionTest` 起线程发一条最小请求，`Host` 用独立定时器 `CloudTestMonitor` 轮询结果显示到窗口底部；
   `reasoning_effort` 缺省 `none`，DeepSeek V4 默认思考，不关正文为空, 偏好设置「云服务」页有文本框可直接改 (留空即请求里不带这个参数, 给不认它的接口)；`max_tokens` 缺省 200, 写 0 即不带这个参数 (释义兜底取配置值与 600 里大的那个, 写 0 时也不带); `sentence` 缺省开, 「云服务」页有勾选框 (关掉只要云端词); 模糊音 `[fuzzy]` 默认都关；`[general]` 学习语言（`off` 不显示译文）/ 每页候选数 / 翻页键 / 外观 / 竖排横排 / 拼音显示位置 /
   英文模式候选开关 / 中文优先 `chinese_first` / 双拼方案 `shuangpin`（小鹤 / 自然码 / 微软 / 搜狗 / 智能ABC / 小浪 / 首道，空为全拼）/ 日志级别 `log_level`（缺省 info 不含敲的内容，debug 逐键记，热切换）/ 输入日志 `input_log`；
-  `[shortcut]` 模式键 v / u、`question_mark`（缺省关，开了空缓冲区敲 `?` 进问字）、上屏第一 / 第二个译词的修饰键 `translation` / `translation_second`、删候选 `delete_candidate`（缺省 shift，用户词整删、词库词清学习）、翻译选中文字 `translate_selection`、
-  这四项都是 `KeyBinding`（`config/key_binding.rs`）：配着键或写 `none` 关掉，关掉的那项在壳里是 `None`，不命中也不占着那个组合（macOS 录制按钮按 ⌫ 清空、Windows 设置页有「不使用」一项）、
+  `[shortcut]` 模式键 v / u、`question_mark`（缺省关，开了空缓冲区敲 `?` 进问字）、上屏第一 / 第二个译词的修饰键 `translation` / `translation_second`、删候选 `delete_candidate`（缺省 shift，用户词整删、词库词清学习）、翻译选中文字 `translate_selection`、录入词组 `learn_phrase`（缺省 `control+option+p`，弹出录入窗口，只在没组句时认）、
+  这几项都是 `KeyBinding`（`config/key_binding.rs`）：配着键或写 `none` 关掉，关掉的那项在壳里是 `None`，不命中也不占着那个组合（macOS 录制按钮按 ⌫ 清空、Windows 设置页有「不使用」一项）、
   中英切换 `switch_mode`（Windows 用）与 `mac_switch_single` / `mac_switch_dual` 两个开关加三个键位（macOS，两个开关可同时开；`mac_caps_lock_switch` 决定 Caps Lock 是否也切，偏好设置「通用」页可录制成带左右的修饰键或组合键）；
   `[apps] english_candidates_off` 按 bundle identifier 列出英文模式不给候选的应用（缺省终端 / 编辑器 / IDE，`*` 前缀匹配）；
   `[dictionaries] domains` 打开随包的领域词库（`Resources/dicts/` 11 本，缺省只开 `idioms`），`disabled` 关掉用户目录 `dicts/` 里的某本导入词库；
@@ -314,6 +317,9 @@ Server 每次轮询比对用户 `dicts` 的路径 / mtime / 长度快照，配�
   （`suggest_pinyin` 反查、`parse_phrase_pinyin` 校验、`learn_phrase` 写入并 `flush_learning`），答完唤醒 UI 线程去读答复
   （`ui::run` 的 `WM_WAKE` 分支排空答复通道）。拼音框被用户手改过就不再覆盖（清空词组解除），`WM_CLOSE` 只隐藏窗口，进程活着一直复用同一个。
   菜单项在 DLL 侧（`tsf/src/com/mode/menu.rs`），经 `IndicatorCommand::LearnPhrase` 交给 Server；协议没加版本号（老 DLL 不发它，DLL 与 Server 同包升级）。
+  快捷键（`[shortcut] learn_phrase`，缺省 Ctrl+Alt+P）也走这条命令：带 Alt 的组合键到不了击键 sink（真机在 `OnTestKeyDown` 里从没出现过），
+  所以 DLL 按 Server 下发的 `InputSettings.learn_phrase` 把它登记成 TSF 保留键（`com/service/phrase.rs`，与「翻译选中文字」同一套），
+  `OnPreservedKey` 里只认没在组句且上下文没禁键盘的那一下，然后交给菜单那条 `send_indicator`（前台权一并让给 Server）。
 - 模式徽标（`ui/badge/`）只在模式真的变了的那一下出现（`Router::handle_mode_changed` / 状态条点击，`[general] mode_badge` 缺省开，
   与 macOS 共用同一个配置项）：锚点优先用最近一次光标矩形（`badge_anchor`，组句结束不清）—— 组句期间由 `composition` 那条路报，
   按切换键切中 / 英时由 DLL 的 `com/edit/caret.rs`（只读编辑会话量插入点）另报一次；从状态条或菜单切时手上没有输入上下文，才退到鼠标位置。

@@ -102,6 +102,7 @@ impl ITfTextInputProcessor_Impl for TextService_Impl {
             && let Ok(keystroke) = thread_mgr.cast::<ITfKeystrokeMgr>()
         {
             self.drop_switch_preserved_key(&keystroke);
+            self.drop_learn_phrase_preserved_key(&keystroke);
             if let Some(combo) = self.translate_combo.take() {
                 preserved::unregister(&keystroke, combo);
             }

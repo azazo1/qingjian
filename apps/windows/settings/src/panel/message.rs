@@ -68,6 +68,8 @@ pub(crate) enum Message {
     AdjustFrequency(Option<usize>),
     /// 只换修饰键，字母键固定用当前的。
     TranslateSelection(Option<usize>),
+    /// 同上：弹出录入词组窗口的组合键。
+    LearnPhrase(Option<usize>),
 
     // 模糊音页
     /// 配置键 + 新值。

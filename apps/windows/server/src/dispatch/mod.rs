@@ -174,6 +174,7 @@ impl Router {
             adjust_frequency: self.config.adjust_keys,
             highlight_down: self.config.highlight_down,
             highlight_up: self.config.highlight_up,
+            learn_phrase: self.config.learn_phrase,
         }
     }
 

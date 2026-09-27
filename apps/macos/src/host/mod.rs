@@ -150,6 +150,10 @@ pub struct Host {
     /// 翻译选中文字的快捷键（配置 `[shortcut] translate_selection`）; `None` 是关掉了.
     pub translate_keys: Option<KeyCombo>,
 
+    /// 弹出「录入词组」窗口的快捷键 (配置 `[shortcut] learn_phrase`, 缺省 ⌃⌥P); `None` 是关掉了.
+    /// 只在没在组句时认, 与输入法菜单里的「录入词组…」是同一件事.
+    pub learn_phrase_keys: Option<KeyCombo>,
+
     /// 进行中的「翻译选中文字」；有它时候选窗口显示的是译文（或「翻译中…」），按键先归它处理。
     pub translation: Option<TranslationJob>,
 

@@ -196,6 +196,9 @@ adjust_frequency = "control"
 # 只在组句里认, 不在组句时这两个键照常归应用; 两项都能写 none
 highlight_down = "control+n"
 highlight_up = "control+p"
+# 弹出「录入词组」窗口的快捷键 (与输入法菜单里的「录入词组…」是同一件事): 修饰键 + 一个字母或数字,
+# 缺省 control+option+p; 只在没在输入拼音时认, 输入拼音时这个组合照旧归应用
+learn_phrase = "control+option+p"
 # 上面这些项都能写 none: 写 none 的那一项就是不用 (比如 delete_candidate = "none" 时这组键不再删候选, 也不再占着它)
 "#
     };
@@ -223,6 +226,9 @@ adjust_frequency = "control"
 # 只在组句里认, 不在组句时这两个键照常归应用; 两项都能写 none
 highlight_down = "control+n"
 highlight_up = "control+p"
+# 弹出「录入词组」窗口的快捷键 (与任务栏中 / 英图标右键菜单里的「录入词组…」是同一件事): 修饰键 + 一个字母或数字,
+# 缺省 ctrl+alt+p; 只在没在输入拼音时认, 输入拼音时这个组合照旧归应用
+learn_phrase = "ctrl+alt+p"
 # 上面这些项都能写 none: 写 none 的那一项就是不用 (比如 delete_candidate = "none" 时这组键不再删候选, 也不再占着它)
 "#
     };

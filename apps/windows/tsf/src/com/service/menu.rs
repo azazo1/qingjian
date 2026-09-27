@@ -42,7 +42,8 @@ impl TextService_Impl {
         }
     }
 
-    fn send_indicator(&self, command: IndicatorCommand) {
+    /// 把一条指示器命令送给 Server（菜单里的项与「录入词组」快捷键都走这里）。
+    pub(super) fn send_indicator(&self, command: IndicatorCommand) {
         if matches!(
             command,
             IndicatorCommand::OpenSettings
