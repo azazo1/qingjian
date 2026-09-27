@@ -147,7 +147,7 @@ fn main() {
     });
     let glossary = language.zip(glossary_path);
     let bundled_dicts_dir = Some(root.join("data/generated/dicts")).filter(|dir| dir.is_dir());
-    let bundled_codes_dir = Some(root.join("codes")).filter(|dir| dir.is_dir());
+    let bundled_codes_dir = Some(root.join("data/generated/codes")).filter(|dir| dir.is_dir());
     let spec = AssemblySpec {
         glossary: glossary.clone(),
         english_glossary: glossary_file(&root, Language::Chinese),

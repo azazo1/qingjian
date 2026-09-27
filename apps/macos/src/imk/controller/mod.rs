@@ -169,13 +169,16 @@ define_class!(
     unsafe impl NSObjectProtocol for QingjianInputController {}
 );
 
-/// 数字行与小键盘的键码对应的数字 1–9（ANSI 布局的物理键）。
 /// 翻译选中文字最多接受多少个字符：再长既慢又贵，也不是输入法该干的事。
 const MAX_TRANSLATE_CHARS: usize = 500;
 
 /// 给本地整句模型看的光标前文最多读多少字符（Engine 自己再按它的前文长度截）。
 const RESCORE_LOOKBACK: usize = qingjian_core::RESCORE_CONTEXT_CHARS;
 
+/// 登录 / 锁屏窗口的 bundle identifier。
+const LOGIN_WINDOW: &str = "com.apple.loginwindow";
+
+/// 数字行与小键盘的键码对应的数字 1–9（ANSI 布局的物理键）。
 fn digit_key(key_code: u16) -> Option<usize> {
     Some(match key_code {
         18 | 83 => 1,
@@ -221,6 +224,15 @@ fn highlight_step(modifiers: Modifiers, typed: char) -> Option<isize> {
 }
 
 impl QingjianInputController {
+    /// 登录 / 锁屏窗口：输入源菜单里没有青简，loginwindow 却照样激活它，按键一律交还系统。
+    ///
+    /// TODO(#190): 临时防护。现象是开机登录界面打不进模式键（u / i），推断为按键进了青简的组句；
+    /// 日志只证实 loginwindow 会激活青简，按键是否真的送来没有复现（开 FileVault 的机器进不到这个界面）。
+    /// 找到按键送进来的条件后改成针对它的判断，并确认别的系统界面有没有同样的情况。
+    fn in_login_window(&self) -> bool {
+        host::with(|h| h.engine.application() == Some(LOGIN_WINDOW)).unwrap_or(false)
+    }
+
     /// IMK 送来的事件分发：按键走 [`Self::dispatch_key_down`]，修饰键的按下抬起走 [`Self::dispatch_modifier_change`]，
     /// 其余（鼠标之类，我们没声明）一律放行。
     fn dispatch_event(&self, event: &NSEvent, client: TextClient<'_>) -> bool {
@@ -275,6 +287,10 @@ impl QingjianInputController {
 
     /// 一个按键事件的分发：只管按下；Cmd / Ctrl 组合除 Cmd+左右外一律交给应用；命令键映射成选择器；其余按字符当文本。
     fn dispatch_key_down(&self, event: &NSEvent, client: TextClient<'_>) -> bool {
+        // 登录 / 锁屏窗口里的按键一律交还系统，见 `Self::in_login_window`
+        if self.in_login_window() {
+            return false;
+        }
         let flags = event.modifierFlags();
         let (command, control, option, shift) = (
             flags.contains(NSEventModifierFlags::Command),

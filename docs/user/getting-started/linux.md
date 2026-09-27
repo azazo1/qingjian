@@ -4,10 +4,30 @@ order: 6
 description: 在 Linux 上安装青简，使用 Fcitx5 默认候选面板。
 ---
 
-青简 Linux 目前提供源码安装，使用 Fcitx5 默认候选面板。已验证 Ubuntu 26.04 的 GNOME 桌面（Wayland）上 Fcitx5 5.1.19 的 GTK4、Qt6 应用与 Firefox；
+青简 Linux 提供预编译包与源码安装，使用 Fcitx5 默认候选面板。已验证 Ubuntu 26.04 的 GNOME 桌面（Wayland）上 Fcitx5 5.1.19 的 GTK4、Qt6 应用与 Firefox；
 其他桌面、其他发行版和旧版应用尚未完成验证。当前支持本地候选、学习和本地整句模型重排，暂不提供云联想、设置窗口或自动启动。
 
-## 安装和首次输入
+## 预编译包
+
+预编译包在 Ubuntu 26.04（x86_64）上构建，插件与系统的 Fcitx5 版本绑定；其他发行版请用下一节的源码安装。
+先装好 Fcitx5 与 GTK / Qt 输入支持：
+
+```sh
+sudo apt install python3 fcitx5 fcitx5-frontend-gtk3 fcitx5-frontend-gtk4 fcitx5-frontend-qt6 fcitx5-config-qt
+```
+
+从[下载页](https://qingjian.app/download)下载 `qingjian-<版本>-linux-x86_64.tar.gz`，解压后在解出的目录里执行：
+
+```sh
+./install.sh
+
+# 手动启动，保持此终端运行
+~/.local/bin/qingjian-linux-server
+```
+
+之后的添加输入法、首次输入与源码安装相同，见下一节末尾。更新时下载新包再执行一次 `./install.sh`；卸载用包里的 `./uninstall.sh`。
+
+## 源码安装和首次输入
 
 先安装 Rust 1.96、CMake、C++20 编译器、pkg-config、Fcitx5、其 GTK / Qt 输入支持，以及 OpenSSL、Fcitx5 Core/Config/Utils 与 nlohmann-json 的开发包。
 Debian / Ubuntu 上是：
@@ -36,7 +56,7 @@ apps/linux/scripts/install.sh
 默认安装到 `~/.local`；`--prefix /绝对用户目录` 可更改安装位置。请用相同用户安装、运行，不要使用 sudo。
 
 重启 Fcitx5，打开 Fcitx5 配置工具，取消「仅显示当前语言」，添加「青简」。切换到青简后输入 `nihao`，空格选中「你好」。
-单击 `Shift` 切换中英；按键规则见 [按键与快捷键](keys.md#linuxfcitx5)。关闭手动启动的终端会结束青简服务；下次登录后需再次启动。
+单击 `Shift` 切换中英；按键规则见 [按键与快捷键](keys.md#Linux（Fcitx5）)。关闭手动启动的终端会结束青简服务；下次登录后需再次启动。
 
 ## 配置、隐私和数据
 
@@ -48,7 +68,7 @@ apps/linux/scripts/install.sh
 `[general] shift_letter = "compose"` 让 Shift 大写字母参与中文组句，默认 `"passthrough"` 保持临时英文输入。
 `scheme = "zhuyin"` 启用大千注音；双拼下 `Shift + V` / `Shift + U` 可进入表达式 / 码点输入。
 数字没有对应候选时继续输入，英文直输内容以空格结束时保留空格；英文候选开启后可用数字、翻页键、空格或 Tab 选词。
-具体规则见 [按键与快捷键](keys.md#linuxfcitx5)。
+具体规则见 [按键与快捷键](keys.md#Linux（Fcitx5）)。
 
 Fcitx5 识别为敏感输入时，可以组句但不会保存输入文本或学习；识别为密码框或禁用输入法的输入框时直接交还应用。
 保护依赖应用和其输入支持正确传递标记；本机已验证 Qt6 的敏感标记，GTK4 的动态 PRIVATE 提示尚未传递为敏感输入标记。

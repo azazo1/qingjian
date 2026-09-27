@@ -31,7 +31,7 @@ pub struct AssemblySpec {
     /// `[dictionaries]` 配置。
     pub dictionaries: DictionariesConfig,
 
-    /// 随包辅码码表目录（随包根 `codes/`）。
+    /// 随包辅码码表目录（随包根 `data/generated/codes/`，与 `dicts/` 并列）。
     pub bundled_codes_dir: Option<PathBuf>,
 
     /// `[aux_code]` 配置。

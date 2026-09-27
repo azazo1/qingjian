@@ -85,10 +85,10 @@ Source: "{#Repo}\data\generated\glossary-zh.qj"; DestDir: "{app}\data\generated"
 Source: "{#Repo}\data\generated\glossary-es.qj"; DestDir: "{app}\data\generated";       Flags: ignoreversion
 Source: "{#Repo}\data\generated\english.tsv";    DestDir: "{app}\data\generated";       Flags: ignoreversion
 Source: "{#Repo}\data\generated\dicts\*.qj";     DestDir: "{app}\data\generated\dicts";  Flags: ignoreversion
-; —— 随包辅码码表（笔画，开箱可用）：Server 按随包根 codes\ 扫；CNS11643 筆順資料派生，署名见「关于」页 ——
+; —— 随包辅码码表（笔画，开箱可用）：Server 扫 data\generated\codes\；CNS11643 筆順資料派生，署名见「关于」页 ——
 ;    缺表时不阻塞打包（skipifsourcedoesntexist），但发布前应先跑 dict-convert pack codes 生成它
-Source: "{#Repo}\data\generated\codes\*.qj";   DestDir: "{app}\codes";                Flags: ignoreversion skipifsourcedoesntexist
-Source: "{#Repo}\assets\stroke\LICENSE-CNS11643.txt"; DestDir: "{app}\codes";     Flags: ignoreversion
+Source: "{#Repo}\data\generated\codes\*.qj";   DestDir: "{app}\data\generated\codes"; Flags: ignoreversion skipifsourcedoesntexist
+Source: "{#Repo}\assets\stroke\LICENSE-CNS11643.txt"; DestDir: "{app}\data\generated\codes"; Flags: ignoreversion
 ; —— 本地整句模型（tools/release/pack-model.sh 打成的单文件 data\model\model.qjm；没有就不装，Server 不重排）——
 Source: "{#Repo}\data\model\model.qjm"; DestDir: "{app}\data\model"; Flags: ignoreversion skipifsourcedoesntexist
 ; —— 随 git 的资源 ——
@@ -148,6 +148,8 @@ Type: files; Name: "{userstartup}\Qingjian Server.lnk"
 Type: files; Name: "{app}\data\model\model.safetensors"
 Type: files; Name: "{app}\data\model\config.json"
 Type: files; Name: "{app}\data\model\vocab.json"
+; 0.1.4 开发版的随包码表旧位置
+Type: filesandordirs; Name: "{app}\codes"
 
 [UninstallDelete]
 ; 历次升级留下的旧版本 DLL（正常在升级时就删了；仍被占用的会留到这里）。

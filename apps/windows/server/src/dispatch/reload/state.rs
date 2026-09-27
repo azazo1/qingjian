@@ -20,7 +20,7 @@ pub struct DataDirs {
     /// 随包领域词库目录。
     pub bundled_dicts: Option<PathBuf>,
 
-    /// 随包辅码码表目录（随包根 `codes/`）。
+    /// 随包辅码码表目录（随包根 `data/generated/codes/`，与 `dicts/` 并列）。
     pub bundled_codes: Option<PathBuf>,
 
     /// 用户导入词库目录（`<用户目录>/dicts`）。

@@ -114,6 +114,6 @@ cargo run --release -p qingjian-dict-convert -- pack codes
 
 - 数据目录与「关于」页署名：**資料來源「CNS11643 中文標準交換碼全字庫」（數位發展部）**，并声明本表为派生
   （筆順資料表格 → 笔画码表）与修改内容（大陆序覆盖表）；
-- 随包数据目录放 `LICENSE-CNS11643.txt`（本目录，OFL-1.1 全文，与码表元数据的许可一致；数据集允许与政府資料開放授權條款第 1 版二选一），Windows 装在 `codes\` 旁。
+- 随包数据目录放 `LICENSE-CNS11643.txt`（本目录，OFL-1.1 全文，与码表元数据的许可一致；数据集允许与政府資料開放授權條款第 1 版二选一），Windows 与码表一起装在 `data\generated\codes\`。
 
 *来源：wayfinder 票 t17（stroke 工具与笔画表生成）与 spec 卷 I 第 8 章的 stroke 契约（在仓库外的 .wayfinder 工作区）。*

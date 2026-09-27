@@ -12,8 +12,8 @@ use crate::panel::controls::{check_row, entry_title, feedback, field, note, page
 use crate::panel::recorder::Recorder;
 use crate::panel::{Message, Settings};
 
-/// 随包码表目录：随包根下的 `codes/`，与 Server 装配同款。
-const BUNDLED_DIR: &str = "codes";
+/// 随包码表目录：随包根下的 `data/generated/codes/`（与 `dicts/` 并列），与 Server 装配同款。
+const BUNDLED_DIR: &str = "data/generated/codes";
 
 /// 用户导入的码表目录 `%APPDATA%\Qingjian\codes`。
 fn user_dir(settings: &Settings) -> PathBuf {
@@ -61,7 +61,9 @@ fn record_control(settings: &Settings, context: &mut ViewContext<Settings>) -> V
 /// 随包码表：标「随包」，不给移除（开关还是能关）。
 fn bundled_list(settings: &Settings, context: &mut ViewContext<Settings>) -> View {
     let Some(dir) = repo_resource(BUNDLED_DIR) else {
-        return note("没找到随包码表目录（随包根的 codes/），随包笔画表装好后这里会列出来。");
+        return note(
+            "没找到随包码表目录（随包根的 data\\generated\\codes\\），随包笔画表装好后这里会列出来。",
+        );
     };
     let tables = code_tables::list(&dir);
     if tables.is_empty() {
