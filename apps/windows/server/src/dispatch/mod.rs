@@ -126,6 +126,10 @@ pub struct Router {
 
     /// 重排的防抖 / 轮询进行态。
     rescore: RescoreState,
+
+    /// 菜单里点过「重启输入法」：学习数据已经落盘，工人循环看到它就把 `serve_pipe` 退出来，
+    /// 让 `main` 正常返回（见 [`Self::restart_requested`]）。
+    restarting: bool,
 }
 
 impl Router {
@@ -161,7 +165,23 @@ impl Router {
             model_loader: None,
             applied_model: LocalModelConfig::default(),
             rescore: RescoreState::default(),
+            restarting: false,
         }
+    }
+
+    /// 菜单里点过「重启输入法」没有。落盘在 [`Self::request_restart`] 里当场做完，
+    /// 这里只给工人循环一个「该退出」的信号。
+    pub fn restart_requested(&self) -> bool {
+        self.restarting
+    }
+
+    /// 菜单里的「重启输入法」：先把学习数据落盘，再记下退出请求。
+    /// Server 退出后由前台应用的 DLL 按需重新拉起（见 `tsf/src/com/service/launch.rs`），
+    /// 所以这里不需要自己起新进程——那样反而会与正在退出的这个抢命名管道。
+    pub(super) fn request_restart(&mut self) {
+        tracing::info!("菜单请求重启输入法，落盘后退出");
+        self.flush_learning();
+        self.restarting = true;
     }
 
     /// 下发给 DLL 的按键行为设置：`OpenSession` 的回包带一次，之后每拍 `SyncMode` 也跟着走，

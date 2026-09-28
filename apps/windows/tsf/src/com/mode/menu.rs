@@ -33,6 +33,8 @@ const ID_SETTINGS: u32 = 5;
 const ID_DOWNLOAD: u32 = 6;
 /// 录入词组：Engine 只在 Server 进程里，窗口也由 Server 弹。
 const ID_LEARN_PHRASE: u32 = 7;
+/// 重启输入法：Server 落盘学习数据后退出，DLL 下一拍重连时按需把它拉回来。
+const ID_RESTART: u32 = 8;
 
 /// 在 `point`（屏幕坐标）弹出菜单，阻塞到用户点了某项或点别处关掉。
 pub(crate) fn track(owner: HWND, point: POINT, state: &MenuState) -> Option<MenuChoice> {
@@ -58,6 +60,7 @@ pub(crate) fn track(owner: HWND, point: POINT, state: &MenuState) -> Option<Menu
         )));
     }
     items.push(Some((ID_LEARN_PHRASE, "录入词组…", MENU_ITEM_FLAGS(0))));
+    items.push(Some((ID_RESTART, "重启输入法", MENU_ITEM_FLAGS(0))));
     items.push(Some((ID_SETTINGS, "设置…", MENU_ITEM_FLAGS(0))));
     let menu = unsafe { CreatePopupMenu() }.ok()?;
     for item in items {
@@ -78,6 +81,7 @@ pub(crate) fn track(owner: HWND, point: POINT, state: &MenuState) -> Option<Menu
         ID_PUNCTUATION => Some(MenuChoice::Server(IndicatorCommand::TogglePunctuation)),
         ID_STATUS_BAR => Some(MenuChoice::Server(IndicatorCommand::ToggleStatusBar)),
         ID_LEARN_PHRASE => Some(MenuChoice::Server(IndicatorCommand::LearnPhrase)),
+        ID_RESTART => Some(MenuChoice::Server(IndicatorCommand::Restart)),
         ID_SETTINGS => Some(MenuChoice::Server(IndicatorCommand::OpenSettings)),
         ID_DOWNLOAD => Some(MenuChoice::Server(IndicatorCommand::OpenDownload)),
         _ => None,

@@ -82,6 +82,13 @@ pub fn serve_pipe(
             Err(RecvTimeoutError::Timeout) => continue,
             Err(RecvTimeoutError::Disconnected) => break,
         }
+        // 菜单里的「重启输入法」：学习数据已经落盘（见 `dispatch::Router::request_restart`），
+        // 这里退出工人循环、让 `main` 正常返回——日志 guard 与各学习数据表都靠这条正常退出路径收尾。
+        // 退出后由前台应用的 DLL 按需把 Server 拉回来（`tsf/src/com/service/launch.rs`）。
+        if router.restart_requested() {
+            tracing::info!("重启输入法：Server 退出，等待 DLL 按需拉起");
+            break;
+        }
         // 处理完消息节拍可能变短了（按键起了防抖）：到点时间只提前不推后
         due = due.min(Instant::now() + router.next_tick());
     }

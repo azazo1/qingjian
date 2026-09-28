@@ -239,6 +239,8 @@ IMK 输入法, 源码按 `app / host / imk / candidates / menubar / preferences 
 - 输入法菜单「录入词组…」 (`learn_phrase/`): 独立 NSWindow, 与偏好设置共用 Accessory 激活策略 (`preferences/panel.rs` 的 `enter_accessory` / `leave_accessory`); 点确认走 `Engine::learn_phrase`, 立刻 `flush_learning`.
   另外配了 `[shortcut] learn_phrase` (缺省 ⌃⌥P) 时按键分发里认这个组合, 走的也是菜单那条 `Host::perform(MenuAction::LearnPhrase)`, 所以两边的行为一字不差; 判定与「翻译选中文字」同一套 (只在没组句时认, 命中吃掉这个键).
 
+- 输入法菜单「重启输入法」 (`host/restart.rs`): 先 `cancel_prediction` 与停掉配置监视, 再 `flush_learning` 落盘学习数据 / 输入统计, 然后 `NSApplication::stop:` 让 `main` 的 run loop 正常返回. 走正常退出而不是 `std::process::exit`, 是为了让日志的非阻塞 `WorkerGuard` 析构、缓冲的日志落盘 (`app/logging`). 进程由系统按需拉起 (同 `bundle.sh --install` 里的 `pkill -x qingjian-macos`), 下次激活青简时起新的.
+
 - 输入法菜单（状态项 + 系统输入源菜单）与偏好设置窗口都是配置文件的前端：只写 `config.toml`，`Host::apply_config` 一条通路热加载，激活期间每秒看一次文件 mtime。
   输入方案（`[general] scheme`）也在这里装配：双拼 / 注音设给引擎，形码额外按 `paths::code_table_path()` 挂码表
   （用户目录 `wubi/wubi86.tsv` 优先，包里 `Resources/wubi/` 兜底；找不到只警告并按拼音跑）。
@@ -320,6 +322,7 @@ Server 每次轮询比对用户 `dicts` 的路径 / mtime / 长度快照，配�
   快捷键（`[shortcut] learn_phrase`，缺省 Ctrl+Alt+P）也走这条命令：带 Alt 的组合键到不了击键 sink（真机在 `OnTestKeyDown` 里从没出现过），
   所以 DLL 按 Server 下发的 `InputSettings.learn_phrase` 把它登记成 TSF 保留键（`com/service/phrase.rs`，与「翻译选中文字」同一套），
   `OnPreservedKey` 里只认没在组句且上下文没禁键盘的那一下，然后交给菜单那条 `send_indicator`（前台权一并让给 Server）。
+- 重启输入法 (`IndicatorCommand::Restart`, DLL 菜单那一项): 与 macOS 语义一致但边界不同——Windows 上 Core 在 Server 进程里, 所以重启的是 `qingjian-server`, 应用进程里的 DLL 不动. Server 收到后 `Router::request_restart` 先 `flush_learning` 再置 `restarting`, 工人循环 (`ipc::pipe::serve_pipe`) 看到标志就退出、让 `main` 正常返回 (日志 guard 与各学习数据表靠这条正常退出路径收尾); **自己不拉新进程**, 否则会与正在退出的这个抢命名管道. 新 Server 由前台应用的 DLL 拉起: 该连接随旧 Server 一起断, `poll` 那一拍 (`com/poll/mod.rs` 的 `sync_mode`) 发现没连着就 `on_reconnect_tick` → `ensure_connected` → `launch_server`(`ShellExecute`, 进程内 5 秒冷却 + 跨进程互斥体, 且只在 Medium 完整性级别的宿主里拉), 所以有约一两秒打不了字. 与 `LearnPhrase` 同理不动 `PROTOCOL_VERSION` (老 DLL 不发它, DLL 与 Server 同包升级). 对已经加载进应用进程的 DLL 没有影响: 换过新版安装包后仍要重启对应应用才会用上新 DLL.
 - 模式徽标（`ui/badge/`）只在模式真的变了的那一下出现（`Router::handle_mode_changed` / 状态条点击，`[general] mode_badge` 缺省开，
   与 macOS 共用同一个配置项）：锚点优先用最近一次光标矩形（`badge_anchor`，组句结束不清）—— 组句期间由 `composition` 那条路报，
   按切换键切中 / 英时由 DLL 的 `com/edit/caret.rs`（只读编辑会话量插入点）另报一次；从状态条或菜单切时手上没有输入上下文，才退到鼠标位置。

@@ -95,6 +95,7 @@ impl Router {
             IndicatorCommand::OpenSettings => self.status.open_settings(),
             IndicatorCommand::OpenDownload => self.status.open_download(),
             IndicatorCommand::LearnPhrase => self.open_learn_phrase(),
+            IndicatorCommand::Restart => self.request_restart(),
         }
     }
 

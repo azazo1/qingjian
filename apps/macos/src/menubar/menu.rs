@@ -78,6 +78,12 @@ impl InputMenu {
             Some(MenuAction::OpenLogs),
             &target,
         ));
+        menu.addItem(&action_item(
+            mtm,
+            "重启输入法",
+            Some(MenuAction::Restart),
+            &target,
+        ));
         // 可点的条目只能放在这一组：放到下面两个纯展示条目之间，IMK 会在每次按键后停用再新建会话，打不了字
         let update = action_item(mtm, "", Some(MenuAction::OpenDownload), &target);
         update.setHidden(true);

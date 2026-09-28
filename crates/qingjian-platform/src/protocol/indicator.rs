@@ -19,6 +19,13 @@ pub enum IndicatorCommand {
     /// 反查拼音与写入用户词都得在那做）。DLL 与 Server 同包升级，故这个变体不动
     /// [`super::PROTOCOL_VERSION`]：老 DLL 不发它，新 DLL 配老 Server 才会读不出来。
     LearnPhrase,
+
+    /// 菜单里的「重启输入法」：Server 落盘学习数据后退出，由前台应用的 DLL 按需把它拉回来
+    /// （见 `tsf/src/com/service/launch.rs`）。与 [`Self::LearnPhrase`] 同理不动 [`super::PROTOCOL_VERSION`]：
+    /// 老 DLL 不认识它，也就不会发；新 DLL 配老 Server 时这一条会解析失败、那条连接断掉，
+    /// 而升级安装本身会 `taskkill qingjian-server.exe`（`qingjian.iss` 的 `PrepareToInstall`），
+    /// 所以这个窗口很窄。
+    Restart,
 }
 
 /// 右键菜单打勾用的开关状态。DLL 不读配置文件（UWP 沙箱里读不到），由 Server 随

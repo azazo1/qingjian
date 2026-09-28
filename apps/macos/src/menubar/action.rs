@@ -22,6 +22,9 @@ pub enum MenuAction {
     /// 在访达里打开日志目录。
     OpenLogs,
 
+    /// 重启输入法进程：落盘学习数据后让进程退出，系统在下次切到青简时拉起新的。
+    Restart,
+
     /// 打开下载页（菜单里「有新版本」那一行）。
     OpenDownload,
 }
@@ -34,6 +37,7 @@ impl MenuAction {
             Self::OpenLogs => 3,
             Self::LearnPhrase => 4,
             Self::OpenDownload => 5,
+            Self::Restart => 6,
             Self::ToggleFuzzy(index) => FUZZY_TAG_BASE + index as NSInteger,
         }
     }
@@ -45,6 +49,7 @@ impl MenuAction {
             3 => Self::OpenLogs,
             4 => Self::LearnPhrase,
             5 => Self::OpenDownload,
+            6 => Self::Restart,
             _ => {
                 let index = usize::try_from(tag.checked_sub(FUZZY_TAG_BASE)?).ok()?;
                 (index < FuzzyRules::NAMES.len()).then_some(Self::ToggleFuzzy(index))?
@@ -65,6 +70,7 @@ mod tests {
             MenuAction::OpenLogs,
             MenuAction::LearnPhrase,
             MenuAction::OpenDownload,
+            MenuAction::Restart,
             MenuAction::ToggleFuzzy(0),
             MenuAction::ToggleFuzzy(FuzzyRules::NAMES.len() - 1),
         ];

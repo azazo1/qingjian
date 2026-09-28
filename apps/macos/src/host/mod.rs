@@ -14,6 +14,7 @@ mod learn_phrase;
 mod mode;
 mod model;
 mod presenting;
+mod restart;
 mod session;
 mod settings;
 

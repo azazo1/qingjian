@@ -85,6 +85,10 @@ impl Host {
                     open_with_system(&[&dir.to_string_lossy()]);
                 }
             }
+            MenuAction::Restart => {
+                self.restart();
+                return;
+            }
             MenuAction::OpenDownload => open_with_system(&[qingjian_update::DOWNLOAD_URL]),
         }
     }
