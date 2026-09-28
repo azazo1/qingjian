@@ -42,7 +42,12 @@ impl InputMenu {
         let cloud = action_item(mtm, "云联想", Some(MenuAction::ToggleCloud), &target);
         menu.addItem(&cloud);
 
-        let punctuation = action_item(mtm, "中文标点", Some(MenuAction::TogglePunctuation), &target);
+        let punctuation = action_item(
+            mtm,
+            "中文标点",
+            Some(MenuAction::TogglePunctuation),
+            &target,
+        );
         menu.addItem(&punctuation);
 
         let fuzzy_menu = NSMenu::new(mtm);
@@ -141,10 +146,7 @@ impl InputMenu {
         };
         self.cloud.setTitle(&NSString::from_str(title));
         set_checked(&self.cloud, cloud_active);
-        set_checked(
-            &self.punctuation,
-            config.general.full_width_punctuation,
-        );
+        set_checked(&self.punctuation, config.general.full_width_punctuation);
         for (item, name) in self.fuzzy.iter().zip(FuzzyRules::NAMES) {
             set_checked(item, config.fuzzy.is_on(name));
         }

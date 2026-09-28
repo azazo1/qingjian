@@ -75,7 +75,9 @@ fn combo_vk(key: char) -> u32 {
     }
     let scanned = unsafe { VkKeyScanW(key as u16) };
     if scanned == -1 {
-        log(&format!("按键 {key:?} 不在当前键盘布局上，保留键可能匹配不上"));
+        log(&format!(
+            "按键 {key:?} 不在当前键盘布局上，保留键可能匹配不上"
+        ));
         return key as u32;
     }
     (scanned & 0xFF) as u32

@@ -108,7 +108,8 @@ impl Host {
         // 模式跟着配置一起刷：关掉 Caps Lock 切换或整个英文模式后，指示器要立刻改回「中」
         let english = self.refresh_mode();
         // 标点状态也上标题（中文模式下「中。」/「中.」），切全角开关后立即能看到
-        self.indicator.set_punctuation(config.general.full_width_punctuation);
+        self.indicator
+            .set_punctuation(config.general.full_width_punctuation);
         self.indicator.update(english);
         self.menu.sync(&config, cloud_active, self.settings.error());
         let key_present = config

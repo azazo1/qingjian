@@ -259,10 +259,7 @@ impl ShortcutsPage {
             config.shortcut.translate_selection,
         );
         show_combo(&self.learn_phrase, config.shortcut.learn_phrase);
-        show_combo(
-            &self.punctuation_toggle,
-            config.shortcut.punctuation_toggle,
-        );
+        show_combo(&self.punctuation_toggle, config.shortcut.punctuation_toggle);
     }
 }
 

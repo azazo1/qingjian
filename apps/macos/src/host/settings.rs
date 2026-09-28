@@ -35,7 +35,10 @@ impl Host {
     pub fn toggle_punctuation(&mut self) {
         let on = !self.settings.config().general.full_width_punctuation;
         tracing::info!(on, "切换中文 / 英文标点");
-        if self.settings.set_bool("general", "full_width_punctuation", on) {
+        if self
+            .settings
+            .set_bool("general", "full_width_punctuation", on)
+        {
             self.apply_config(false);
         }
     }
@@ -306,7 +309,8 @@ impl Host {
                 }
             }
             (
-                Setting::TranslateSelectionKeys | Setting::LearnPhraseKeys
+                Setting::TranslateSelectionKeys
+                | Setting::LearnPhraseKeys
                 | Setting::PunctuationToggleKeys,
                 SettingValue::Text(text),
             ) => match text.parse::<KeyBinding<KeyCombo>>() {

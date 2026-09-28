@@ -456,7 +456,10 @@ mod tests {
         let custom: ShortcutConfig =
             toml::from_str("punctuation_toggle = \"shift+ctrl+.\"\n").unwrap();
         assert_eq!(
-            custom.punctuation_toggle.key().map(|combo| combo.key_string()),
+            custom
+                .punctuation_toggle
+                .key()
+                .map(|combo| combo.key_string()),
             Some("shift+control+.".to_owned())
         );
     }
