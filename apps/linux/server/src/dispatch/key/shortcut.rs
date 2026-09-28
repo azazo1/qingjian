@@ -98,10 +98,10 @@ impl Router {
             "full_width_punctuation"
         };
         tracing::info!(english, full_width, "快捷键: 切换中文 / 英文标点");
-        if let Some(path) = self.config_path.clone() {
-            if let Err(error) = Config::set_value(&path, "general", key, full_width) {
-                tracing::warn!(%error, "写回配置失败");
-            }
+        if let Some(path) = self.config_path.clone()
+            && let Err(error) = Config::set_value(&path, "general", key, full_width)
+        {
+            tracing::warn!(%error, "写回配置失败");
         }
         Some(Effect::Changed(None))
     }
