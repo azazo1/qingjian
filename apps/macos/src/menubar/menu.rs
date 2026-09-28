@@ -16,6 +16,9 @@ pub struct InputMenu {
     /// 「云联想」勾选项。
     cloud: Retained<NSMenuItem>,
 
+    /// 「中文标点」勾选项（中文模式下敲的标点转不转全角）。
+    punctuation: Retained<NSMenuItem>,
+
     /// 模糊音子菜单的九条勾选项，顺序同 [`FuzzyRules::NAMES`]。
     fuzzy: Vec<Retained<NSMenuItem>>,
 
@@ -38,6 +41,9 @@ impl InputMenu {
 
         let cloud = action_item(mtm, "云联想", Some(MenuAction::ToggleCloud), &target);
         menu.addItem(&cloud);
+
+        let punctuation = action_item(mtm, "中文标点", Some(MenuAction::TogglePunctuation), &target);
+        menu.addItem(&punctuation);
 
         let fuzzy_menu = NSMenu::new(mtm);
         fuzzy_menu.setAutoenablesItems(false);
@@ -101,6 +107,7 @@ impl InputMenu {
         Self {
             menu,
             cloud,
+            punctuation,
             fuzzy,
             error,
             update,
@@ -134,6 +141,10 @@ impl InputMenu {
         };
         self.cloud.setTitle(&NSString::from_str(title));
         set_checked(&self.cloud, cloud_active);
+        set_checked(
+            &self.punctuation,
+            config.general.full_width_punctuation,
+        );
         for (item, name) in self.fuzzy.iter().zip(FuzzyRules::NAMES) {
             set_checked(item, config.fuzzy.is_on(name));
         }

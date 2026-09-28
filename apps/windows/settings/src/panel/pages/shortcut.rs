@@ -125,6 +125,16 @@ pub(crate) fn view(settings: &Settings, context: &mut ViewContext<Settings>) -> 
                 context.callback(Message::LearnPhrase),
             ),
         ),
+        field(
+            "切换中英文标点",
+            "按这组键 + 当前主键 (缺省 Ctrl+.) 在中文模式的中文标点 (，。？) 与英文标点 (, . ?) 之间切换, \
+             与悬浮状态条点「，。」、任务栏右键菜单里的那一项相同; 英文模式有自己的那份标点开关. 打着拼音也能按, 不打断组句. \
+             这里只改修饰键, 主键固定用当前的; 选「不使用」就关掉这个键.",
+            modifier_combo(
+                s.punctuation_toggle.map(|combo| combo.modifiers),
+                context.callback(Message::PunctuationToggle),
+            ),
+        ),
     ];
     page("快捷键", StackPanel::new().spacing(16.0).children(rows))
 }

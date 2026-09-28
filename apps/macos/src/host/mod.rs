@@ -155,6 +155,10 @@ pub struct Host {
     /// 只在没在组句时认, 与输入法菜单里的「录入词组…」是同一件事.
     pub learn_phrase_keys: Option<KeyCombo>,
 
+    /// 中文模式下切换中文 / 英文标点的快捷键 (配置 `[shortcut] punctuation_toggle`, 缺省 ⌃.); `None` 是关掉了.
+    /// 任何时候都认, 正在组句也不打断.
+    pub punctuation_toggle_keys: Option<KeyCombo>,
+
     /// 进行中的「翻译选中文字」；有它时候选窗口显示的是译文（或「翻译中…」），按键先归它处理。
     pub translation: Option<TranslationJob>,
 

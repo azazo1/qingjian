@@ -195,6 +195,7 @@ impl Router {
             highlight_down: self.config.highlight_down,
             highlight_up: self.config.highlight_up,
             learn_phrase: self.config.learn_phrase,
+            punctuation_toggle: self.config.punctuation_toggle,
         }
     }
 

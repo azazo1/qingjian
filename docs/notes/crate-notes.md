@@ -187,6 +187,10 @@ v7 同时加任务栏图标右键菜单的 `Indicator`; `Frame.aux_code_show` �
 `InputSettings.highlight_down` / `highlight_up` 随 `SessionOpened` 与每一拍 `ModeSync` 下发, TSF 据此决定组句里吃不吃这两个键;
 `[shortcut] learn_phrase` 是弹出「录入词组」窗口的组合键 (缺省 `control+option+p`, 可写 `none` 关掉, 只在没组句时认),
 `InputSettings.learn_phrase` 同样随 `SessionOpened` 与每一拍下发, TSF 据此把组合登记成保留键, 命中后发 `IndicatorCommand::LearnPhrase`;
+`[shortcut] punctuation_toggle` 是中文模式下切换中文 / 英文标点的组合键 (缺省 `control+.`, 可写 `none` 关掉, 任何时候都认),
+`InputSettings.punctuation_toggle` 同样下发, TSF 登记成保留键, 命中后发 `IndicatorCommand::TogglePunctuation` 请 Server 翻配置;
+`KeyCombo` 的主键从「字母或数字」放宽到任意 ASCII 可打印字符 (标点没有大小写, `+` 是写法分隔符仍写不出来),
+Windows 的保留键登记对标点主键用 `VkKeyScanW` 查当前布局的 OEM 虚拟键码 (`.` 是 `VK_OEM_PERIOD` 而非字符码);
 以上都是加字段: 老的一侧忽略未知字段, 所以不升 `PROTOCOL_VERSION`.
 
 ## crates/qingjian-render
@@ -387,3 +391,5 @@ DLL 不读文件、不查 mtime。`SessionOpened` 只回过协议版本对得上
 Unix socket 用共享长度前缀与 Frame（当前公共版本 7，与 `PROTOCOL_VERSION` 同步，Fcitx5 插件里写死在 `qingjian.cpp` 的 OpenSession）；插件复用一条连接，每个上下文独立会话。Linux v3 扩展逐会话握手、确认 Sensitive/Password/Disable 后接受按下/释放、焦点和点击事实。
 候选回报绑定连接代次、上下文和服务端帧序号，仅当前聚焦页的有效释义进入 `note_displayed`，不把生成帧算作已展示。
 `[general] preedit` 使用已有 `both` / `inline` / `window`；没有新增 Linux 自绘配置。详见 [linux-fcitx5.md](linux-fcitx5.md)。
+`[shortcut] punctuation_toggle`（缺省 `Ctrl+.`）在 `dispatch/key` 里拦截，翻转当前模式的那份全角设置并经 `Router::set_config_path`
+（main 启动时设的 config.toml 路径）用 `Config::set_value` 写回；Linux Server 没有热加载，改的是内存里那份 `RouterConfig` 立即生效。

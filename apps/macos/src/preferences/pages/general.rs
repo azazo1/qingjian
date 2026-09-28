@@ -145,7 +145,7 @@ impl GeneralPage {
         note(
             layout,
             mtm,
-            "仅影响标点，字母和数字保持半角；自定义短语原样输出。设置会保存。 ",
+            "仅影响标点，字母和数字保持半角；自定义短语原样输出。设置会保存；平时切换用快捷键（「快捷键」页的中英文标点）或输入法菜单里的「中文标点」。 ",
         );
         let punctuation_first =
             checkbox(mtm, "标点符号自动上屏", Setting::PunctuationFirst, target);

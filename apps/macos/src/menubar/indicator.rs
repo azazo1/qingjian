@@ -39,6 +39,9 @@ pub struct ModeIndicator {
     /// 云联想开着：标题带云朵，让用户一眼知道上下文会发出去。
     cloud: bool,
 
+    /// 中文模式下的中文标点（全角）开着：标题「中。」，半角是「中.」。切了标点立刻能看到。
+    full_width: bool,
+
     mtm: MainThreadMarker,
 }
 
@@ -54,6 +57,7 @@ impl ModeIndicator {
             shown: false,
             english: None,
             cloud: false,
+            full_width: true,
             mtm,
         }
     }
@@ -129,6 +133,14 @@ impl ModeIndicator {
         self.english = None;
     }
 
+    /// 中文模式下的标点状态变了（`[general] full_width_punctuation`）：缓存作废，下一次 `update` 重画。
+    pub fn set_punctuation(&mut self, full_width: bool) {
+        if self.full_width != full_width {
+            self.full_width = full_width;
+            self.english = None;
+        }
+    }
+
     /// 按当前模式刷新标题；收起时不动。`english` 由宿主给（它同时负责读 Caps Lock 的跳变）。
     pub fn update(&mut self, english: bool) {
         if !self.shown {
@@ -139,7 +151,13 @@ impl ModeIndicator {
         }
         self.english = Some(english);
         if let Some(button) = self.item.button(self.mtm) {
-            let mode = if english { "英" } else { "中" };
+            let mode = if english {
+                "英"
+            } else if self.full_width {
+                "中。"
+            } else {
+                "中."
+            };
             let title = if self.cloud {
                 format!("{mode} ☁︎")
             } else {

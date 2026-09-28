@@ -31,6 +31,9 @@ pub struct Router {
     /// 按键及候选展示配置。
     config: RouterConfig,
 
+    /// config.toml 的位置：中 / 英标点切换这类运行时开关要写回它；测试里没有为 `None`。
+    config_path: Option<PathBuf>,
+
     /// 会话表。
     sessions: HashMap<SessionId, SessionInfo>,
 
@@ -79,6 +82,7 @@ impl Router {
         Self {
             engine,
             config,
+            config_path: None,
             sessions: HashMap::new(),
             focused: None,
             composed: None,
@@ -120,6 +124,11 @@ impl Router {
         } else {
             self.config.full_width
         }
+    }
+
+    /// 记下 config.toml 的位置，运行时切换的开关（中 / 英标点）写回它才有处落笔；不设就只改内存。
+    pub fn set_config_path(&mut self, path: PathBuf) {
+        self.config_path = Some(path);
     }
 }
 

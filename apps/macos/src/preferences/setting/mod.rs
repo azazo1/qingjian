@@ -159,6 +159,9 @@ pub enum Setting {
     /// `[shortcut] learn_phrase`，同上：弹出录入词组窗口的组合键。
     LearnPhraseKeys,
 
+    /// `[shortcut] punctuation_toggle`，同上：中文模式下切换中文 / 英文标点的组合键。
+    PunctuationToggleKeys,
+
     /// 「恢复默认快捷键」按钮：翻页键、模式键、三组译词 / 翻译快捷键全部回缺省。
     ResetShortcuts,
 
@@ -276,6 +279,7 @@ impl Setting {
             Self::TranslationSecondKeys => 16,
             Self::TranslateSelectionKeys => 17,
             Self::LearnPhraseKeys => 73,
+            Self::PunctuationToggleKeys => 74,
             Self::ResetShortcuts => 18,
             Self::ImportDictionary => 19,
             Self::Scheme => 20,
@@ -359,6 +363,7 @@ impl Setting {
             16 => Self::TranslationSecondKeys,
             17 => Self::TranslateSelectionKeys,
             73 => Self::LearnPhraseKeys,
+            74 => Self::PunctuationToggleKeys,
             18 => Self::ResetShortcuts,
             19 => Self::ImportDictionary,
             20 => Self::Scheme,
@@ -459,6 +464,7 @@ mod tests {
             Setting::TranslationSecondKeys,
             Setting::TranslateSelectionKeys,
             Setting::LearnPhraseKeys,
+            Setting::PunctuationToggleKeys,
             Setting::ResetShortcuts,
             Setting::ImportDictionary,
             Setting::Scheme,

@@ -58,6 +58,10 @@ pub struct RouterConfig {
 
     /// 往上挪一格 (`[shortcut] highlight_up`, 缺省 Ctrl+P); `None` 是关掉了.
     pub highlight_up: Option<KeyCombo>,
+
+    /// 中文模式下切换中文 / 英文标点的快捷键 (`[shortcut] punctuation_toggle`, 缺省 Ctrl+.); `None` 是关掉了.
+    /// 任何时候都认, 命中后翻转当前模式的那份全角设置并写回配置文件.
+    pub punctuation_toggle: Option<KeyCombo>,
 }
 
 impl RouterConfig {
@@ -98,6 +102,7 @@ impl From<&Config> for RouterConfig {
                 .map(KeyModifiers::from),
             highlight_down: highlight_down.key(),
             highlight_up: highlight_up.key(),
+            punctuation_toggle: config.shortcut.punctuation_toggle.key(),
         }
     }
 }

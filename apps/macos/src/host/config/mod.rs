@@ -37,6 +37,7 @@ impl Host {
         self.highlight_up = highlight_up.key();
         self.translate_keys = config.shortcut.translate_selection.key();
         self.learn_phrase_keys = config.shortcut.learn_phrase.key();
+        self.punctuation_toggle_keys = config.shortcut.punctuation_toggle.key();
         self.page_size = config.general.page_size();
         self.cloud_slots = config.predict.slots;
         self.page_keys = config.general.page_keys();
@@ -106,6 +107,8 @@ impl Host {
         self.indicator.set_cloud(cloud_active);
         // 模式跟着配置一起刷：关掉 Caps Lock 切换或整个英文模式后，指示器要立刻改回「中」
         let english = self.refresh_mode();
+        // 标点状态也上标题（中文模式下「中。」/「中.」），切全角开关后立即能看到
+        self.indicator.set_punctuation(config.general.full_width_punctuation);
         self.indicator.update(english);
         self.menu.sync(&config, cloud_active, self.settings.error());
         let key_present = config

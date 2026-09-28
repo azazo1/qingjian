@@ -67,7 +67,8 @@ impl ITfKeyEventSink_Impl for TextService_Impl {
 
     /// 保留键命中：Ctrl+Space 直接切中英（切换键在 DLL 侧，不进 Server）；
     /// 「翻译选中文字」当作按下了那个组合键转发给 Server（绕过 `would_eat`）；
-    /// 「录入词组」请 Server 弹录入窗口（Engine 在 Server 进程里）。
+    /// 「录入词组」请 Server 弹录入窗口（Engine 在 Server 进程里）；
+    /// 「中 / 英标点切换」请 Server 翻转配置（任何时候都认，正在组句也不打断）。
     fn OnPreservedKey(&self, pic: Ref<ITfContext>, rguid: *const GUID) -> Result<BOOL> {
         let guid = unsafe { *rguid };
         log(&format!("保留键命中 guid={guid:?}"));
@@ -85,6 +86,14 @@ impl ITfKeyEventSink_Impl for TextService_Impl {
                 return Ok(FALSE);
             }
             self.open_learn_phrase();
+            return Ok(true.into());
+        }
+        // 中 / 英标点切换：不碰文档，密码框那种上下文里也放行
+        if guid == preserved::GUID_PUNCTUATION {
+            if self.keyboard_disabled(&pic) {
+                return Ok(FALSE);
+            }
+            self.toggle_punctuation();
             return Ok(true.into());
         }
         if guid != preserved::GUID_TRANSLATE || self.keyboard_disabled(&pic) {

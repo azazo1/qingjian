@@ -103,6 +103,7 @@ impl ITfTextInputProcessor_Impl for TextService_Impl {
         {
             self.drop_switch_preserved_key(&keystroke);
             self.drop_learn_phrase_preserved_key(&keystroke);
+            self.drop_punctuation_preserved_key(&keystroke);
             if let Some(combo) = self.translate_combo.take() {
                 preserved::unregister(&keystroke, combo);
             }

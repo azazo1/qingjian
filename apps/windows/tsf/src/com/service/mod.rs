@@ -1,7 +1,7 @@
 //! 文本服务对象 [`TextService`]：每线程一个，实现 `ITfTextInputProcessor`（激活 / 停用，[`processor`]）、
 //! `ITfKeyEventSink`（收键，[`key_sink`]）与显示属性提供者（[`display`]）。
 //! 连 Server 在 [`connection`]，中英模式在 [`mode`]，往文档写字在 [`document`]，
-//! 录入词组的快捷键在 [`phrase`]。
+//! 录入词组的快捷键在 [`phrase`]，中英文标点切换的快捷键在 [`punctuation`]。
 
 mod connection;
 mod display;
@@ -13,6 +13,7 @@ mod mode;
 mod next;
 mod phrase;
 mod processor;
+mod punctuation;
 
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;
@@ -90,6 +91,10 @@ pub struct TextService {
     /// 当前登记成保留键的「录入词组」组合（`[shortcut] learn_phrase`，由 Server 下发）；
     /// `None` 是没有登记（配成 `none` 或登记失败），停用时照它撤掉。
     learn_phrase_combo: Cell<Option<KeyCombo>>,
+
+    /// 当前登记成保留键的中 / 英标点切换组合（`[shortcut] punctuation_toggle`，由 Server 下发）；
+    /// `None` 是没有登记（配成 `none` 或登记失败），停用时照它撤掉。
+    punctuation_combo: Cell<Option<KeyCombo>>,
 
     /// 上一次应用过的按键行为设置；与 Server 下发的一致时就不重复应用
     /// （每一拍 `SyncMode` 都带着它，见 [`TextService_Impl::apply_input_settings`]）。
@@ -182,6 +187,7 @@ impl TextService {
             translate_combo: Cell::new(None),
             switch_preserved: Cell::new(false),
             learn_phrase_combo: Cell::new(None),
+            punctuation_combo: Cell::new(None),
             input_settings: Cell::new(None),
             indicator_state: Cell::new(IndicatorState::default()),
             conversion_guard_until: Cell::new(None),

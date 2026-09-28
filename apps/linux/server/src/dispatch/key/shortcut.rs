@@ -1,8 +1,9 @@
-//! 组句中的快捷键：修饰键 + 数字 (上屏译词、删候选) 与调频键 + J / K (升降当前候选)。与 macOS 壳对齐。
+//! 组句中的快捷键：修饰键 + 数字 (上屏译词、删候选) 与调频键 + J / K (升降当前候选)，以及
+//! 任何时候都认的中 / 英标点切换。与 macOS 壳对齐。
 
 use qingjian_core::{Candidate, CandidateList};
-use qingjian_platform::KeyCombo;
 use qingjian_platform::protocol::{KeyEvent, KeyModifiers};
+use qingjian_platform::{Config, KeyCombo};
 
 use super::{Effect, codes};
 use crate::dispatch::Router;
@@ -71,6 +72,38 @@ impl Router {
         };
         self.move_highlight(delta);
         Some(Effect::Navigated)
+    }
+
+    /// 中文模式下切换中文 / 英文标点 (配置 `[shortcut] punctuation_toggle`, 缺省 Ctrl+.) : 翻转当前模式的
+    /// 那份全角设置并写回配置文件 (重启后仍是新值). 任何时候都认, 正在组句也不打断; 没配到 / 配成
+    /// `none` / 修饰键与主键对不上 / 这是抬起事件, 都返回 `None`, 键照旧分流.
+    pub(super) fn apply_punctuation_toggle(&mut self, event: &KeyEvent) -> Option<Effect> {
+        if event.release {
+            return None;
+        }
+        let combo = self.config.punctuation_toggle?;
+        let typed = event.character?;
+        if KeyModifiers::from(combo.modifiers) != event.modifiers.chord()
+            || !combo.key.eq_ignore_ascii_case(&typed)
+        {
+            return None;
+        }
+        let english = event.modifiers.caps || event.modifiers.english_mode;
+        let full_width = !self.full_width_for(english);
+        let key = if english {
+            self.config.english_full_width = full_width;
+            "english_full_width_punctuation"
+        } else {
+            self.config.full_width = full_width;
+            "full_width_punctuation"
+        };
+        tracing::info!(english, full_width, "快捷键: 切换中文 / 英文标点");
+        if let Some(path) = self.config_path.clone() {
+            if let Err(error) = Config::set_value(&path, "general", key, full_width) {
+                tracing::warn!(%error, "写回配置失败");
+            }
+        }
+        Some(Effect::Changed(None))
     }
 
     /// 调频键 + J / K：把当前高亮的候选降 / 升一格。名次可能变，所以自己重新组一次句，

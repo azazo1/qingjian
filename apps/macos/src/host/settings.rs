@@ -30,6 +30,16 @@ impl Host {
         }
     }
 
+    /// 切换中文模式下的中文 / 英文标点 (输入法菜单那一项与 `[shortcut] punctuation_toggle` 快捷键都到这):
+    /// 翻转 `[general] full_width_punctuation` 落盘, 热加载顺带刷新菜单勾选与菜单栏标题.
+    pub fn toggle_punctuation(&mut self) {
+        let on = !self.settings.config().general.full_width_punctuation;
+        tracing::info!(on, "切换中文 / 英文标点");
+        if self.settings.set_bool("general", "full_width_punctuation", on) {
+            self.apply_config(false);
+        }
+    }
+
     /// 表格中的启用开关只修改所选规则。
     pub fn set_phrase_enabled(&mut self, index: usize, enabled: bool) {
         if !self.phrases_are_current() {
@@ -68,6 +78,7 @@ impl Host {
                     self.apply_config(false);
                 }
             }
+            MenuAction::TogglePunctuation => self.toggle_punctuation(),
             MenuAction::OpenPreferences => {
                 self.preferences.sync_usage(
                     &self.engine.usage_summary(),
@@ -295,12 +306,14 @@ impl Host {
                 }
             }
             (
-                Setting::TranslateSelectionKeys | Setting::LearnPhraseKeys,
+                Setting::TranslateSelectionKeys | Setting::LearnPhraseKeys
+                | Setting::PunctuationToggleKeys,
                 SettingValue::Text(text),
             ) => match text.parse::<KeyBinding<KeyCombo>>() {
                 Ok(chosen) => {
                     let name = match setting {
                         Setting::LearnPhraseKeys => "learn_phrase",
+                        Setting::PunctuationToggleKeys => "punctuation_toggle",
                         _ => "translate_selection",
                     };
                     self.settings
@@ -367,6 +380,11 @@ impl Host {
                     "shortcut",
                     "learn_phrase",
                     defaults.learn_phrase.to_string(),
+                );
+                self.settings.set_value(
+                    "shortcut",
+                    "punctuation_toggle",
+                    defaults.punctuation_toggle.to_string(),
                 );
                 self.settings.set_value(
                     "shortcut",

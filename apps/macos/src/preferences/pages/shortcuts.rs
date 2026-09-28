@@ -45,6 +45,9 @@ pub struct ShortcutsPage {
 
     /// 弹出录入词组窗口的组合键。
     learn_phrase: Retained<KeyRecorder>,
+
+    /// 中文模式下切换中文 / 英文标点的组合键。
+    punctuation_toggle: Retained<KeyRecorder>,
 }
 
 impl ShortcutsPage {
@@ -179,6 +182,21 @@ impl ShortcutsPage {
             "按这个键弹出「录入词组」窗口, 与输入法菜单里的「录入词组…」是同一件事; 只在没在输入拼音时认.",
         );
         layout.space(GROUP_GAP);
+        let punctuation_toggle = row_recorder(
+            layout,
+            mtm,
+            "切换中英文标点",
+            Setting::PunctuationToggleKeys,
+            RecorderKind::Combo,
+            target,
+        );
+        note(
+            layout,
+            mtm,
+            "中文模式下按这个键在中文标点 (，。？) 与英文标点 (, . ?) 之间切换, 与输入法菜单里的「中文标点」是同一件事, \
+             菜单栏的「中。 / 中.」跟着变; 英文模式下标点本来就是半角, 不受影响. 打着拼音也能按, 不打断组句.",
+        );
+        layout.space(GROUP_GAP);
         note_full(
             layout,
             mtm,
@@ -206,6 +224,7 @@ impl ShortcutsPage {
             adjust_frequency,
             translate_selection,
             learn_phrase,
+            punctuation_toggle,
         }
     }
 
@@ -240,6 +259,10 @@ impl ShortcutsPage {
             config.shortcut.translate_selection,
         );
         show_combo(&self.learn_phrase, config.shortcut.learn_phrase);
+        show_combo(
+            &self.punctuation_toggle,
+            config.shortcut.punctuation_toggle,
+        );
     }
 }
 

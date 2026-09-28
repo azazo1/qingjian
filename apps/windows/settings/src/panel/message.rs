@@ -70,6 +70,8 @@ pub(crate) enum Message {
     TranslateSelection(Option<usize>),
     /// 同上：弹出录入词组窗口的组合键。
     LearnPhrase(Option<usize>),
+    /// 同上：中文模式下切换中文 / 英文标点的组合键，主键固定用当前的（缺省 `.`）。
+    PunctuationToggle(Option<usize>),
 
     // 模糊音页
     /// 配置键 + 新值。

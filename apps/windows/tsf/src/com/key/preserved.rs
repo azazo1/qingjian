@@ -6,7 +6,7 @@
 //! 切换键来自 `[shortcut] switch_mode`，录入词组来自 `[shortcut] learn_phrase`，这两个值由 Server 经协议下发
 //! （DLL 不读配置文件），变了就地重登记。
 
-use windows::Win32::UI::Input::KeyboardAndMouse::VK_SPACE;
+use windows::Win32::UI::Input::KeyboardAndMouse::{VK_SPACE, VkKeyScanW};
 use windows::Win32::UI::TextServices::{
     ITfKeystrokeMgr, TF_MOD_ALT, TF_MOD_CONTROL, TF_MOD_SHIFT, TF_PRESERVEDKEY,
 };
@@ -25,6 +25,9 @@ pub(crate) const GUID_SWITCH_MODE: GUID = GUID::from_u128(0x2f6b8c51_9a34_4e7d_b
 
 /// 「录入词组」快捷键的保留键标识。
 pub(crate) const GUID_LEARN_PHRASE: GUID = GUID::from_u128(0x7d3e9a44_1b62_4c58_9f0d_6a2b8c1d5e33);
+
+/// 中 / 英标点切换快捷键的保留键标识。
+pub(crate) const GUID_PUNCTUATION: GUID = GUID::from_u128(0x4a8c1f5e_2d67_4b39_a0c4_9e5f6d7a8b21);
 
 /// msctf.h 的 `TF_MOD_LWIN`（windows crate 没导出）。
 const TF_MOD_LWIN: u32 = 0x08;
@@ -63,6 +66,21 @@ pub(crate) fn unregister_switch_mode(keystroke: &ITfKeystrokeMgr) {
     let _ = unsafe { keystroke.UnpreserveKey(&GUID_SWITCH_MODE, &switch_mode_key()) };
 }
 
+/// 组合键主键的虚拟键码。字母 / 数字的字符码就是 VK；标点是 OEM 键，VK 随键盘布局
+/// （美式布局上 `.` 是 `VK_OEM_PERIOD` 0xBE，不是字符码 0x2E），查当前布局换算，查不到时
+/// 退回字符码（登记了也匹配不上，无害）。
+fn combo_vk(key: char) -> u32 {
+    if key.is_ascii_alphanumeric() {
+        return key.to_ascii_uppercase() as u32;
+    }
+    let scanned = unsafe { VkKeyScanW(key as u16) };
+    if scanned == -1 {
+        log(&format!("按键 {key:?} 不在当前键盘布局上，保留键可能匹配不上"));
+        return key as u32;
+    }
+    (scanned & 0xFF) as u32
+}
+
 fn preserved_key(combo: KeyCombo) -> TF_PRESERVEDKEY {
     let m = combo.modifiers;
     let mut modifiers = 0;
@@ -79,7 +97,7 @@ fn preserved_key(combo: KeyCombo) -> TF_PRESERVEDKEY {
         modifiers |= TF_MOD_LWIN;
     }
     TF_PRESERVEDKEY {
-        uVKey: combo.key.to_ascii_uppercase() as u32,
+        uVKey: combo_vk(combo.key),
         uModifiers: modifiers,
     }
 }
@@ -109,6 +127,22 @@ pub(crate) fn register_learn_phrase(
 pub(crate) fn unregister_learn_phrase(keystroke: &ITfKeystrokeMgr, combo: KeyCombo) {
     let key = preserved_key(combo);
     let _ = unsafe { keystroke.UnpreserveKey(&GUID_LEARN_PHRASE, &key) };
+}
+
+/// 登记中 / 英标点切换组合键（`[shortcut] punctuation_toggle`，缺省 Ctrl+.）。
+pub(crate) fn register_punctuation(
+    keystroke: &ITfKeystrokeMgr,
+    tid: u32,
+    combo: KeyCombo,
+) -> Result<()> {
+    let key = preserved_key(combo);
+    let description: Vec<u16> = "切换中英文标点 (青简)".encode_utf16().collect();
+    unsafe { keystroke.PreserveKey(tid, &GUID_PUNCTUATION, &key, &description) }
+}
+
+pub(crate) fn unregister_punctuation(keystroke: &ITfKeystrokeMgr, combo: KeyCombo) {
+    let key = preserved_key(combo);
+    let _ = unsafe { keystroke.UnpreserveKey(&GUID_PUNCTUATION, &key) };
 }
 
 /// 保留键命中时喂给 Server 的按键：Router 按字符 + 物理修饰键与配置比对。

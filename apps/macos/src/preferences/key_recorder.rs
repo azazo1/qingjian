@@ -116,10 +116,16 @@ define_class!(
             let value = if self.ivars().kind == RecorderKind::ModifiersOnly {
                 Some((modifiers.key(), modifiers.label()))
             } else {
+                // 组合键的主键: 字母数字, 或标点 (中英标点切换的 ⌃.); `+` 是写法里的分隔符, 录不进来.
+                // 切换键 (SingleOrCombo) 仍只认字母数字: MacSwitchKey 的组合键不收标点.
+                let take_punctuation = self.ivars().kind == RecorderKind::Combo;
                 event
                     .charactersIgnoringModifiers()
                     .and_then(|c| c.to_string().chars().next())
-                    .filter(|c| c.is_ascii_alphanumeric())
+                    .filter(|c| {
+                        c.is_ascii_alphanumeric()
+                            || (take_punctuation && c.is_ascii_graphic() && *c != '+')
+                    })
                     .map(|c| {
                         let combo = KeyCombo {
                             modifiers,

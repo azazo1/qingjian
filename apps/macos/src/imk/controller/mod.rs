@@ -352,6 +352,16 @@ impl QingjianInputController {
             host::with(|h| h.perform(menubar::MenuAction::LearnPhrase));
             return true;
         }
+        // 中文 / 英文标点切换 (配置 `[shortcut] punctuation_toggle`, 缺省 ⌃.): 与输入法菜单里的
+        // 「中文标点」是同一件事. 任何时候都认, 正在组句也不打断; 菜单栏「中。/中.」跟着变
+        let combo = host::with(|h| h.punctuation_toggle_keys).flatten();
+        if let Some(combo) = combo
+            && pressed == combo.modifiers
+            && typed.as_deref().and_then(|t| t.chars().next()) == Some(combo.key)
+        {
+            host::with(|h| h.toggle_punctuation());
+            return true;
+        }
         // 修饰键 + 数字：按配置的两组组合上屏第一 / 第二个译词（缺省 ⌥ 与 ⇧⌥）、删候选（缺省 ⇧）。
         // 只在组句中认：不在组句时 ⇧4 就是 `$`，得走下面的标点转换（中文模式出 ￥、⇧6 出 ……、⇧1 出 ！），
         // 以前在这里被截走后原样还给应用，全角转换就没机会做了。

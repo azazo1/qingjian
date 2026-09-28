@@ -62,18 +62,21 @@ impl TextService_Impl {
         }
         self.input_settings.set(Some(input));
         log(&format!(
-            "按键行为设置: 中英切换键 {}, 内置英文模式 {}, Shift 字母进组句 {}, 调频键 {:?}, 高亮键 {:?} / {:?}, 录入词组 {:?}",
+            "按键行为设置: 中英切换键 {}, 内置英文模式 {}, Shift 字母进组句 {}, 调频键 {:?}, 高亮键 {:?} / {:?}, 录入词组 {:?}, 标点切换 {:?}",
             input.switch_mode.describe(),
             input.english_mode,
             input.shift_letter_compose,
             input.adjust_frequency,
             input.highlight_down,
             input.highlight_up,
-            input.learn_phrase
+            input.learn_phrase,
+            input.punctuation_toggle
         ));
         self.apply_mode_settings(input.english_mode, input.switch_mode);
         // 录入词组也是带 Alt 的组合键，同样走保留键（见 `phrase`）
         self.sync_learn_phrase_preserved_key(input.learn_phrase);
+        // 中 / 英标点切换 (缺省 Ctrl+.) 同样走保留键 (见 `punctuation`)
+        self.sync_punctuation_preserved_key(input.punctuation_toggle);
     }
 
     /// Ctrl + Alt + Space 是组合键、走 TSF 保留键（与「翻译选中文字」同一套）；没勾就撤掉登记，免得白占着。

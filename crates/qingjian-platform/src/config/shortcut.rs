@@ -58,8 +58,13 @@ pub struct ShortcutConfig {
     pub highlight_up: KeyBinding<KeyCombo>,
 
     /// 弹出「录入词组」窗口的快捷键 (缺省 `control+option+p`, 与「翻译选中文字」同一族的组合键);
-    /// 写 `none` 就是不用这个键. 只在没在组句时认: 输入拼音时这个组合照旧归应用.
+    /// 写 `none` 就是不用这个键. 只在没在组句 (没有候选) 时认: 输入拼音时这个组合照旧归应用.
     pub learn_phrase: KeyBinding<KeyCombo>,
+
+    /// 中文模式下切换中文 / 英文标点 (全角 / 半角, 配置 `[general] full_width_punctuation`)
+    /// 的快捷键, 缺省 `control+.` (微软拼音的惯例); 写 `none` 就是不用这个键. 任何时候都认,
+    /// 正在组句也不打断.
+    pub punctuation_toggle: KeyBinding<KeyCombo>,
 }
 
 impl Default for ShortcutConfig {
@@ -89,6 +94,8 @@ impl Default for ShortcutConfig {
             highlight_up: KeyBinding::on(KeyCombo::HIGHLIGHT_UP),
             // 录入词组缺省用 ⌃⌥P: 与「翻译选中文字」的 ⌃⌥T 同一族, 两个平台同一个写法 (Windows 上是 Ctrl+Alt+P)
             learn_phrase: KeyBinding::on(KeyCombo::LEARN_PHRASE),
+            // 中英标点切换缺省用 ⌃. (微软拼音的惯例), 三端同一个写法
+            punctuation_toggle: KeyBinding::on(KeyCombo::PUNCTUATION_TOGGLE),
         }
     }
 }
@@ -427,5 +434,30 @@ mod tests {
         // `alt` 与 `option` 是同一个修饰键, 写法不同读回来一样
         let custom: ShortcutConfig = toml::from_str("learn_phrase = \"alt+ctrl+p\"\n").unwrap();
         assert_eq!(custom.learn_phrase, default.learn_phrase);
+    }
+
+    #[test]
+    fn punctuation_toggle_defaults_to_control_period_and_can_be_switched_off() {
+        let default = ShortcutConfig::default();
+        assert_eq!(
+            default.punctuation_toggle,
+            KeyBinding::on(KeyCombo::PUNCTUATION_TOGGLE)
+        );
+        assert_eq!(
+            default.punctuation_toggle.key().unwrap().key_string(),
+            "control+."
+        );
+        let parsed: ShortcutConfig = toml::from_str("").unwrap();
+        assert_eq!(parsed.punctuation_toggle, default.punctuation_toggle);
+
+        let off: ShortcutConfig = toml::from_str("punctuation_toggle = \"none\"\n").unwrap();
+        assert!(off.punctuation_toggle.is_off());
+
+        let custom: ShortcutConfig =
+            toml::from_str("punctuation_toggle = \"shift+ctrl+.\"\n").unwrap();
+        assert_eq!(
+            custom.punctuation_toggle.key().map(|combo| combo.key_string()),
+            Some("shift+control+.".to_owned())
+        );
     }
 }

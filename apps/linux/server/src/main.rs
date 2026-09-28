@@ -89,6 +89,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
         .map_err(std::io::Error::other)?;
     engine.log_session(env!("CARGO_PKG_VERSION"), "linux");
     let mut router = Router::new(engine, RouterConfig::from(&config));
+    router.set_config_path(config_path.clone());
     router.configure_local_model(find_model(Some(&user_dir), &root), &config.model);
     extern "C" fn stop(_: libc::c_int) {
         qingjian_linux_server::ipc::request_shutdown();

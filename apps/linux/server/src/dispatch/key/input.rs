@@ -10,7 +10,12 @@ impl Router {
     /// 功能键靠键码，其余靠字符。组句中修饰键 + 数字是快捷键；带 Ctrl / Alt / Win 而没配到快捷键的键归应用。
     /// 表达式模式里 Shift + 数字打的是 `^ * ( )`，不当快捷键。
     pub(crate) fn apply_key(&mut self, event: &KeyEvent) -> Effect {
-        // 调频修饰键（缺省 Ctrl）的按下 / 抬起：只开关帧里的频次预览，键照旧归应用
+        // 中 / 英标点切换 (配置 `[shortcut] punctuation_toggle`, 缺省 Ctrl+.): 任何时候都认,
+        // 正在组句也不打断; 没配到 (或配成 none) 的组合照旧按普通键分流
+        if let Some(effect) = self.apply_punctuation_toggle(event) {
+            return effect;
+        }
+        // 调频修饰键（缺省 Ctrl）的按下 / 抬起：只开关帧里的频次预览，键本身照旧归应用
         let composing = self.composing();
         if let Some(effect) = self.apply_adjust_modifier(event, composing) {
             return effect;

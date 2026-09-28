@@ -5,14 +5,14 @@ use serde::{Deserialize, Serialize};
 
 use super::modifiers::Modifiers;
 
-/// 修饰键 + 一个字母键的组合，配置里写成 `control+option+t`。
+/// 修饰键 + 一个键的组合，配置里写成 `control+option+t`、`control+.`。
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(try_from = "String", into = "String")]
 pub struct KeyCombo {
     /// 修饰键，至少一个。
     pub modifiers: Modifiers,
 
-    /// 字母或数字键（小写）。
+    /// 字母, 数字或标点键（字母小写；标点没有大小写）。`+` 写不出来：它是写法里的分隔符。
     pub key: char,
 }
 
@@ -50,6 +50,12 @@ impl KeyCombo {
         key: 'p',
     };
 
+    /// 中文模式下切换中文 / 英文标点的缺省键 (配置 `[shortcut] punctuation_toggle`), 微软拼音的惯例.
+    pub const PUNCTUATION_TOGGLE: Self = Self {
+        modifiers: Modifiers::CONTROL,
+        key: '.',
+    };
+
     /// 配置文件里的写法。
     pub fn key_string(&self) -> String {
         format!("{}+{}", self.modifiers.key(), self.key)
@@ -83,8 +89,8 @@ impl FromStr for KeyCombo {
         let (Some(key), None) = (chars.next(), chars.next()) else {
             return Err(format!("key must be a single character: {key:?}"));
         };
-        if !key.is_ascii_alphanumeric() {
-            return Err(format!("key must be a letter or digit: {key:?}"));
+        if !key.is_ascii_graphic() {
+            return Err(format!("key must be an ASCII printable character: {key:?}"));
         }
         Ok(Self {
             modifiers: modifiers.parse()?,
@@ -125,7 +131,13 @@ mod tests {
         assert_eq!(combo.key_string(), "control+option+t");
         assert!("t".parse::<KeyCombo>().is_err());
         assert!("option+tt".parse::<KeyCombo>().is_err());
-        assert!("option+-".parse::<KeyCombo>().is_err());
+        // 空格与非 ASCII 不能当键; 标点可以 (中文 / 英文标点切换的 Ctrl+.)
+        assert!("option+ ".parse::<KeyCombo>().is_err());
+        assert!("option+…".parse::<KeyCombo>().is_err());
+        let period: KeyCombo = "control+.".parse().unwrap();
+        assert_eq!(period, KeyCombo::PUNCTUATION_TOGGLE);
+        assert_eq!(period.key_string(), "control+.");
+        assert_eq!(period.label(), "⌃.");
         for option in ["control+shift+t", "control+option+e", "shift+command+9"] {
             assert_eq!(option.parse::<KeyCombo>().unwrap().key_string(), option);
         }

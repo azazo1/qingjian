@@ -199,6 +199,8 @@ highlight_up = "control+p"
 # 弹出「录入词组」窗口的快捷键 (与输入法菜单里的「录入词组…」是同一件事): 修饰键 + 一个字母或数字,
 # 缺省 control+option+p; 只在没在输入拼音时认, 输入拼音时这个组合照旧归应用
 learn_phrase = "control+option+p"
+# 中文模式下切换中文 / 英文标点 (全角 / 半角, 即上面的 full_width_punctuation): 缺省 control+.; 写 none 不用这个键
+punctuation_toggle = "control+."
 # 上面这些项都能写 none: 写 none 的那一项就是不用 (比如 delete_candidate = "none" 时这组键不再删候选, 也不再占着它)
 "#
     };
@@ -229,6 +231,8 @@ highlight_up = "control+p"
 # 弹出「录入词组」窗口的快捷键 (与任务栏中 / 英图标右键菜单里的「录入词组…」是同一件事): 修饰键 + 一个字母或数字,
 # 缺省 ctrl+alt+p; 只在没在输入拼音时认, 输入拼音时这个组合照旧归应用
 learn_phrase = "ctrl+alt+p"
+# 中文模式下切换中文 / 英文标点 (全角 / 半角, 即上面的 full_width_punctuation): 缺省 ctrl+.; 写 none 不用这个键
+punctuation_toggle = "control+."
 # 上面这些项都能写 none: 写 none 的那一项就是不用 (比如 delete_candidate = "none" 时这组键不再删候选, 也不再占着它)
 "#
     };
@@ -274,7 +278,8 @@ shift_letter = "passthrough"
 english_mode = true
 # 切换中 / 英时光标旁闪一下当前模式（「中」/「英」），一秒后自己收。只有 macOS 用
 mode_badge = true
-# 中文模式下（没在组句时）敲的标点转全角：, . ? ! : ; ( ) 等，数字后面的 . 保持半角。Windows 上悬浮状态条的「，。」格可以点着切；macOS 在偏好设置中选择默认中文标点模式
+# 中文模式下（没在组句时）敲的标点转全角：, . ? ! : ; ( ) 等，数字后面的 . 保持半角。按 [shortcut] punctuation_toggle（缺省 Ctrl+.）随时切换；
+# Windows 上悬浮状态条的「，。」格与任务栏右键菜单也能切；macOS 在输入法菜单与偏好设置里选默认模式
 full_width_punctuation = true
 # 英文模式下的同一件事，中英各记一份，状态条切的是当前模式那份；只有 Windows 用
 english_full_width_punctuation = false

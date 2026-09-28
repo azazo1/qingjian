@@ -89,6 +89,10 @@ pub struct RouterConfig {
     /// 由 Server 经协议下发给 DLL, DLL 据此登记保留键, 命中后发 `IndicatorCommand::LearnPhrase` 回来弹窗.
     pub learn_phrase: Option<KeyCombo>,
 
+    /// 中文模式下切换中文 / 英文标点的快捷键 (`[shortcut] punctuation_toggle`, 缺省 Ctrl+.); `None` 是关掉了.
+    /// 由 Server 经协议下发给 DLL, DLL 据此登记保留键, 命中后发 `IndicatorCommand::TogglePunctuation` 回来翻转配置.
+    pub punctuation_toggle: Option<KeyCombo>,
+
     /// 悬浮状态条开关（`[status_bar] enabled`）。
     pub status_enabled: bool,
 
@@ -160,6 +164,7 @@ impl From<&Config> for RouterConfig {
                 .map(KeyModifiers::from),
             translate_selection: config.shortcut.translate_selection.key(),
             learn_phrase: config.shortcut.learn_phrase.key(),
+            punctuation_toggle: config.shortcut.punctuation_toggle.key(),
             highlight_down: highlight_down.key(),
             highlight_up: highlight_up.key(),
             status_enabled: config.status_bar.enabled,

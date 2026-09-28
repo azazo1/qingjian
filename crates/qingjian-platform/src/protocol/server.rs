@@ -45,6 +45,12 @@ pub struct InputSettings {
     /// 只在没在组句时认.
     #[serde(default)]
     pub learn_phrase: Option<KeyCombo>,
+
+    /// 中文模式下切换中文 / 英文标点的快捷键 (`[shortcut] punctuation_toggle`, 缺省 Ctrl+.); `None` 是关掉了.
+    /// DLL 据此把组合键登记成 TSF 保留键, 命中时发 [`IndicatorCommand::TogglePunctuation`](super::IndicatorCommand::TogglePunctuation)
+    /// 请 Server 翻转配置 (与悬浮状态条点「，。」同一件事), 任何时候都认.
+    #[serde(default)]
+    pub punctuation_toggle: Option<KeyCombo>,
 }
 
 impl Default for InputSettings {
@@ -57,6 +63,7 @@ impl Default for InputSettings {
             highlight_down: Some(KeyCombo::HIGHLIGHT_DOWN),
             highlight_up: Some(KeyCombo::HIGHLIGHT_UP),
             learn_phrase: Some(KeyCombo::LEARN_PHRASE),
+            punctuation_toggle: Some(KeyCombo::PUNCTUATION_TOGGLE),
         }
     }
 }
