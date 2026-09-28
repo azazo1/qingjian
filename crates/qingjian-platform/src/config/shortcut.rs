@@ -460,7 +460,7 @@ mod tests {
                 .punctuation_toggle
                 .key()
                 .map(|combo| combo.key_string()),
-            Some("shift+control+.".to_owned())
+            Some("control+shift+.".to_owned())
         );
     }
 }
