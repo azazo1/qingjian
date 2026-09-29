@@ -76,7 +76,7 @@ impl QingjianInputController {
         // 见 `TextClient::rejects_text`): 不组词也不自己上屏, 键原样交还应用, 由应用自己插字.
         // 代价: 这里的大小写跟随系统 (Caps Lock 亮着就是大写), 不再按「按住 Shift 才大写」改写
         if ((english && !question) || (caps_locks_case && c.is_ascii_alphabetic()))
-            && client.rejects_text()
+            && client.rejects()
         {
             if composing {
                 self.commit_raw(client);

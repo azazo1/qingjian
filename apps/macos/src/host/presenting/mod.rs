@@ -179,10 +179,8 @@ impl Host {
         // 页上的译词告诉 Engine：用户上屏那一刻它们在屏幕上，算「见过」（词汇记录）；窗口收起时传空
         self.engine
             .note_displayed(cells.iter().copied().filter_map(Cell::candidate));
-        // 配置成只在行内显示时，窗口顶部不画拼音行
-        let preedit = self
-            .preedit_mode
-            .in_window()
+        // 配置成只在行内显示时，窗口顶部不画拼音行；应用收不下行内拼音时照样画，否则拼音哪儿都看不到
+        let preedit = (self.preedit_mode.in_window() || self.force_window_preedit)
             .then(|| self.session.preedit.clone())
             .flatten();
         if rows.is_empty() && self.session.preedit.is_none() {

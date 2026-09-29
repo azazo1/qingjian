@@ -15,15 +15,47 @@ const NO_REPLACEMENT: NSRange = NSRange::new(NSNotFound as usize, 0);
 pub struct TextClient<'a> {
     /// IMK 传进来的 `sender`。
     object: &'a AnyObject,
+    /// 这个 client 收不下写回的文字（[`Self::rejects_text`] 的结果，按键分发时填）。
+    rejects: bool,
+    /// 收不下，且能改用合成键盘事件上屏（有辅助功能权限）：`insert_text` 改走 [`super::synthetic`]，
+    /// `set_marked_text` 什么都不做（拼音只显示在候选窗口里）。
+    detached: bool,
 }
 
 impl<'a> TextClient<'a> {
     pub fn new(object: &'a AnyObject) -> Self {
-        Self { object }
+        Self {
+            object,
+            rejects: false,
+            detached: false,
+        }
+    }
+
+    /// 带上这一键判断出的 client 状态：`rejects` 见 [`Self::rejects_text`]，`can_post` 是能不能发合成键盘事件。
+    pub fn with_rejects(self, rejects: bool, can_post: bool) -> Self {
+        Self {
+            rejects,
+            detached: rejects && can_post,
+            ..self
+        }
+    }
+
+    /// 这一键面对的 client 收不下写回的文字。
+    pub fn rejects(&self) -> bool {
+        self.rejects
+    }
+
+    /// 上屏改走合成键盘事件（见 `detached` 字段）。
+    pub fn detached(&self) -> bool {
+        self.detached
     }
 
     /// 设置 marked text（带下划线的未上屏文本），光标放在第 `cursor` 个字符处。空串等于清除。
     pub fn set_marked_text(&self, text: &str, cursor: usize) {
+        // 写了也会被丢掉；拼音由候选窗口顶部那行显示
+        if self.detached {
+            return;
+        }
         let string = NSString::from_str(text);
         let cursor = NSRange::new(cursor.min(text.chars().count()), 0);
         unsafe {
@@ -36,8 +68,12 @@ impl<'a> TextClient<'a> {
         }
     }
 
-    /// 上屏。
+    /// 上屏。client 收不下时改成攒进合成键盘事件的发件箱，这一键分发完再发（见 [`super::synthetic`]）。
     pub fn insert_text(&self, text: &str) {
+        if self.detached {
+            super::synthetic::queue_text(text);
+            return;
+        }
         let string = NSString::from_str(text);
         unsafe {
             let _: () =

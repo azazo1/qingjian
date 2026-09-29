@@ -12,7 +12,7 @@ use objc2_input_method_kit::{IMKInputController, IMKServer};
 use qingjian_core::{Candidate, QUESTION_PREFIX};
 use qingjian_platform::{KeyCombo, MacSwitchAction, Modifiers};
 
-use super::{TextClient, catch_panic, modifiers, recover_from_panic, secure_input};
+use super::{TextClient, catch_panic, modifiers, recover_from_panic, secure_input, synthetic};
 use crate::candidates::Preedit;
 use crate::host;
 use crate::menubar;
@@ -236,6 +236,45 @@ impl QingjianInputController {
     /// IMK 送来的事件分发：按键走 [`Self::dispatch_key_down`]，修饰键的按下抬起走 [`Self::dispatch_modifier_change`]，
     /// 其余（鼠标之类，我们没声明）一律放行。
     fn dispatch_event(&self, event: &NSEvent, client: TextClient<'_>) -> bool {
+        let key_down = event.r#type() == NSEventType::KeyDown;
+        let characters = key_down
+            .then(|| event.characters().map(|text| text.to_string()))
+            .flatten();
+        // 青简自己发出的合成键盘事件（见 `synthetic`）回来了：原样交给应用插字
+        if key_down && synthetic::take_echo(event.keyCode(), characters.as_deref()) {
+            return false;
+        }
+        // 输入框收不收得下写回的文字（Zen 的 native popover 面板收不下）：组句开头问一次，组句中沿用
+        let composing = host::with(|h| !h.engine.composition().is_empty()).unwrap_or(false);
+        // 修饰键事件不问 (它们不上屏, 切换键上屏的拼音照样用这一段组句的判断)
+        let rejects = synthetic::rejects_for(composing || !key_down, || client.rejects_text());
+        let client = client.with_rejects(rejects, rejects && synthetic::can_post());
+        host::with(|h| h.force_window_preedit = client.detached());
+        let handled = self.route_event(event, client);
+        if !client.detached() || !synthetic::has_pending() {
+            return handled;
+        }
+        // 这一键攒下了要上屏的文字：它本来要交还应用的话，改成吞掉、排在文字后面重发，否则顺序会反
+        if key_down && !handled {
+            let flags = event.modifierFlags();
+            let printable = !flags.contains(NSEventModifierFlags::Command)
+                && !flags.contains(NSEventModifierFlags::Control)
+                && characters
+                    .as_deref()
+                    .is_some_and(|text| !text.is_empty() && !text.chars().any(char::is_control));
+            synthetic::queue_passthrough(
+                event.keyCode(),
+                characters.as_deref(),
+                flags.0 as u64,
+                printable,
+            );
+        }
+        synthetic::flush();
+        key_down || handled
+    }
+
+    /// 按事件类型分发，并在这一键交给应用时把还没上屏的已选词交出去。
+    fn route_event(&self, event: &NSEvent, client: TextClient<'_>) -> bool {
         let handled = match event.r#type() {
             NSEventType::KeyDown => self.dispatch_key_down(event, client),
             NSEventType::FlagsChanged => self.dispatch_modifier_change(event, client),

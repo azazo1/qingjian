@@ -168,6 +168,10 @@ pub struct Host {
     /// 组句中的拼音显示在行内、候选窗口还是两处。
     pub preedit_mode: PreeditMode,
 
+    /// 当前输入框收不下行内拼音（marked text）：不管 `preedit_mode` 怎么配，拼音都画在候选窗口顶部。
+    /// 由 IMK 控制器按每一键的判断填（见 `TextClient::detached`）。
+    pub force_window_preedit: bool,
+
     /// 候选窗口竖排 / 横排（配置 `[general] layout`）。
     pub layout: LayoutMode,
 

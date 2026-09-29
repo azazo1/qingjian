@@ -7,6 +7,7 @@ mod client;
 mod controller;
 pub mod modifiers;
 pub mod secure_input;
+mod synthetic;
 
 use std::any::Any;
 use std::panic::{AssertUnwindSafe, catch_unwind};
