@@ -72,6 +72,19 @@ impl QingjianInputController {
             c
         };
         host::with(|h| h.engine.set_english_mode(english_candidates && !question));
+        // 英文模式 (或 Caps Lock 锁大写) 下, client 收不下写回的文字 (Zen 的 native popover 面板等,
+        // 见 `TextClient::rejects_text`): 不组词也不自己上屏, 键原样交还应用, 由应用自己插字.
+        // 代价: 这里的大小写跟随系统 (Caps Lock 亮着就是大写), 不再按「按住 Shift 才大写」改写
+        if ((english && !question) || (caps_locks_case && c.is_ascii_alphabetic()))
+            && client.rejects_text()
+        {
+            if composing {
+                self.commit_raw(client);
+            }
+            tracing::debug!("client 收不下写回的文字, 按键交还应用");
+            host::with(|h| h.engine.note_passthrough(c));
+            return false;
+        }
         // Caps Lock 只锁大小写（不当中 / 英切换键）时：亮着敲字母一律直接上屏大写，与 Windows 的 Caps 一致
         if caps_locks_case && !question && c.is_ascii_alphabetic() {
             if composing {

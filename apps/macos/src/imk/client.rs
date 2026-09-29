@@ -45,6 +45,23 @@ impl<'a> TextClient<'a> {
         }
     }
 
+    /// 这个 client 收不下输入法写回的文字（`insertText:` / `setMarkedText:` 都会被丢掉），按键只能原样交还应用。
+    ///
+    /// 已知场景：Zen 等 Gecko 浏览器开着 `widget.macos.native-popovers` 时，书签面板、扩展弹窗这类 native popover
+    /// 里的输入框。输入视图没进 `_NSPopoverWindow` 的响应链，IMK 拿到的 client 背后没有编辑框：
+    /// `length` 是 `INT32_MAX`（2147483647）、`selectedRange` 是 NotFound（正常的空输入框是 `0` 与 `0+0`）。
+    /// 按键交还应用时走的是应用自己的 `interpretKeyEvents:`，能正常出字（系统 ABC、Rime 的英文状态就是这样）。
+    /// 见 zen-browser/desktop#12626。
+    pub fn rejects_text(&self) -> bool {
+        let (length, selected): (usize, NSRange) = unsafe {
+            (
+                msg_send![self.object, length],
+                msg_send![self.object, selectedRange],
+            )
+        };
+        length == i32::MAX as usize && selected.location == NSNotFound as usize
+    }
+
     /// 应用里当前选中的文字与它的范围（翻译用）。没有选区、应用不支持读文本、超过 `max_chars` 个字符都返回 `None`。
     pub fn selected_text(&self, max_chars: usize) -> Option<(String, NSRange)> {
         let selected: NSRange = unsafe { msg_send![self.object, selectedRange] };
