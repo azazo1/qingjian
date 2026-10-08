@@ -87,21 +87,20 @@ artifact 名就是包文件名去掉扩展名. 这些包不走发版流程: 没�
 
 ## 产品数据从哪来
 
-词库、语言模型、释义表（`data/generated/*.qj`、`dicts/*.qj`、英文词表）不在 git 里，体积约 90 MB 且由本机数据管道生成。
-它们发在仓库里一个个**不可变**的预发布 Release 上：`data-v1`、`data-v2`……每次数据重生成发一个新号、从不覆盖
-（预发布不会成为 GitHub 的 latest，官网取 latest 时不会拿到它）。仓库里 `tools/release/data.lock` 钉住当前要用的标签与两个资产的 SHA-256，
-跟用到新数据的代码同一个提交进去：checkout 哪个提交就拿到它对应的那版数据，离线自编译的人不会因为我们改了数据而编出坏包。
+词库, 释义表 (`data/generated/*.qj`, `dicts/*.qj`, 英文词表) 不在 git 里, 由本机数据管道生成.
+它们发在仓库里一个个**不可变**的预发布 Release 上: `data-v1`, `data-v2`……每次数据重生成发一个新号, 从不覆盖
+(预发布不会成为 GitHub 的 latest, 官网取 latest 时不会拿到它). 仓库里 `tools/release/data.lock` 钉住当前要用的标签与数据包的 SHA-256,
+跟用到新数据的代码同一个提交进去: checkout 哪个提交就拿到它对应的那版数据, 离线自编译的人不会因为我们改了数据而编出坏包.
 
-- `tools/release/data-bundle.sh`：把 `data/generated/` 打成 `qingjian-data.tar.gz`，本地整句模型单文件 `data/model/model.qjm`
-  （训练仓库导出三件套到 `data/model/`，`tools/release/pack-model.sh` 打成一个 `.qj` 容器，fp16 约 56 MB，元数据也写在那个脚本里）原样上传，
-  连同 LLM 续跑中间产物 `qingjian-llm-intermediates.tar.gz` 发到下一个 `data-vN`（`--tag` 可指定，已存在就拒绝），然后改写 `data.lock`。
-- `tools/release/data-fetch.sh`：按 `data.lock` 下载（有 gh 用 gh，没有就 curl 直连）、按锁文件里的哈希校验（不信 Release 自己那份 `SHA256SUMS`），
-  数据包解到 `data/generated/`、`model.qjm` 放到 `data/model/`。`release.yml` 两个 job 和离线自编译走同一个脚本；
-  `bundle.sh` 见到 `dict.qj` 就按产品数据打包、见到 `model.qjm` 就放进 `Resources/model/`，`qingjian.iss` 同理装进 `{app}\data\model`。
-  标签与两个哈希记进 `build-info.json`（`data_tag` / `data_sha256` / `model_sha256`）。
+- `tools/release/data-bundle.sh`: 把 `data/generated/` 打成 `qingjian-data.tar.gz`,
+  连同 LLM 续跑中间产物 `qingjian-llm-intermediates.tar.gz` 发到下一个 `data-vN` (`--tag` 可指定, 已存在就拒绝), 然后改写 `data.lock`.
+- `tools/release/data-fetch.sh`: 按 `data.lock` 下载 (有 gh 用 gh, 没有就 curl 直连), 按锁文件里的哈希校验 (不信 Release 自己那份 `SHA256SUMS`),
+  数据包解到 `data/generated/`. `release.yml` 两个 job 和离线自编译走同一个脚本;
+  `bundle.sh` 见到 `dict.qj` 就按产品数据打包.
+  标签与哈希记进 `build-info.json` (`data_tag` / `data_sha256`).
 
-数据重生成之后（重跑 lexicon / bigram / gloss-gen export）或模型重训之后跑一次 `data-bundle.sh`（三件套比 `.qjm` 新会自动重打），
-把锁文件的改动提交（`chore(data): 数据 data-vN`），否则 CI 打的包还是锁文件指的旧数据。模型文件缺失或哈希不符时 CI 会失败，不会静默地发出错数据的包。
+数据重生成之后 (重跑 lexicon / gloss-gen export) 跑一次 `data-bundle.sh`,
+把锁文件的改动提交 (`chore(data): 数据 data-vN`), 否则 CI 打的包还是锁文件指的旧数据.
 2026-09-16 之前用的是滚动覆盖的 `data` Release，已冻结不再更新。
 
 ## 版本索引的签名

@@ -63,7 +63,7 @@ apps/linux/scripts/install.sh
 首次运行生成 `~/.config/qingjian/config.toml`，修改后重启青简服务。
 `[general] preedit` 可设为 `both`（行内和候选窗口）、`inline`（只在行内）、`window`（只在候选窗口）；应用不支持行内显示时使用候选窗口。
 每页候选数、翻页键、学习、日志和辅助语言使用同一配置文件。`learning_language = "off"` 关闭中文候选的辅助语言释义与生词标记。系统面板外观由 Fcitx5 设置控制。
-随包的本地整句模型在你停顿后给整句候选重新排序，`[model] enabled = false` 可关闭；自己的 `.qjm` 放 `~/.local/share/qingjian/model/` 优先使用，见 [本地整句模型](../input/local-model.md)。
+整句候选按词库词频与用户学习排序, 不加载本地整句模型.
 
 `[general] shift_letter = "compose"` 让 Shift 大写字母参与中文组句，默认 `"passthrough"` 保持临时英文输入。
 `scheme = "zhuyin"` 启用大千注音；双拼下 `Shift + V` / `Shift + U` 可进入表达式 / 码点输入。

@@ -41,7 +41,6 @@ pub fn recover_from_panic(client: Option<TextClient<'_>>) {
             // 已经选中、还没交给应用的词排在敲过的字母前面（`clear` 把它们交出来）
             let mut text = h.engine.clear();
             text.push_str(&typed);
-            h.cancel_prediction();
             h.window.hide();
             text
         });

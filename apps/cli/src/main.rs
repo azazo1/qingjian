@@ -10,7 +10,6 @@ mod eval;
 mod logging;
 mod repl;
 mod replay;
-mod rescoring;
 mod tuning;
 
 use std::sync::Arc;
@@ -20,9 +19,7 @@ use clap::Parser;
 use qingjian_core::{EmojiTable, Engine, FuzzyRules, Language};
 use qingjian_dictionary::{AuxCodeLookup, AuxCodeTable, CodeTable, Dictionary, WordList};
 use qingjian_learning::FrequencyLearner;
-use qingjian_lm::BigramModel;
 use qingjian_platform::{Config, Scheme};
-use qingjian_predict::CloudPredictor;
 use qingjian_translate::Glossary;
 
 use crate::args::Args;
@@ -187,93 +184,11 @@ fn build_engine(args: &Args) -> Result<Engine, CliError> {
         );
         engine = engine.with_emoji(table);
     }
-    // 语言模型可选：没有就退化成一元词频整句；打包过的 lm.qj 优先
-    let packed = std::path::PathBuf::from("data/generated/lm.qj");
-    let unigram = std::path::PathBuf::from("data/generated/lm-unigram.tsv");
-    let bigram = std::path::PathBuf::from("data/generated/lm-bigram.tsv");
-    if packed.is_file() || (unigram.is_file() && bigram.is_file()) {
-        let started = Instant::now();
-        let model = if packed.is_file() {
-            BigramModel::from_path(&packed)?
-        } else {
-            BigramModel::from_paths(&unigram, &bigram)?
-        };
-        tracing::info!(
-            words = model.word_count(),
-            bigrams = model.bigram_count(),
-            load_ms = started.elapsed().as_millis(),
-            "语言模型已加载"
-        );
-        engine = engine.with_language_model(Box::new(model));
-    }
-    if let Some(dir) = &args.neural {
-        let started = Instant::now();
-        let scorer = qingjian_neural::CharScorer::load(dir)?;
-        tracing::info!(
-            load_ms = started.elapsed().as_millis(),
-            weight = args.neural_weight.unwrap_or(qingjian_core::NEURAL_WEIGHT),
-            "神经重打分已启用"
-        );
-        engine = if args.neural_async {
-            engine.with_async_sentence_scorer(
-                Box::new(scorer),
-                args.neural_weight,
-                args.neural_margin,
-                args.neural_context,
-            )
-        } else {
-            engine.with_sentence_scorer(
-                Box::new(scorer),
-                args.neural_weight,
-                args.neural_margin,
-                args.neural_context,
-            )
-        };
-    }
-    if let Some(kind) = args.decision {
-        // 密钥在配置文件同目录的 .env 里 (输入法就是这么读的), 这里也读一次,
-        // 免得评测前还要把密钥 export 到 shell
-        let config_file = args
-            .config
-            .clone()
-            .unwrap_or_else(args::default_config_file);
-        if let Some(dir) = config_file.parent() {
-            let _ = dotenvy::from_path_override(dir.join(".env"));
-        }
-        let decision_config = qingjian_decision::DecisionConfig {
-            enabled: true,
-            backend: kind,
-            endpoint: args.decision_endpoint.clone().unwrap_or_default(),
-            timeout_ms: args.decision_timeout.unwrap_or(5_000),
-            context_chars: args
-                .neural_context
-                .unwrap_or(qingjian_core::RESCORE_CONTEXT_CHARS),
-            span: args.decision_span.unwrap_or(4.0),
-            ..Default::default()
-        };
-        let scorer = qingjian_decision::DecisionScorer::new(&decision_config)?;
-        tracing::info!(
-            backend = kind.key(),
-            endpoint = decision_config.endpoint(),
-            timeout_ms = decision_config.timeout_ms,
-            span = decision_config.span,
-            "决策模型重排已启用"
-        );
-        engine = engine.with_sentence_scorer(
-            Box::new(scorer),
-            args.neural_weight,
-            args.neural_margin,
-            args.neural_context,
-        );
-    }
     let config_path = args
         .config
         .clone()
         .unwrap_or_else(args::default_config_file);
     let mut config = Config::load(&config_path)?;
-    if args.predict {
-        config.predict.enabled = true;
-    }
     if !args.fuzzy.is_empty() {
         let mut rules = FuzzyRules::default();
         for name in &args.fuzzy {
@@ -330,10 +245,6 @@ fn build_engine(args: &Args) -> Result<Engine, CliError> {
         engine.set_aux_codes(tables);
         // CLI 没有配置开关：给了码表即开辅码（缺省关），replay 统计不哑
         engine.set_aux_enabled(true);
-    }
-    if config.predict.enabled {
-        let predictor = CloudPredictor::new(&config.predict)?;
-        engine = engine.with_predictor(Box::new(predictor));
     }
     Ok(engine)
 }

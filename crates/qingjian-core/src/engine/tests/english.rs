@@ -187,9 +187,7 @@ fn hyphen_turns_the_buffer_into_a_raw_english_segment() {
     let raw = query.candidates.items[0].clone();
     assert_eq!(engine.commit(&raw), "no-way");
     assert!(engine.composition().is_empty());
-    // 直输段不发云联想
     engine.set_input("a-b");
-    assert_eq!(engine.request_prediction(None, &[]), None);
     // 表达式与问字模式优先
     engine.set_input("v1-2");
     assert!(engine.expression_mode() && !engine.raw_mode());
@@ -229,15 +227,9 @@ fn english_mode_suggests_from_the_word_list_and_keeps_the_typed_text() {
         "company\tcompany\t900\ncompare\tcompare\t500\nhello\thello\t1000\nhelp\thelp\t700\n",
     )
     .unwrap();
-    let submitted = std::rc::Rc::new(std::cell::RefCell::new(Vec::new()));
     let mut engine = engine()
         .with_english(words)
-        .with_learner(Box::new(CountingLearner(HashMap::new())))
-        .with_predictor(Box::new(EchoPredictor {
-            submitted: submitted.clone(),
-            replies: Vec::new(),
-            sentence: false,
-        }));
+        .with_learner(Box::new(CountingLearner(HashMap::new())));
     engine.set_english_mode(true);
     assert!(engine.english_mode());
     // 大小写跟着敲的走，marked text 就是敲的字母，没有拼音切分
@@ -250,11 +242,8 @@ fn english_mode_suggests_from_the_word_list_and_keeps_the_typed_text() {
     engine.set_input("foo1");
     assert!(texts_of(&engine).is_empty());
     assert_eq!(engine.query().unwrap().marked_text(), "foo1");
-    // 英文模式不发云联想
     engine.set_input("comp");
-    assert_eq!(engine.request_prediction(None, &[]), None);
-    assert!(submitted.borrow().is_empty());
-    // 选中的词记次数，下次同样的前缀它靠前
+    // 选中的词记次数, 下次同样的前缀它靠前
     let compare = engine.query().unwrap().candidates.items[1].clone();
     assert_eq!(engine.commit(&compare), "compare");
     assert!(engine.composition().is_empty());

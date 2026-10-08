@@ -5,14 +5,12 @@
 //! 配置只有一条通路：[`Host::apply_config`] 把当前 `Config` 推给 Engine 与界面。启动、菜单开关、
 //! 设置窗口、手改文件被监视到，全都走它；三个入口都只写 `config.toml`，不各存一套状态。
 
-mod cloud;
 mod config;
 mod diagnostics;
 mod dictionaries;
 mod init;
 mod learn_phrase;
 mod mode;
-mod model;
 mod presenting;
 mod restart;
 mod session;
@@ -25,21 +23,16 @@ use objc2::MainThreadMarker;
 use objc2_app_kit::{NSPasteboard, NSPasteboardTypeString};
 use objc2_foundation::{NSProcessInfo, NSRect, NSString};
 use qingjian_core::{
-    Candidate, CandidateKind, Cell, CloudWord, EmojiTable, Engine, FuzzyRules, Language, ModeKeys,
-    NoGlossFiller, NoInputLogger, NoPredictor, NoTranslator, Prediction,
+    Candidate, CandidateKind, Cell, EmojiTable, Engine, FuzzyRules, Language, ModeKeys,
+    NoInputLogger, NoTranslator,
 };
 use qingjian_dictionary::{Dictionary, WordList};
 use qingjian_learning::{FrequencyLearner, InputLog, UsageStats, VocabularyBook};
-use qingjian_lm::BigramModel;
 use qingjian_platform::extra_dictionaries;
 use qingjian_platform::{
-    AppsConfig, CandidateRenderer, DEFAULT_ENGLISH_CANDIDATES_OFF, DecisionConfig,
-    DictionariesConfig, GeneralConfig, KeyCombo, LEARNING_LANGUAGE_OFF, LayoutMode,
-    LocalModelConfig, LogLevel, MacSwitchPlan, Modifiers, PAGE_KEY_OPTIONS, PreeditMode, Scheme,
-    ShortcutConfig, ThemeMode,
-};
-use qingjian_predict::{
-    CloudGlossFiller, CloudPredictor, ConnectionTest, PredictConfig, PredictError,
+    AppsConfig, CandidateRenderer, DEFAULT_ENGLISH_CANDIDATES_OFF, DictionariesConfig,
+    GeneralConfig, KeyCombo, LEARNING_LANGUAGE_OFF, LayoutMode, LogLevel, MacSwitchPlan,
+    Modifiers, PAGE_KEY_OPTIONS, PreeditMode, Scheme, ShortcutConfig, ThemeMode,
 };
 use qingjian_translate::{Glossary, LayeredTranslator, LevelTable, PersonalGlossary};
 
@@ -51,12 +44,10 @@ use crate::learn_phrase::LearnPhraseWindow;
 use crate::menubar::{InputMenu, MenuAction, ModeBadge, ModeIndicator};
 use crate::preferences::{PreferencesWindow, Setting, SettingValue, UpdateStatus};
 
-use cloud::{CloudTestMonitor, PredictMonitor};
 use config::{ConfigWatch, TextReplacement};
 pub use dictionaries::DictionaryInfo;
 pub use init::init;
 pub use mode::{ModeState, SwitchMatcher};
-use model::RescoreMonitor;
 use presenting::Notice;
 pub use presenting::TranslationJob;
 pub use session::Session;
@@ -92,10 +83,7 @@ pub struct Host {
     /// 上次把学习数据落盘的时间；激活期间的定时器按 [`LEARNING_FLUSH_INTERVAL`] 再刷一次。
     pub last_flush: std::time::Instant,
 
-    /// 当前 Predictor 是按哪份 `[predict]` 建的；配置没变就不重建（重建会起新线程、丢缓存）。
-    applied_predict: PredictConfig,
-
-    /// 附加词库是按哪份 `[dictionaries]` 装的；开关变了才重新加载。
+    /// 附加词库是按哪份 `[dictionaries]` 装的; 开关变了才重新加载.
     applied_dictionaries: DictionariesConfig,
 
     /// 偏好设置「词库」页显示的列表，勾选框 / 移除按钮的下标对着它。
@@ -113,13 +101,10 @@ pub struct Host {
     /// 见 [`BundleInfo::build`]。
     build: String,
 
-    /// 每页候选数（配置 `[general] page_size`，已夹到 1–9）。
+    /// 每页候选数 (配置 `[general] page_size`, 已夹到 1-9).
     pub page_size: usize,
 
-    /// 候选窗口第一页末尾留给云端词的格数（配置 `[predict] slots`）。
-    pub cloud_slots: usize,
-
-    /// 翻页键对（上一页、下一页）。
+    /// 翻页键对 (上一页、下一页).
     pub page_keys: (char, char),
 
     /// 配数字键上屏第一 / 第二个译词的修饰键组合（配置 `[shortcut] translation` / `translation_second`）;
@@ -206,33 +191,8 @@ pub struct Host {
     /// 上次从系统读到的文本替换（激活输入法时重读），`[general] system_text_replacements` 开着时并进自定义短语。
     text_replacements: Vec<TextReplacement>,
 
-    /// 按应用的行为（配置 `[apps]`）：哪些应用里英文模式不给候选。
+    /// 按应用的行为 (配置 `[apps]`): 哪些应用里英文模式不给候选.
     pub apps: AppsConfig,
-
-    /// 联想结果轮询定时器。
-    pub monitor: PredictMonitor,
-
-    /// 进行中的云服务连通性测试（「云服务」页「测试连接」按钮）；没在测为 `None`。
-    cloud_test: Option<ConnectionTest>,
-
-    /// 连通性测试的轮询定时器。
-    cloud_test_monitor: CloudTestMonitor,
-
-    /// 本地整句模型的防抖与轮询定时器。
-    rescore: RescoreMonitor,
-
-    /// 正在后台加载的模型；加载完接到 Engine 上就清掉。
-    model_loader: Option<
-        std::sync::mpsc::Receiver<
-            Result<qingjian_neural::CharScorer, qingjian_neural::NeuralError>,
-        >,
-    >,
-
-    /// 上次套用的 `[model]`，变了才重载 / 卸载。
-    applied_model: Option<LocalModelConfig>,
-
-    /// 上次套用的 `[decision]`, 变了才重建决策后端.
-    applied_decision: Option<DecisionConfig>,
 
     /// 检查更新; 拿不到数据目录时没有.
     updates: Option<qingjian_update::Checker>,
@@ -240,13 +200,10 @@ pub struct Host {
     /// 菜单与关于页上正显示的更新状态, 变了才刷界面.
     update_status: UpdateStatus,
 
-    /// 当前会话的候选、高亮、页码、preedit。
+    /// 当前会话的候选、高亮、页码、preedit.
     pub session: Session,
 
-    /// 组句中到达的整句补全，Tab 接受。
-    pub sentence: Option<String>,
-
-    /// 最近一次绘制时的光标矩形，联想结果到达后在同一位置重画。
+    /// 最近一次绘制时的光标矩形.
     pub anchor: NSRect,
 }
 

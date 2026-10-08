@@ -7,10 +7,7 @@ const FUZZY_TAG_BASE: NSInteger = 100;
 /// 菜单能触发的动作。编码进 NSMenuItem 的 tag，派发时再解出来。
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum MenuAction {
-    /// 开关云联想（写 `[predict] enabled`）。
-    ToggleCloud,
-
-    /// 中文模式下的中文 / 英文标点（写 `[general] full_width_punctuation`）。
+    /// 中文模式下的中文 / 英文标点 (写 `[general] full_width_punctuation`).
     TogglePunctuation,
 
     /// 开关一条模糊音规则，值是 [`FuzzyRules::NAMES`] 的下标。
@@ -35,7 +32,6 @@ pub enum MenuAction {
 impl MenuAction {
     pub fn tag(self) -> NSInteger {
         match self {
-            Self::ToggleCloud => 1,
             Self::TogglePunctuation => 7,
             Self::OpenPreferences => 2,
             Self::OpenLogs => 3,
@@ -48,7 +44,6 @@ impl MenuAction {
 
     pub fn from_tag(tag: NSInteger) -> Option<Self> {
         Some(match tag {
-            1 => Self::ToggleCloud,
             7 => Self::TogglePunctuation,
             2 => Self::OpenPreferences,
             3 => Self::OpenLogs,
@@ -70,7 +65,6 @@ mod tests {
     #[test]
     fn tags_round_trip() {
         let all = [
-            MenuAction::ToggleCloud,
             MenuAction::TogglePunctuation,
             MenuAction::OpenPreferences,
             MenuAction::OpenLogs,

@@ -1,4 +1,4 @@
-//! Tab、整句补全与末页边界。
+//! Tab 翻页与末页边界.
 use super::support::{compose, key, router};
 use qingjian_platform::protocol::{KeyModifiers, KeyOutcome};
 #[test]
@@ -34,11 +34,10 @@ fn tab_and_backtab_page_boundaries_and_current_page_selection() {
     }
 }
 #[test]
-fn shift_tab_precedes_prediction_and_english_commit() {
+fn shift_tab_pages_and_english_tab_commits() {
     let mut router = router(1);
     let normal = KeyModifiers::default();
     compose(&mut router, "qq", normal);
-    router.sentence = Some("可控补全".into());
     let result = key(
         &mut router,
         9,
@@ -49,11 +48,8 @@ fn shift_tab_precedes_prediction_and_english_commit() {
         },
     );
     assert_eq!(result.1, None);
-    assert_eq!(router.sentence.as_deref(), Some("可控补全"));
-    assert_eq!(
-        key(&mut router, 9, None, normal).1.as_deref(),
-        Some("可控补全")
-    );
+    assert_eq!(key(&mut router, 9, None, normal).1, None);
+    key(&mut router, 0x1B, None, normal);
     let english = KeyModifiers {
         english_mode: true,
         ..normal

@@ -3,7 +3,6 @@
 //! 启动、菜单开关、切回输入法时的热加载都从这里拿 `Config`，壳只认这一份。
 //! 解析失败不让输入法退出（输入优先于一切附加功能）：保留上一份能用的配置，把错误留给菜单显示。
 
-use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::time::SystemTime;
 
@@ -105,48 +104,11 @@ impl Settings {
         true
     }
 
-    /// 把一个环境变量（密钥）写进配置同目录的 `.env` 并立即注入当前进程。
-    /// 文件仅本用户可读；值不进日志。返回是否成功。
-    pub fn set_env_var(&self, name: &str, value: &str) -> bool {
-        let Some(path) = &self.path else {
-            tracing::warn!("没有配置目录，密钥无处可存");
-            return false;
-        };
-        // 先登记再动文件：后面哪一步失败，日志里都不会出现这个值
-        qingjian_platform::logs::secrets::register(value);
-        let env_file = path.with_file_name(".env");
-        let existing = std::fs::read_to_string(&env_file).unwrap_or_default();
-        let prefix = format!("{name}=");
-        let mut lines: Vec<&str> = existing
-            .lines()
-            .filter(|line| !line.trim_start().starts_with(&prefix))
-            .collect();
-        let entry = format!("{prefix}{value}");
-        lines.push(&entry);
-        let content = format!("{}\n", lines.join("\n"));
-        // 原子写且仅本用户可读（0600）
-        let written = qingjian_core::storage::write_atomic_private(&env_file, |file| {
-            file.write_all(content.as_bytes())
-        });
-        if let Err(error) = written {
-            tracing::warn!(%error, path = %env_file.display(), "写 .env 失败");
-            return false;
-        }
-        // 解析错误的原文里带着出错的那一行（含密钥），不进日志
-        if dotenvy::from_path_override(&env_file).is_err() {
-            tracing::warn!(path = %env_file.display(), ".env 写入后重新加载失败");
-            return false;
-        }
-        tracing::info!(name, path = %env_file.display(), "密钥已写入 .env");
-        true
-    }
-
     fn read(&mut self, path: &Path) {
         match Config::load(path) {
             Ok(config) => {
                 tracing::info!(
                     path = %path.display(),
-                    predict = config.predict.enabled,
                     fuzzy = config.fuzzy.any(),
                     "配置已加载"
                 );

@@ -11,7 +11,7 @@ fn phrase(code: &str, position: usize, text: &str) -> CustomPhrase {
 }
 
 #[test]
-fn custom_positions_survive_normal_candidates_and_cloud() {
+fn custom_positions_survive_normal_candidates() {
     let mut e = xiaohe();
     e.set_custom_phrases(vec![phrase("ee", 1, "："), phrase("ee", 2, "；")])
         .unwrap();
@@ -20,15 +20,7 @@ fn custom_positions_survive_normal_candidates_and_cloud() {
         let q = e.query().unwrap();
         assert_eq!(q.candidates.items[0].text, "：");
         assert_eq!(q.candidates.items[1].text, "；");
-        let mut layout = CandidateLayout::new(q.candidates.items, 2, 2);
-        layout.set_cloud(vec![Candidate {
-            text: "云".into(),
-            kind: CandidateKind::Cloud,
-            syllables: vec![],
-            reading: None,
-            translation: None,
-            aux_code: None,
-        }]);
+        let layout = CandidateLayout::new(q.candidates.items, 2);
         assert_eq!(layout.candidate(1).unwrap().text, "；");
     }
     let c = e.query().unwrap().candidates.items[1].clone();
@@ -68,12 +60,12 @@ fn custom_long_text_exact_keys_and_sparse_positions() {
         .unwrap();
     e.set_input("abcdefghij");
     let query = e.query().unwrap();
-    let layout = CandidateLayout::new(query.candidates.items, 9, 2);
+    let layout = CandidateLayout::new(query.candidates.items, 9);
     let c = layout.candidate(2).unwrap().clone();
     assert_eq!(e.commit(&c), text);
     e.set_custom_phrases(vec![phrase("ii", 3, "目标")]).unwrap();
     e.set_input("ii");
-    let layout = CandidateLayout::new(e.query().unwrap().candidates.items, 9, 2);
+    let layout = CandidateLayout::new(e.query().unwrap().candidates.items, 9);
     assert_eq!(layout.candidate(2).unwrap().text, "目标");
     assert!(layout.local().iter().all(|c| !c.text.is_empty()));
     assert!(
@@ -110,7 +102,7 @@ fn custom_exact_codes_override_mode_prefixes_but_not_longer_input() {
         .unwrap();
     e.set_input("vv");
     assert!(!e.expression_mode());
-    let layout = CandidateLayout::new(e.query().unwrap().candidates.items, 9, 2);
+    let layout = CandidateLayout::new(e.query().unwrap().candidates.items, 9);
     assert_eq!(layout.candidate(1).unwrap().text, "固定");
     e.set_input("vvv");
     assert!(e.expression_mode());

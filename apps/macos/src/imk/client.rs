@@ -6,7 +6,6 @@ use objc2::msg_send;
 use objc2::rc::Retained;
 use objc2::runtime::AnyObject;
 use objc2_foundation::{NSAttributedString, NSDictionary, NSNotFound, NSRange, NSRect, NSString};
-use qingjian_core::SurroundingText;
 
 /// `{NSNotFound, 0}`：不替换任何已有文本，插到当前位置。
 const NO_REPLACEMENT: NSRange = NSRange::new(NSNotFound as usize, 0);
@@ -121,47 +120,7 @@ impl<'a> TextClient<'a> {
         }
     }
 
-    /// 读光标附近的文本给联想当上下文：marked text 之前 `before` 个字符、之后 `after` 个字符。
-    /// 应用不支持 `attributedSubstringFromRange:`（不少 Electron / 终端）时返回 `None`，由 Core 退回本地历史。
-    pub fn surrounding_text(&self, before: usize, after: usize) -> Option<SurroundingText> {
-        let (length, selected, marked): (usize, NSRange, NSRange) = unsafe {
-            (
-                msg_send![self.object, length],
-                msg_send![self.object, selectedRange],
-                msg_send![self.object, markedRange],
-            )
-        };
-        if selected.location == NSNotFound as usize || length == 0 {
-            return None;
-        }
-        // 组句中光标在 marked text 里；上下文以 marked text 为界
-        let (start, end) = if marked.location == NSNotFound as usize {
-            (selected.location, selected.location + selected.length)
-        } else {
-            (marked.location, marked.location + marked.length)
-        };
-        let start = start.min(length);
-        let end = end.min(length);
-        let before_range = NSRange::new(
-            start.saturating_sub(before),
-            start - start.saturating_sub(before),
-        );
-        let after_range = NSRange::new(end, after.min(length - end));
-        let read = |range: NSRange| -> Option<String> {
-            if range.length == 0 {
-                return Some(String::new());
-            }
-            let text: Option<Retained<NSAttributedString>> =
-                unsafe { msg_send![self.object, attributedSubstringFromRange: range] };
-            text.map(|t| t.string().to_string())
-        };
-        Some(SurroundingText {
-            before: read(before_range)?,
-            after: read(after_range)?,
-        })
-    }
-
-    /// 正在输入的应用的 bundle identifier（`com.apple.Terminal`），按应用改行为用；应用没给返回 `None`。
+    /// 正在输入的应用的 bundle identifier (`com.apple.Terminal`), 按应用改行为用; 应用没给返回 `None`.
     pub fn bundle_identifier(&self) -> Option<String> {
         let bundle: Option<Retained<NSString>> =
             unsafe { msg_send![self.object, bundleIdentifier] };

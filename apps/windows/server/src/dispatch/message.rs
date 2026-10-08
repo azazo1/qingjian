@@ -58,7 +58,6 @@ impl Router {
             }
             ClientMessage::Surrounding { session, text } => {
                 tracing::trace!(?session, chars = text.chars().count(), "收到光标前文");
-                self.set_surrounding(session, text);
                 None
             }
             ClientMessage::Privacy { session, private } => {
@@ -127,10 +126,7 @@ impl Router {
         if self.translation.is_some() {
             return self.handle_translation_review(session, &event);
         }
-        if self.engine.composition().is_empty()
-            && self.engine.prediction_enabled()
-            && self.matches_translate_combo(&event)
-        {
+        if self.engine.composition().is_empty() && self.matches_translate_combo(&event) {
             self.selection_seq += 1;
             self.pending_selection = Some(self.selection_seq);
             tracing::debug!(
@@ -163,8 +159,7 @@ impl Router {
         };
         // 组句已经结束（删空拼音、Esc 之外的清空路径）却还有没交给应用的已选词：补上屏
         let commit = self.settle_pending(commit);
-        self.poll_prediction();
-        // 自绘窗吃未降级的帧；发给 DLL 的那份按老协议降级（见 composed 的 current_frame）
+        // 自绘窗吃未降级的帧; 发给 DLL 的那份按老协议降级 (见 composed 的 current_frame)
         let shown = self.self_drawn_frame();
         self.reconcile_candidates(&shown);
         ServerMessage::KeyResult {
@@ -189,15 +184,10 @@ impl Router {
         }
     }
 
-    /// 云联想轮询：聚焦会话拉一次异步结果回最新一帧，否则回空帧。释义兜底与本地整句模型也借这个节拍收。
+    /// 空闲轮询: 聚焦会话回最新一帧, 否则回空帧.
     fn handle_poll(&mut self, session: SessionId) -> ServerMessage {
         self.tick();
-        let learned = self.engine.poll_glosses();
-        if learned > 0 {
-            tracing::info!(learned, "释义兜底写入个人释义表");
-        }
         let frame = if self.focused == Some(session) {
-            self.poll_prediction();
             let shown = self.self_drawn_frame();
             self.reconcile_candidates(&shown);
             self.current_frame()

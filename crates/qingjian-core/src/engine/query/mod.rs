@@ -19,7 +19,6 @@ impl Engine {
     /// 光标停在拼音中间时只按光标前的那段算候选（`ni|hao` 出 你），光标后的拼音留着，
     /// 上屏之后接着组句；见 [`Composition::scope`]。
     pub fn query(&self) -> Result<Query, ParseError> {
-        self.last_rescored.set(false);
         let mut query = match self.query_inner() {
             Ok(query) => query,
             Err(error) => {
@@ -63,7 +62,7 @@ impl Engine {
                 .take(QuerySnapshot::MAX_CANDIDATES)
                 .map(|c| c.text.clone())
                 .collect(),
-            rescored: self.last_rescored.get(),
+            rescored: false,
         });
 
         if self.traditional
@@ -72,7 +71,7 @@ impl Engine {
             for candidate in &mut query.candidates.items {
                 if matches!(
                     candidate.kind,
-                    CandidateKind::Chinese | CandidateKind::Sentence | CandidateKind::Cloud
+                    CandidateKind::Chinese | CandidateKind::Sentence
                 ) {
                     let traditional_text = opencc.convert(&candidate.text);
                     self.traditional_map
@@ -652,10 +651,7 @@ impl Engine {
         self.convert_sentence_with(patterns, typos, false)
     }
 
-    /// 同 [`Self::convert_sentence`]，`whole` 为真时末尾单字母也读（[`sentence::convert_whole`]），只给比分用。
-    /// 接了神经重打分器时取前 [`RESCORE_PATHS`] 条路径，按「路径分 + λ·(神经分 − 静态分)」重排（[`Self::rescore_paths`]）：
-    /// 神经分替换的是静态二元模型那部分判断，个人 n-gram 插值、用户加分、敲错代价原样保留，尺度也不变（纠错代价等常数照旧适用）。
-    /// 返回重排后的第一条（`score` 换成重排后的分，好与别的读法比）；只有一条路径或模型还没给分时原样返回。
+    /// 同 [`Self::convert_sentence`], `whole` 为真时末尾单字母也读 ([`sentence::convert_whole`]), 只给比分用.
     pub(super) fn convert_sentence_with(
         &self,
         patterns: &[qingjian_dictionary::SyllablePattern<'_>],
@@ -664,29 +660,19 @@ impl Engine {
     ) -> Option<Conversion> {
         let dictionaries = self.all_dictionaries();
         let expanded = self.expand_positions(patterns, typos);
-        let k = if self.has_sentence_scorer() {
-            RESCORE_PATHS
-        } else {
-            1
-        };
-        let mut paths = sentence::convert_paths(
+        sentence::convert_paths(
             &dictionaries,
             &expanded.positions(),
             whole,
-            k,
+            1,
             &*self.language_model,
             self.personal(),
             |text| self.learner.weight(text),
             |index, syllable| expanded.cost(index, syllable),
             &mut self.span_cache.borrow_mut(),
-        );
-        // 与最优路径差得太远的不参与：那种差距多半是个人 n-gram 拉开的
-        if paths.len() > 1 {
-            let floor = paths[0].score - self.neural_margin;
-            paths.retain(|p| p.score >= floor);
-            self.rescore_paths(&mut paths);
-        }
-        paths.into_iter().next()
+        )
+        .into_iter()
+        .next()
     }
 
     /// 每个位置的写法：敲的原样、模糊音，再加音节级敲错变体（`correction::typo`）当带代价的边，
@@ -722,17 +708,7 @@ impl Engine {
         expanded
     }
 
-    /// 本地整句转换把最优切分转成的汉字，给云端当参考（问字模式里就是问题的汉字形式）；转不出或有占位音节为空。
-    pub(super) fn local_guess(&self, segmentations: &[Segmentation]) -> String {
-        segmentations
-            .first()
-            .and_then(|best| self.convert_sentence(&best.patterns(), true))
-            .filter(|conversion| !conversion.has_placeholder())
-            .map(|conversion| conversion.text)
-            .unwrap_or_default()
-    }
-
-    /// 主词库与用户词一起查（每个位置多种写法）。用户词是用户自己选过的（云联想接受的词等），排序上靠 weight 自然靠前。
+    /// 主词库与用户词一起查 (每个位置多种写法). 用户词是用户自己选过的, 排序上靠 weight 自然靠前.
     pub(super) fn lookup_all(
         &self,
         positions: &[Vec<qingjian_dictionary::SyllablePattern<'_>>],

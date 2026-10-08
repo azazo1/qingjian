@@ -47,26 +47,8 @@ pub enum Setting {
     /// `[shortcut] question_mark`，勾选框：没在组句时敲 `?` 也进问字。
     QuestionMark,
 
-    /// `[fuzzy]` 里的一条规则，值是 [`FuzzyRules::NAMES`] 的下标。
+    /// `[fuzzy]` 里的一条规则, 值是 [`FuzzyRules::NAMES`] 的下标.
     Fuzzy(usize),
-
-    /// `[predict] enabled`。
-    CloudEnabled,
-
-    /// `[model] enabled`。
-    LocalModelEnabled,
-
-    /// `[decision] enabled`.
-    DecisionEnabled,
-
-    /// `[decision] backend`, 弹出菜单: 本地服务 (laya) / 云端 (jev).
-    DecisionBackend,
-
-    /// `[decision] endpoint`.
-    DecisionEndpoint,
-
-    /// `[decision] api_key_env` 那个环境变量, 密钥写到 `.env`.
-    DecisionApiKey,
 
     /// `[update] check`.
     UpdateCheck,
@@ -104,26 +86,10 @@ pub enum Setting {
     /// 关闭编辑表单。
     CancelPhraseEdit,
 
-    /// `[general] system_text_replacements`，勾选框：系统的文本替换并进自定义短语。
+    /// `[general] system_text_replacements`, 勾选框: 系统的文本替换并进自定义短语.
     SystemTextReplacements,
 
-    /// `[predict] base_url`。
-    BaseUrl,
-
-    /// `[predict] model`。
-    Model,
-
-    /// `[predict] reasoning_effort`, 文本框: 推理强度 (none / minimal / low / medium / high / xhigh),
-    /// 留空表示不发这个参数 (给不认它的接口).
-    ReasoningEffort,
-
-    /// `[predict] max_tokens`, 文本框: 输出额度, 0 或留空表示不发这个参数.
-    MaxTokens,
-
-    /// 密钥，写到 `.env`。
-    ApiKey,
-
-    /// 「在编辑器中打开配置文件」按钮。
+    /// 「在编辑器中打开配置文件」按钮.
     OpenConfigFile,
 
     /// `[general] layout`，弹出菜单 竖排 / 横排。
@@ -195,16 +161,10 @@ pub enum Setting {
     /// 「关于」页「复制诊断信息」按钮。
     CopyDiagnostics,
 
-    /// 「关于」「高级」页「打包日志到桌面」按钮。
+    /// 「关于」「高级」页「打包日志到桌面」按钮.
     ExportLogs,
 
-    /// `[predict] slots`，弹出菜单 0–4：第一页末尾留给云端词的格数。
-    CloudSlots,
-
-    /// `[predict] sentence`, 勾选框: 组句中要不要整句补全.
-    CloudSentence,
-
-    /// `[apps] english_candidates_off`，勾选框：勾上写缺省的终端 / 编辑器列表，去掉写空表。
+    /// `[apps] english_candidates_off`, 勾选框: 勾上写缺省的终端 / 编辑器列表, 去掉写空表.
     EnglishCandidatesOffInApps,
 
     /// `[shortcut] mac_switch_single`，勾选框：单键切换开关（`mac_switch_toggle` 那个键单击翻转）。
@@ -238,13 +198,10 @@ pub enum Setting {
     /// 学习输入习惯开关。
     Learning,
 
-    /// 「高级」页「清空输入日志」按钮。
+    /// 「高级」页「清空输入日志」按钮.
     ClearInputLog,
 
-    /// 「云服务」页「测试连接」按钮。
-    TestCloud,
-
-    /// 「关于」页「官网」按钮。
+    /// 「关于」页「官网」按钮.
     OpenWebsite,
 
     /// 「关于」页「GitHub」按钮。
@@ -261,12 +218,6 @@ impl Setting {
             Self::ExpressionKey => 5,
             Self::QuestionKey => 6,
             Self::QuestionMark => 41,
-            Self::CloudEnabled => 7,
-            Self::BaseUrl => 8,
-            Self::Model => 9,
-            Self::ReasoningEffort => 67,
-            Self::MaxTokens => 68,
-            Self::ApiKey => 10,
             Self::OpenConfigFile => 11,
             Self::Layout => 12,
             Self::Preedit => 13,
@@ -289,8 +240,6 @@ impl Setting {
             Self::OpenLogDirectory => 22,
             Self::CopyDiagnostics => 23,
             Self::ExportLogs => 48,
-            Self::CloudSlots => 24,
-            Self::CloudSentence => 72,
             Self::EnglishCandidatesOffInApps => 25,
             Self::DeleteCandidateKeys => 26,
             Self::MacSwitchSingle => 60,
@@ -304,17 +253,11 @@ impl Setting {
             Self::InputLog => 27,
             Self::Learning => 45,
             Self::ClearInputLog => 28,
-            Self::TestCloud => 29,
             Self::OpenWebsite => 30,
             Self::OpenRepository => 31,
-            Self::LocalModelEnabled => 32,
             Self::UpdateCheck => 53,
             Self::UpdateChannel => 54,
             Self::CheckUpdateNow => 55,
-            Self::DecisionEnabled => 56,
-            Self::DecisionBackend => 57,
-            Self::DecisionEndpoint => 58,
-            Self::DecisionApiKey => 59,
             Self::OpenDownload => 69,
             Self::FullWidthPunctuation => 33,
             Self::SelectPhrase => 34,
@@ -345,12 +288,6 @@ impl Setting {
             5 => Self::ExpressionKey,
             6 => Self::QuestionKey,
             41 => Self::QuestionMark,
-            7 => Self::CloudEnabled,
-            8 => Self::BaseUrl,
-            9 => Self::Model,
-            67 => Self::ReasoningEffort,
-            68 => Self::MaxTokens,
-            10 => Self::ApiKey,
             11 => Self::OpenConfigFile,
             12 => Self::Layout,
             13 => Self::Preedit,
@@ -374,8 +311,6 @@ impl Setting {
             22 => Self::OpenLogDirectory,
             23 => Self::CopyDiagnostics,
             48 => Self::ExportLogs,
-            24 => Self::CloudSlots,
-            72 => Self::CloudSentence,
             25 => Self::EnglishCandidatesOffInApps,
             26 => Self::DeleteCandidateKeys,
             60 => Self::MacSwitchSingle,
@@ -389,17 +324,11 @@ impl Setting {
             27 => Self::InputLog,
             45 => Self::Learning,
             28 => Self::ClearInputLog,
-            29 => Self::TestCloud,
             30 => Self::OpenWebsite,
             31 => Self::OpenRepository,
-            32 => Self::LocalModelEnabled,
             53 => Self::UpdateCheck,
             54 => Self::UpdateChannel,
             55 => Self::CheckUpdateNow,
-            56 => Self::DecisionEnabled,
-            57 => Self::DecisionBackend,
-            58 => Self::DecisionEndpoint,
-            59 => Self::DecisionApiKey,
             69 => Self::OpenDownload,
             33 => Self::FullWidthPunctuation,
             34 => Self::SelectPhrase,
@@ -441,21 +370,10 @@ mod tests {
             Setting::Font,
             Setting::ExpressionKey,
             Setting::QuestionKey,
-            Setting::CloudEnabled,
-            Setting::LocalModelEnabled,
-            Setting::DecisionEnabled,
-            Setting::DecisionBackend,
-            Setting::DecisionEndpoint,
-            Setting::DecisionApiKey,
             Setting::UpdateCheck,
             Setting::UpdateChannel,
             Setting::CheckUpdateNow,
             Setting::OpenDownload,
-            Setting::BaseUrl,
-            Setting::Model,
-            Setting::ReasoningEffort,
-            Setting::MaxTokens,
-            Setting::ApiKey,
             Setting::OpenConfigFile,
             Setting::Layout,
             Setting::Preedit,
@@ -475,8 +393,6 @@ mod tests {
             Setting::OpenLogDirectory,
             Setting::CopyDiagnostics,
             Setting::ExportLogs,
-            Setting::CloudSlots,
-            Setting::CloudSentence,
             Setting::EnglishCandidatesOffInApps,
             Setting::DeleteCandidateKeys,
             Setting::AdjustFrequencyKeys,
@@ -493,7 +409,6 @@ mod tests {
             Setting::PunctuationFirst,
             Setting::HorizontalGrid,
             Setting::ClearInputLog,
-            Setting::TestCloud,
             Setting::OpenWebsite,
             Setting::OpenRepository,
             Setting::DictionaryEnabled(0),

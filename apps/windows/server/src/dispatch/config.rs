@@ -9,13 +9,10 @@ use super::RenderSettings;
 /// Router 要用的配置项，与 macOS 壳的 `Host` 字段对齐。
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RouterConfig {
-    /// 每页候选数（`[general] page_size`）。
+    /// 每页候选数 (`[general] page_size`).
     pub page_size: usize,
 
-    /// 云端候选在第一页预留的格数（`[predict] slots`）。
-    pub cloud_slots: usize,
-
-    /// 中文模式下 Shift+字母收进组句缓冲区（`[general] shift_letter = "compose"`）。
+    /// 中文模式下 Shift+字母收进组句缓冲区 (`[general] shift_letter = "compose"`).
     /// 关着（缺省）时壳把大写字母交给应用，与以前一致。
     pub shift_letter_compose: bool,
 
@@ -132,7 +129,6 @@ impl From<&Config> for RouterConfig {
         let (highlight_down, highlight_up) = config.shortcut.highlight_keys();
         Self {
             page_size: config.general.page_size(),
-            cloud_slots: config.predict.slots,
             shift_letter_compose: config.general.shift_letter.compose(),
             layout: config.general.layout,
             theme: config.general.theme,

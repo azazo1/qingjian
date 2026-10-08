@@ -1,14 +1,10 @@
 //! 候选与耗时的终端排版。
 
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
 use qingjian_core::{Candidate, Engine, Query};
 
-/// 等联想结果的轮询间隔与上限。CLI 是同步工具，等一等无妨；输入法里是定时器轮询、不等。
-const PREDICTION_POLL: Duration = Duration::from_millis(20);
-const PREDICTION_WAIT: Duration = Duration::from_secs(8);
-
-/// 查询并打印一段拼音的候选、译文和耗时。返回查询结果供后续上屏用。
+/// 查询并打印一段拼音的候选, 译文和耗时. 返回查询结果供后续上屏用.
 ///
 /// 输入里的 `|` 表示光标位置（`ni|hao`），用来验证光标停在中间时的候选。
 pub fn show(engine: &mut Engine, input: &str, limit: usize) -> Option<Query> {
@@ -21,8 +17,6 @@ pub fn show(engine: &mut Engine, input: &str, limit: usize) -> Option<Query> {
         }
     }
     let mut query = match engine.query() {
-        // 异步重打分：等后台的分回来再查一次，输出的就是重排后的
-        Ok(query) if crate::rescoring::settle(engine) => engine.query().unwrap_or(query),
         Ok(query) => query,
         Err(error) => {
             println!("  {error}");
@@ -80,7 +74,6 @@ pub fn show(engine: &mut Engine, input: &str, limit: usize) -> Option<Query> {
         report.total,
         fmt_duration(t.total() + report.elapsed),
     );
-    show_prediction(engine, &query.candidates.items);
     Some(query)
 }
 
@@ -157,36 +150,7 @@ pub fn show_typing(engine: &mut Engine, input: &str) {
     engine.set_input("");
 }
 
-/// 发一次联想并等结果打印出来。没接 Predictor 时什么都不做。
-pub fn show_prediction(engine: &mut Engine, candidates: &[Candidate]) {
-    let Some(_sequence) = engine.request_prediction(None, candidates) else {
-        return;
-    };
-    let start = Instant::now();
-    while start.elapsed() < PREDICTION_WAIT {
-        if let Some(prediction) = engine.poll_prediction() {
-            if prediction.is_empty() {
-                println!("  ☁ （无联想）");
-            }
-            for word in &prediction.words {
-                let reading = word
-                    .reading
-                    .clone()
-                    .unwrap_or_else(|| word.syllables.join(" "));
-                println!("  ☁ {}  ({reading})", word.text);
-            }
-            if let Some(sentence) = &prediction.sentence {
-                println!("  ☁ 整句: {sentence}");
-            }
-            println!("  predict {}", fmt_duration(start.elapsed()));
-            return;
-        }
-        std::thread::sleep(PREDICTION_POLL);
-    }
-    println!("  ☁ （联想超时）");
-}
-
-/// 候选词左对齐，右侧是「词性 译文」，多条释义用 · 分隔。
+/// 候选词左对齐, 右侧是「词性 译文」, 多条释义用 · 分隔.
 fn format_candidate(candidate: &Candidate, width: usize) -> String {
     let padding = " ".repeat(width.saturating_sub(display_width(&candidate.text)) + 2);
     let reading = candidate
@@ -228,7 +192,6 @@ fn format_candidate(candidate: &Candidate, width: usize) -> String {
     let marker = match candidate.kind {
         qingjian_core::CandidateKind::Chinese | qingjian_core::CandidateKind::Code => "",
         qingjian_core::CandidateKind::English => "[en] ",
-        qingjian_core::CandidateKind::Cloud => "☁ ",
         qingjian_core::CandidateKind::Shortcut => "[v] ",
         qingjian_core::CandidateKind::Custom(_) => "[custom] ",
         qingjian_core::CandidateKind::Sentence => "[句] ",

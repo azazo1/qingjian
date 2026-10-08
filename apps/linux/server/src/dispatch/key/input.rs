@@ -155,14 +155,11 @@ impl Router {
             codes::TAB if self.engine.english_mode() => {
                 Effect::Changed(Some(self.commit_highlighted()))
             }
-            // 中文模式 Tab：有整句补全就接受，否则下一页。
-            codes::TAB => match self.sentence.take() {
-                Some(sentence) => Effect::Changed(Some(self.engine.accept_prediction(&sentence))),
-                None => {
-                    self.page(1);
-                    Effect::Navigated
-                }
-            },
+            // 中文模式 Tab: 下一页.
+            codes::TAB => {
+                self.page(1);
+                Effect::Navigated
+            }
             codes::DOWN => {
                 self.move_highlight(1);
                 Effect::Navigated

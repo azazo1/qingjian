@@ -5,7 +5,6 @@ mod composing;
 mod english;
 mod learn_phrase;
 mod modes;
-mod rescoring;
 mod shortcuts;
 mod status;
 mod support;

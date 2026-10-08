@@ -14,9 +14,7 @@ use super::Host;
 impl Host {
     /// 重启输入法进程。菜单动作与输入源菜单的回调都在主线程，所以这里可以直接拿 `NSApplication`。
     pub fn restart(&mut self) {
-        tracing::info!("重启输入法：落盘学习数据后结束进程");
-        // 先停掉定时器与在途请求，免得进程在收尾期间还在等云端的回包
-        self.cancel_prediction();
+        tracing::info!("重启输入法: 落盘学习数据后结束进程");
         self.watch.stop();
         self.engine.flush_learning();
         // 候选窗是独立 NSPanel，不随 run loop 退出自动收，先自己收掉，免得屏幕上留一个孤儿窗口

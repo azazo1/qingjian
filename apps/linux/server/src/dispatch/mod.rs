@@ -1,4 +1,4 @@
-//! Linux 会话路由：独立保存各上下文的组句，词库和学习服务保持单实例。本地整句模型在 [`rescore`]。
+//! Linux 会话路由: 独立保存各上下文的组句, 词库和学习服务保持单实例.
 
 mod composed;
 mod config;
@@ -6,13 +6,10 @@ mod display;
 mod key;
 mod linux;
 mod message;
-mod rescore;
 mod session;
 
 use self::composed::Composed;
 pub use self::config::RouterConfig;
-pub use self::rescore::find_model;
-use self::rescore::{ModelLoader, RescoreState};
 use self::session::SessionInfo;
 use qingjian_core::Engine;
 use qingjian_platform::protocol::{ClientMessage, ServerMessage, SessionId};
@@ -49,10 +46,7 @@ pub struct Router {
     /// 本轮是否已主动移动候选。
     navigated: bool,
 
-    /// 可选的整句提示；首版没有云服务。
-    sentence: Option<String>,
-
-    /// 删除候选等操作提示。
+    /// 删除候选等操作提示.
     notice: Option<String>,
 
     /// 调频键（`[shortcut] adjust_frequency`，缺省 Ctrl）正按着：帧里带上每个候选的频次，面板照它画。
@@ -62,23 +56,13 @@ pub struct Router {
     /// 全服务帧号递增，关闭再开不会复用展示身份。
     display_revision: u64,
 
-    /// 最近一次学习落盘的时刻。
+    /// 最近一次学习落盘的时刻.
     last_flush: Instant,
-
-    /// 本地整句模型（`.qjm` 或三件套目录）；没有模型文件为 `None`。
-    model_path: Option<PathBuf>,
-
-    /// 进行中的模型加载；加载完接到 Engine 上就清掉。
-    model_loader: Option<ModelLoader>,
-
-    /// 重排的防抖 / 轮询进行态。
-    rescore: RescoreState,
 }
 
 impl Router {
     pub fn new(engine: Engine, mut config: RouterConfig) -> Self {
         config.page_size = config.page_size.clamp(1, 9);
-        config.cloud_slots = 0;
         Self {
             engine,
             config,
@@ -88,14 +72,10 @@ impl Router {
             composed: None,
             highlight: 0,
             navigated: false,
-            sentence: None,
             notice: None,
             preview_frequency: false,
             display_revision: 0,
             last_flush: Instant::now(),
-            model_path: None,
-            model_loader: None,
-            rescore: RescoreState::default(),
         }
     }
     /// 一条客户端消息；无需答复的通知返回 None。
@@ -110,10 +90,8 @@ impl Router {
         self.engine.flush_learning();
         self.last_flush = Instant::now();
     }
-    /// 到点了：接上加载好的模型、推进重排、到点落盘学习（输入停止后也不能一直不落盘）。主循环超时与插件的 `Poll` 都会调。
+    /// 到点了: 落盘学习 (输入停止后也不能一直不落盘). 主循环超时与插件的 `Poll` 都会调.
     pub fn tick(&mut self) {
-        self.attach_loaded_model();
-        self.advance_rescoring();
         if self.last_flush.elapsed() >= LEARNING_FLUSH_INTERVAL {
             self.flush_learning();
         }

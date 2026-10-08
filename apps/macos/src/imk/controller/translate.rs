@@ -5,40 +5,35 @@ use super::*;
 impl QingjianInputController {
     /// Option+数字：上屏当前页第几个候选的译文（学习和拼音消耗与选那个候选一样）。
     /// 不在组句中时不管；候选没有译文就吞掉按键不动，免得 ¡™£ 进应用。
-    /// 翻译应用里选中的文字：云服务关着、密码框、没有选区都不动（键交回应用）。
+    /// 翻译应用里选中的文字: 查本机释义表. 密码框, 没有选区都不动 (键交回应用).
     pub(super) fn translate_selection(&self, client: TextClient<'_>) -> bool {
-        if !host::with(|h| h.engine.prediction_enabled()).unwrap_or(false) {
-            tracing::info!("云服务没开，翻译快捷键不生效");
-            return false;
-        }
         if secure_input::enabled() {
-            tracing::debug!("Secure Input 中，不翻译");
+            tracing::debug!("Secure Input 中, 不翻译");
             return false;
         }
         let Some((text, range)) = client.selected_text(MAX_TRANSLATE_CHARS) else {
-            // 分不清是没选还是应用不给读（不少 Electron 应用不支持），两种情况都提示一下，键吞掉
-            tracing::debug!("没有选中的文字，或应用不支持读选区");
+            // 分不清是没选还是应用不给读 (不少 Electron 应用不支持), 两种情况都提示一下, 键吞掉
+            tracing::debug!("没有选中的文字, 或应用不支持读选区");
             let anchor = client.caret_rect();
             host::with(|h| {
                 h.show_notice(
-                    "没有选中的文字，或这个应用不支持读取选区（最多 500 字）",
+                    "没有选中的文字, 或这个应用不支持读取选区 (最多 500 字)",
                     anchor,
                 )
             });
             return true;
         };
-        // 光标位置先在借用之外取好：取的过程会等应用回话，期间别的 IMK 回调可能重入
+        // 光标位置先在借用之外取好: 取的过程会等应用回话, 期间别的 IMK 回调可能重入
         let anchor = client.caret_rect();
-        let sent = host::with(|h| {
-            h.anchor = anchor;
-            h.engine.request_translation(&text).is_some()
-        })
-        .unwrap_or(false);
-        if !sent {
-            return false;
-        }
+        let Some(result) = host::with(|h| h.engine.translate_text(&text)).flatten() else {
+            host::with(|h| h.show_notice("词库里没有这条译文", anchor));
+            return true;
+        };
         tracing::debug!(chars = text.chars().count(), "翻译选中文字");
-        host::with(|h| h.begin_translation(range));
+        host::with(|h| {
+            h.anchor = anchor;
+            h.begin_translation(range, result);
+        });
         true
     }
 

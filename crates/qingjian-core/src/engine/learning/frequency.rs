@@ -31,7 +31,6 @@ pub(super) fn adjustable(kind: CandidateKind) -> bool {
         kind,
         CandidateKind::Chinese
             | CandidateKind::Code
-            | CandidateKind::Cloud
             | CandidateKind::English
     )
 }

@@ -2,7 +2,6 @@ use std::path::PathBuf;
 
 use qingjian_dictionary::DictionaryError;
 use qingjian_learning::LearningError;
-use qingjian_lm::LmError;
 use qingjian_platform::ConfigError;
 use qingjian_translate::GlossaryError;
 
@@ -28,10 +27,7 @@ pub enum HostError {
     #[error(transparent)]
     Config(#[from] ConfigError),
 
-    #[error(transparent)]
-    LanguageModel(#[from] LmError),
-
-    /// emoji 表读取或解析失败。
+    /// emoji 表读取或解析失败.
     #[error("emoji table: {0}")]
     Emoji(#[from] std::io::Error),
 }

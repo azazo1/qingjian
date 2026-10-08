@@ -33,13 +33,10 @@ pub struct ModeIndicator {
     /// 正展开着（输入法激活中）。收起时不刷新标题。
     shown: bool,
 
-    /// 上次显示的是否英文模式，避免每次轮询都重设标题。
+    /// 上次显示的是否英文模式, 避免每次轮询都重设标题.
     english: Option<bool>,
 
-    /// 云联想开着：标题带云朵，让用户一眼知道上下文会发出去。
-    cloud: bool,
-
-    /// 中文模式下的中文标点（全角）开着：标题「中。」，半角是「中.」。切了标点立刻能看到。
+    /// 中文模式下的中文标点 (全角) 开着: 标题「中。」, 半角是「中.」. 切了标点立刻能看到.
     full_width: bool,
 
     mtm: MainThreadMarker,
@@ -56,7 +53,6 @@ impl ModeIndicator {
             collapse_timer: None,
             shown: false,
             english: None,
-            cloud: false,
             full_width: true,
             mtm,
         }
@@ -128,12 +124,7 @@ impl ModeIndicator {
         self.item.setMenu(Some(menu));
     }
 
-    pub fn set_cloud(&mut self, cloud: bool) {
-        self.cloud = cloud;
-        self.english = None;
-    }
-
-    /// 中文模式下的标点状态变了（`[general] full_width_punctuation`）：缓存作废，下一次 `update` 重画。
+    /// 中文模式下的标点状态变了 (`[general] full_width_punctuation`): 缓存作废, 下一次 `update` 重画.
     pub fn set_punctuation(&mut self, full_width: bool) {
         if self.full_width != full_width {
             self.full_width = full_width;
@@ -158,12 +149,7 @@ impl ModeIndicator {
             } else {
                 "中."
             };
-            let title = if self.cloud {
-                format!("{mode} ☁︎")
-            } else {
-                mode.to_owned()
-            };
-            button.setTitle(&NSString::from_str(&title));
+            button.setTitle(&NSString::from_str(mode));
         }
     }
 }

@@ -82,28 +82,11 @@ if [[ -f data/generated/dict.tsv || -f data/generated/dict.qj ]]; then
       --license "MIT AND Unicode-3.0" --attribution "通用规范汉字表；现代汉语常用词表（liuxilu 校对版）；THUOCL（清华大学自然语言处理实验室，MIT）；读音 Unihan（Unicode）" \
       --source https://github.com/qingjian-team/qingjian/tree/main/assets/lexicon
   fi
-  if [[ -f data/generated/lm-bigram.tsv && ( ! -f data/generated/lm.qj || data/generated/lm-bigram.tsv -nt data/generated/lm.qj ) ]]; then
-    cargo run --release -q -p qingjian-dict-convert -- pack lm --name "青简语言模型（中文维基 + LCCC，青简词库分词）" \
-      --license "CC-BY-SA-4.0 AND MIT" --attribution "中文维基百科（CC BY-SA 4.0）；LCCC（清华大学 CoAI，MIT）"
-  fi
   cp data/generated/dict.qj "$APP/Contents/Resources/"
-  # 领域词库（lexicon 拆出的 dicts/*.qj）随包放 Resources/dicts/，缺省只开成语，偏好设置「词库」页可勾选
+  # 领域词库 (lexicon 拆出的 dicts/*.qj) 随包放 Resources/dicts/, 缺省只开成语, 偏好设置「词库」页可勾选
   if ls data/generated/dicts/*.qj >/dev/null 2>&1; then
     mkdir -p "$APP/Contents/Resources/dicts"
     cp data/generated/dicts/*.qj "$APP/Contents/Resources/dicts/"
-  fi
-  [[ -f data/generated/lm.qj ]] && cp data/generated/lm.qj "$APP/Contents/Resources/"
-  # 本地整句模型（字级 Transformer）：训练仓库 ../train 导出三件套到 data/model/，tools/release/pack-model.sh 打成 model.qjm，
-  # 随包只带这一个文件放 Resources/model/（三件套比 .qjm 新就重打）；什么都没有就不重排
-  model_dir="${QINGJIAN_MODEL_DIR:-data/model}"
-  if [[ -f "$model_dir/model.safetensors" ]]; then
-    QINGJIAN_MODEL_DIR="$model_dir" tools/release/pack-model.sh
-  fi
-  if [[ -f "$model_dir/model.qjm" ]]; then
-    mkdir -p "$APP/Contents/Resources/model"
-    cp "$model_dir/model.qjm" "$APP/Contents/Resources/model/"
-    chmod 644 "$APP/Contents/Resources/model/model.qjm"
-    echo "打包本地整句模型：$model_dir/model.qjm"
   fi
   # 释义表打成 .qj（TSV 比 .qj 新时重打），英文词表仍是 TSV。各表来源不同，元数据按表写（见 assets/glossary/README.md）
   for lang in en ja zh es; do

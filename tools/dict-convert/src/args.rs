@@ -188,15 +188,14 @@ pub enum Command {
     /// 用的两张开发期对照表到 `data/mmh/`（笔画数、首笔几何类别，见模块文档与 assets/stroke/README.md）
     MmhReference(MmhReferenceOptions),
 
-    /// 把 TSV 打包成 `.qj` 容器（mmap 直接用，启动近零耗时）：`dict` 读 dict.tsv 写 dict.qj，`lm` 读 lm-unigram/bigram.tsv 写 lm.qj，
-    /// `glossary --language en` 读 glossary-en.tsv 写 glossary-en.qj；`model` 把训练仓库导出的三件套目录（缺省 data/model）
-    /// 打成一个 model.qjm（`--out-dir data/model` 就写回原目录，随包只带这一个文件）；
-    /// `codes` 是唯一不「原样落盘」的一种：读笔画表与词库，按取码规则算成本地码表 codes/stroke.qj（见 codes 模块）
+    /// 把 TSV 打包成 `.qj` 容器 (mmap 直接用, 启动近零耗时): `dict` 读 dict.tsv 写 dict.qj,
+    /// `glossary --language en` 读 glossary-en.tsv 写 glossary-en.qj;
+    /// `codes` 是唯一不「原样落盘」的一种: 读笔画表与词库, 按取码规则算成本地码表 codes/stroke.qj (见 codes 模块)
     Pack {
         /// 打包哪种数据
         kind: PackKind,
 
-        /// 输入文件；`dict` 一个 TSV，`lm` 两个（一元表、二元表），`model` 一个目录。缺省从输出目录里找同名 TSV（`model` 缺省 data/model）
+        /// 输入文件; `dict` 一个 TSV. 缺省从输出目录里找同名 TSV
         #[arg(long, num_args = 1..)]
         input: Vec<PathBuf>,
 
@@ -244,16 +243,10 @@ pub enum PackKind {
     /// 拼音词库
     Dict,
 
-    /// 词级 bigram 语言模型
-    Lm,
-
-    /// 释义表（glossary-<语言>.tsv → glossary-<语言>.qj）
+    /// 释义表 (glossary-<语言>.tsv → glossary-<语言>.qj)
     Glossary,
 
-    /// 本地整句模型（三件套目录 → model.qjm）
-    Model,
-
-    /// 笔画码表（笔画表 + 词库 → codes/stroke.qj，随包原生码表）
+    /// 笔画码表 (笔画表 + 词库 → codes/stroke.qj, 随包原生码表)
     Codes,
 }
 
@@ -262,9 +255,7 @@ impl PackKind {
     pub fn name(self) -> &'static str {
         match self {
             Self::Dict => "dict",
-            Self::Lm => "lm",
             Self::Glossary => "glossary",
-            Self::Model => "model",
             Self::Codes => "codes",
         }
     }

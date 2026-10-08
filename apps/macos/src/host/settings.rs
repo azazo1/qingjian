@@ -3,7 +3,6 @@
 use super::diagnostics::{copy_to_pasteboard, open_with_system};
 use super::*;
 use crate::preferences::DEFAULT_FONT_LABEL;
-use qingjian_decision::BackendKind;
 use qingjian_platform::{KeyBinding, MacSwitchKey, ShiftLetter, UpdateChannel};
 
 impl Host {
@@ -68,12 +67,6 @@ impl Host {
     pub fn perform(&mut self, action: MenuAction) {
         tracing::info!(?action, "菜单");
         match action {
-            MenuAction::ToggleCloud => {
-                let on = !self.settings.config().predict.enabled;
-                if self.settings.set_bool("predict", "enabled", on) {
-                    self.apply_config(false);
-                }
-            }
             MenuAction::ToggleFuzzy(index) => {
                 let name = FuzzyRules::NAMES[index];
                 let on = !self.settings.config().fuzzy.is_on(name);
@@ -448,53 +441,6 @@ impl Host {
                 self.settings
                     .set_bool("fuzzy", FuzzyRules::NAMES[index], on);
             }
-            (Setting::CloudEnabled, SettingValue::Bool(on)) => {
-                self.settings.set_bool("predict", "enabled", on);
-            }
-            (Setting::LocalModelEnabled, SettingValue::Bool(on)) => {
-                self.settings.set_bool("model", "enabled", on);
-            }
-            (Setting::DecisionEnabled, SettingValue::Bool(on)) => {
-                self.settings.set_bool("decision", "enabled", on);
-            }
-            // 弹出菜单按 BackendKind::ALL 的顺序
-            (Setting::DecisionBackend, SettingValue::Index(index)) => {
-                let key = BackendKind::ALL
-                    .get(index)
-                    .map_or(BackendKind::Laya.key(), |kind| kind.key());
-                self.settings.set_value("decision", "backend", key);
-            }
-            (Setting::DecisionEndpoint, SettingValue::Text(text)) => {
-                let text = text.trim();
-                if text != config.decision.endpoint {
-                    self.settings.set_value("decision", "endpoint", text);
-                }
-            }
-            // 决策模型的密钥与云联想的走同一套: 写进配置目录的 .env, 不进 config.toml
-            (Setting::DecisionApiKey, SettingValue::Text(text)) => {
-                let text = text.trim();
-                if text.chars().any(|c| !c.is_ascii_graphic()) {
-                    self.preferences.set_status(
-                        "密钥没有保存: 里面有空格或非英文字符, 多半是粘贴时多带了别的内容",
-                    );
-                    return;
-                }
-                if text.is_empty() {
-                    return;
-                }
-                if self
-                    .settings
-                    .set_env_var(&config.decision.api_key_env, text)
-                {
-                    // 密钥换了必须重建决策后端
-                    self.apply_config(true);
-                    self.preferences.set_status("密钥已保存");
-                } else {
-                    self.preferences
-                        .set_status("密钥没有保存: 写不进配置目录的 .env, 详情见日志");
-                }
-                return;
-            }
             (Setting::UpdateCheck, SettingValue::Bool(on)) => {
                 self.settings.set_bool("update", "check", on);
             }
@@ -502,12 +448,6 @@ impl Host {
                 if let Some(channel) = UpdateChannel::ALL.get(index) {
                     self.settings.set_value("update", "channel", channel.key());
                 }
-            }
-            (Setting::CloudSlots, SettingValue::Index(index)) => {
-                self.settings.set_value("predict", "slots", index as i64);
-            }
-            (Setting::CloudSentence, SettingValue::Bool(on)) => {
-                self.settings.set_bool("predict", "sentence", on);
             }
             (Setting::Traditional, SettingValue::Bool(on)) => {
                 self.settings.set_bool("general", "traditional", on);
@@ -556,71 +496,6 @@ impl Host {
             (Setting::Wubi, SettingValue::Bool(on)) => {
                 self.settings
                     .set_value("general", "wubi", if on { "wubi86" } else { "" });
-            }
-            // 文本框失焦也会发 action：值没变就不写，免得每次切窗口都重写一遍配置
-            (Setting::BaseUrl, SettingValue::Text(text)) => {
-                let text = text.trim();
-                if !text.is_empty() && text != config.predict.base_url {
-                    self.settings.set_value("predict", "base_url", text);
-                }
-            }
-            (Setting::Model, SettingValue::Text(text)) => {
-                let text = text.trim();
-                if !text.is_empty() && text != config.predict.model {
-                    self.settings.set_value("predict", "model", text);
-                }
-            }
-            // 推理强度: 留空就是不发这个参数 (给不认它的接口), 所以空值也要写进去
-            (Setting::ReasoningEffort, SettingValue::Text(text)) => {
-                let text = text.trim();
-                if text != config.predict.reasoning_effort {
-                    self.settings.set_value("predict", "reasoning_effort", text);
-                }
-            }
-            // 输出额度: 0 或留空都是不发这个参数; 不是整数就不写 (文本框里可能是刚敲了一半)
-            (Setting::MaxTokens, SettingValue::Text(text)) => {
-                let text = text.trim();
-                let value = if text.is_empty() {
-                    Some(0)
-                } else {
-                    text.parse::<u32>().ok()
-                };
-                match value {
-                    Some(value) if value != config.predict.max_tokens => {
-                        self.settings
-                            .set_value("predict", "max_tokens", value as i64);
-                    }
-                    Some(_) => {}
-                    None => self.preferences.set_status(
-                        "输出额度没有保存: 填一个非负整数, 填 0 表示请求里不带这个参数",
-                    ),
-                }
-            }
-            (Setting::ApiKey, SettingValue::Text(text)) => {
-                let text = text.trim();
-                // 密码框看不见内容，粘贴多了（带上了终端提示符、命令）用户发现不了；这种值写进 .env 还会让整个文件解析失败
-                if text.chars().any(|c| !c.is_ascii_graphic()) {
-                    self.preferences.set_status(
-                        "密钥没有保存：里面有空格或非英文字符，多半是粘贴时多带了别的内容",
-                    );
-                    return;
-                }
-                if text.is_empty() {
-                    return;
-                }
-                if self.settings.set_env_var(&config.predict.api_key_env, text) {
-                    // 密钥换了必须重建 Predictor
-                    self.apply_config(true);
-                    self.preferences.set_status("密钥已保存");
-                } else {
-                    self.preferences
-                        .set_status("密钥没有保存：写不进配置目录的 .env，详情见日志");
-                }
-                return;
-            }
-            (Setting::TestCloud, _) => {
-                self.start_cloud_test();
-                return;
             }
             (Setting::OpenConfigFile, _) => {
                 if let Some(path) = self.settings.path() {

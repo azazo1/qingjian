@@ -1,4 +1,4 @@
-//! 组句的展示状态：缓冲变化时重查候选并重建 [`Composed`]，云端词异步并入，高亮 / 翻页，按状态生成给 DLL 的帧。
+//! 组句的展示状态: 缓冲变化时重查候选并重建 [`Composed`], 高亮 / 翻页, 按状态生成给 DLL 的帧.
 
 mod state;
 
@@ -9,30 +9,26 @@ pub(super) use self::state::Composed;
 use super::Router;
 
 impl Router {
-    /// 缓冲变化后：按 Engine 状态重建 [`Composed`]，发一次云联想请求，归零高亮与整句补全。
+    /// 缓冲变化后: 按 Engine 状态重建 [`Composed`], 归零高亮.
     pub(super) fn recompose(&mut self) {
         self.highlight = 0;
         self.navigated = false;
-        self.sentence = None;
         if self.engine.composition().is_empty() {
-            // 没在组句就没有候选可调，频次预览跟着归位
+            // 没在组句就没有候选可调, 频次预览跟着归位
             self.preview_frequency = false;
             self.composed = None;
-            self.stop_rescoring();
             return;
         }
-        self.attach_loaded_model();
         let built = self.engine.query().ok().map(|query| {
             let items = query.candidates.items.clone();
             let preedit: Vec<PreeditSegment> =
                 query.marked_segments().iter().map(Into::into).collect();
-            // 光标用 Core 的映射：自动补的 `'` 会让显示串比敲的长。
+            // 光标用 Core 的映射: 自动补的 `'` 会让显示串比敲的长.
             (items, preedit, query.marked_cursor())
         });
         self.composed = Some(match built {
             Some((items, preedit, cursor)) => {
-                let layout =
-                    CandidateLayout::new(items, self.config.page_size, self.config.cloud_slots);
+                let layout = CandidateLayout::new(items, self.config.page_size);
                 Composed::Candidates {
                     preedit,
                     cursor,
@@ -40,7 +36,7 @@ impl Router {
                 }
             }
             None => {
-                // 查询失败时退回显示原始字母；还没交给应用的已选词排在前面
+                // 查询失败时退回显示原始字母; 还没交给应用的已选词排在前面
                 let (text, cursor) = self.engine.plain_preedit();
                 Composed::Raw { text, cursor }
             }
@@ -48,7 +44,6 @@ impl Router {
         self.highlight = (0..self.candidate_count())
             .find(|&index| self.layout_candidate(index).is_some())
             .unwrap_or(0);
-        self.schedule_rescoring();
     }
 
     /// 高亮移动 `delta`，夹在 `[0, 末尾]`，到页边自然换页。
@@ -202,7 +197,7 @@ impl Router {
                     layout: self.config.layout,
                     theme: self.config.theme,
                     aux_code_show: false,
-                    sentence: self.sentence.clone(),
+                    sentence: None,
                     notice: self.notice.clone(),
                     frequencies,
                 }

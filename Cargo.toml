@@ -6,12 +6,7 @@ members = [
     "crates/qingjian-translate",
     "crates/qingjian-learning",
     "crates/qingjian-platform",
-    "crates/qingjian-predict",
-    "crates/qingjian-lm",
     "crates/qingjian-format",
-    "crates/qingjian-neural",
-    "crates/qingjian-decision",
-    "crates/qingjian-render",
     "crates/qingjian-update",
     "apps/linux/server", "apps/cli", "apps/macos", "apps/windows/server", "apps/windows/tsf", "apps/windows/settings", "tools/dict-convert", "tools/gloss-gen", "tools/release-sign",
 ]
@@ -32,11 +27,7 @@ qingjian-dictionary = { path = "crates/qingjian-dictionary" }
 qingjian-translate = { path = "crates/qingjian-translate" }
 qingjian-learning = { path = "crates/qingjian-learning" }
 qingjian-platform = { path = "crates/qingjian-platform" }
-qingjian-predict = { path = "crates/qingjian-predict" }
-qingjian-lm = { path = "crates/qingjian-lm" }
 qingjian-format = { path = "crates/qingjian-format" }
-qingjian-neural = { path = "crates/qingjian-neural" }
-qingjian-decision = { path = "crates/qingjian-decision" }
 qingjian-render = { path = "crates/qingjian-render" }
 qingjian-update = { path = "crates/qingjian-update" }
 
@@ -62,11 +53,7 @@ ferrous-opencc = { version = "0.4.0", default-features = false, features = ["s2t
 memmap2 = "0.9"
 zerocopy = { version = "0.8", features = ["derive"] }
 
-# 本地神经语言模型推理（字级 Transformer，权重 safetensors）
-candle-core = "0.11.0"
-candle-nn = "0.11.0"
-
-# 云联想：OpenAI 兼容接口客户端与它需要的异步运行时
+# 释义生成 (gloss-gen) 与检查更新：HTTP 客户端与异步运行时
 async-openai = { version = "0.42.0", default-features = false, features = ["chat-completion", "native-tls", "byot"] }
 reqwest = { version = "0.13", default-features = false }
 uuid = { version = "1.26", features = ["v4"] }

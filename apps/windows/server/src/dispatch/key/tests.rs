@@ -1,4 +1,4 @@
-//! Tab 与分页的三端约定；直接注入整句补全状态，不接云服务。
+//! Tab 与分页的三端约定.
 use crate::dispatch::{Router, RouterConfig};
 use qingjian_core::{CustomPhrase, Engine};
 use qingjian_dictionary::{Dictionary, WordList};
@@ -97,11 +97,10 @@ fn tab_and_backtab_page_boundaries_and_current_page_selection() {
     }
 }
 #[test]
-fn shift_tab_precedes_prediction_and_english_commit() {
+fn shift_tab_pages_and_english_tab_commits() {
     let mut router = router(1);
     let normal = KeyModifiers::default();
     compose(&mut router, "qq", normal);
-    router.sentence = Some("可控补全".into());
     let result = key(
         &mut router,
         9,
@@ -112,11 +111,8 @@ fn shift_tab_precedes_prediction_and_english_commit() {
         },
     );
     assert_eq!(result.1, None);
-    assert_eq!(router.sentence.as_deref(), Some("可控补全"));
-    assert_eq!(
-        key(&mut router, 9, None, normal).1.as_deref(),
-        Some("可控补全")
-    );
+    assert_eq!(key(&mut router, 9, None, normal).1, None);
+    key(&mut router, 0x1B, None, normal);
     let english = KeyModifiers {
         english_mode: true,
         ..normal

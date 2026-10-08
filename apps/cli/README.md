@@ -12,8 +12,8 @@ cargo run --release -p qingjian-cli                     # 交互模式
 
 ## 数据文件
 
-缺省按优先级找：`data/generated/` 里打包好的 `.qj` → 那里的 TSV → 仓库自带的产品数据（`assets/lexicon/`、`assets/glossary/`）→ `assets/sample/` 的样例。
-语言模型 `data/generated/lm.qj`（或 `lm-unigram.tsv` / `lm-bigram.tsv`）有就加载，没有就退化成一元词频整句；emoji 表在 `assets/emoji/`。
+缺省按优先级找: `data/generated/` 里打包好的 `.qj` → 那里的 TSV → 仓库自带的产品数据 (`assets/lexicon/`, `assets/glossary/`) → `assets/sample/` 的样例.
+整句按词库词频与用户学习打分; emoji 表在 `assets/emoji/`.
 
 | 参数 | 作用 |
 |---|---|
@@ -23,7 +23,7 @@ cargo run --release -p qingjian-cli                     # 交互模式
 | `--language en\|ja` | 学习语言（也可用环境变量 `QINGJIAN_LEARNING_LANGUAGE`） |
 | `--english <路径>` | 英文词表（中英混输、英文模式候选） |
 | `--user-dict <路径>` | 用户词频文件（`user.tsv`，同目录的 `user-words.tsv` / `user-choices.tsv` / `user-ngram.tsv` / `user-english.tsv` 一起读）；给了就在退出时写回，不给则只在本次会话内学习 |
-| `--config <路径>` | 配置文件，缺省与输入法共用 `~/Library/Application Support/Qingjian/config.toml`；测试时给一份 `[predict] enabled = false` 的，免得每次查询都等云端 |
+| `--config <路径>` | 配置文件, 缺省与输入法共用 `~/Library/Application Support/Qingjian/config.toml` |
 
 ## 行为开关
 

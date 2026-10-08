@@ -1,5 +1,5 @@
-//! TSV → `.qj`：解析成内存结构后原样落盘，加上元数据；`model` 是三件套目录 → `.qjm`，
-//! `codes` 是唯一带计算的一种（笔画表 + 词库 → 码表，见 `codes` 模块）。
+//! TSV → `.qj`: 解析成内存结构后原样落盘, 加上元数据;
+//! `codes` 是唯一带计算的一种 (笔画表 + 词库 → 码表, 见 `codes` 模块).
 
 use std::path::{Path, PathBuf};
 use std::time::Instant;
@@ -7,7 +7,6 @@ use std::time::Instant;
 use qingjian_core::Language;
 use qingjian_dictionary::Dictionary;
 use qingjian_format::Metadata;
-use qingjian_lm::BigramModel;
 use qingjian_translate::Glossary;
 
 use crate::args::PackKind;
@@ -67,19 +66,6 @@ pub fn pack(
             dictionary.write_qj(&out, &metadata)?;
             report(&out, dictionary.len(), started);
         }
-        PackKind::Lm => {
-            let (unigram, bigram) = match inputs {
-                [unigram, bigram, ..] => (unigram.clone(), bigram.clone()),
-                _ => (
-                    out_dir.join("lm-unigram.tsv"),
-                    out_dir.join("lm-bigram.tsv"),
-                ),
-            };
-            let model = BigramModel::from_paths(&unigram, &bigram)?;
-            let out = out_dir.join("lm.qj");
-            model.write_qj(&out, &metadata)?;
-            report(&out, model.bigram_count(), started);
-        }
         PackKind::Glossary => {
             let language: Language = language.parse().map_err(|_| ConvertError::Format {
                 path: PathBuf::from(language),
@@ -93,19 +79,6 @@ pub fn pack(
             let out = out_dir.join(format!("glossary-{}.qj", language.code()));
             glossary.write_qj(&out, &metadata)?;
             report(&out, glossary.len(), started);
-        }
-        PackKind::Model => {
-            let input = inputs
-                .first()
-                .cloned()
-                .unwrap_or_else(|| PathBuf::from("data/model"));
-            let out = out_dir.join("model.qjm");
-            let parameters = qingjian_neural::qjm::pack(&input, &out, &metadata)?;
-            report(
-                &out,
-                usize::try_from(parameters).unwrap_or(usize::MAX),
-                started,
-            );
         }
         PackKind::Codes => {
             let stroke = paths

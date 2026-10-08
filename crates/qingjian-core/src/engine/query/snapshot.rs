@@ -13,7 +13,7 @@ pub struct QuerySnapshot {
     /// 候选文本按顺序（只留前面一段，够定位选了第几个）。
     pub candidates: Vec<String>,
 
-    /// 候选顺序经过了神经重排。
+    /// 候选顺序经过了神经重排. 整句模型拆除后始终为假, 字段留给旧输入日志反序列化.
     pub rescored: bool,
 }
 

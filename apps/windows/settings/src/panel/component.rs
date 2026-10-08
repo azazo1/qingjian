@@ -6,10 +6,9 @@ use qingjian_platform::{
 };
 use windows_reactor::*;
 
-use super::cloud_status::CloudStatus;
 use super::controls::{export_logs, log_dir, open_in_editor, open_with_explorer};
 use super::notice::Notice;
-use super::pages::{about, aux_code, cloud, dictionaries, general, shortcut};
+use super::pages::{about, aux_code, dictionaries, general, shortcut};
 use super::recorder::Recorder;
 use super::{Message, Settings};
 
@@ -25,7 +24,6 @@ impl Component for Settings {
             config,
             path,
             page: "general".to_string(),
-            cloud_status: CloudStatus::Idle,
             recorder: Recorder::Idle,
             record_box: ElementRef::new(),
             notice: Notice::default(),
@@ -134,47 +132,6 @@ impl Component for Settings {
                 self.save("general", "font", family);
             }
             Message::StatusBar(on) => self.save("status_bar", "enabled", on),
-
-            // 云服务页
-            Message::LocalModel(on) => self.save("model", "enabled", on),
-            Message::CloudEnabled(on) => self.save("predict", "enabled", on),
-            Message::CloudApiKey(value) => self.save("predict", "api_key", value),
-            Message::CloudModel(value) => self.save("predict", "model", value),
-            Message::CloudBaseUrl(value) => self.save("predict", "base_url", value),
-            Message::CloudReasoningEffort(value) => self.save("predict", "reasoning_effort", value),
-            Message::CloudMaxTokens(value) => {
-                // 0 或留空都是不发这个参数；不是整数就不写（框里可能是刚敲了一半）
-                let text = value.trim();
-                let tokens = if text.is_empty() {
-                    Some(0)
-                } else {
-                    text.parse::<u32>().ok()
-                };
-                if let Some(tokens) = tokens {
-                    self.save("predict", "max_tokens", i64::from(tokens));
-                }
-            }
-            Message::CloudSlots(Some(value)) => {
-                let slots = (value.round() as i64).clamp(0, 9);
-                self.save("predict", "slots", slots);
-            }
-            Message::CloudSentence(on) => self.save("predict", "sentence", on),
-            Message::TestConnection => {
-                if matches!(self.cloud_status, CloudStatus::Testing) {
-                    return;
-                }
-                self.cloud_status = CloudStatus::Testing;
-                let config = self.config.predict.clone();
-                context.spawn_background(move |cancel| {
-                    Message::CloudTestDone(cloud::run_test(&config, &cancel))
-                });
-            }
-            Message::CloudTestDone(result) => {
-                self.cloud_status = match result {
-                    Ok(message) => CloudStatus::Ok(message),
-                    Err(message) => CloudStatus::Failed(message),
-                };
-            }
 
             // 快捷键页
             Message::PageKeys(Some(i)) if i < shortcut::PAGE_KEYS.len() => {
@@ -402,7 +359,6 @@ impl Component for Settings {
             item("general", "通用", Symbol::Setting),
             item("candidates", "候选窗口", Symbol::View),
             item("shortcut", "快捷键", Symbol::Keyboard),
-            item("cloud", "云服务", Symbol::World),
             item("fuzzy", "模糊音", Symbol::Audio),
             item("dictionaries", "词库", Symbol::Library),
             item("aux_code", "辅码", Symbol::Character),

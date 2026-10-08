@@ -66,15 +66,11 @@ pub struct Args {
     #[arg(long)]
     pub user_dict: Option<PathBuf>,
 
-    /// 配置文件路径。缺省：~/Library/Application Support/Qingjian/config.toml（macOS）或 ./config.toml
+    /// 配置文件路径. 缺省: ~/Library/Application Support/Qingjian/config.toml (macOS) 或 ./config.toml
     #[arg(long)]
     pub config: Option<PathBuf>,
 
-    /// 启用云联想（无视配置里的 enabled）；密钥来自配置或 QINGJIAN_API_KEY（`api_key_env`）
-    #[arg(long)]
-    pub predict: bool,
-
-    /// 模糊音，逗号分隔（z-zh,c-ch,s-sh,n-l,f-h,l-r,an-ang,en-eng,in-ing），`all` 全开；给了就覆盖配置里的 [fuzzy]
+    /// 模糊音, 逗号分隔 (z-zh,c-ch,s-sh,n-l,f-h,l-r,an-ang,en-eng,in-ing), `all` 全开; 给了就覆盖配置里的 [fuzzy]
     #[arg(long, value_delimiter = ',')]
     pub fuzzy: Vec<String>,
 
@@ -90,48 +86,11 @@ pub struct Args {
     #[arg(long)]
     pub shuangpin: Option<String>,
 
-    /// 形码码表（五笔）的 TSV 文件（`词\t编码\t词频`）：给了就用编码查表，不走拼音那一套
+    /// 形码码表 (五笔) 的 TSV 文件 (`词\t编码\t词频`): 给了就用编码查表, 不走拼音那一套
     #[arg(long, value_name = "码表")]
     pub wubi: Option<PathBuf>,
 
-    /// 神经重打分：字级 Transformer 的 .qjm 文件或导出目录（model.safetensors / config.json / vocab.json），整句前几条路径用它重排
-    #[arg(long)]
-    pub neural: Option<PathBuf>,
-
-    /// 神经重打分的权重 λ（0 到 1，缺省 0.5）：最终分 = 路径分 + λ·(神经分 − 静态二元分)，个人学习与代价不受影响
-    #[arg(long)]
-    pub neural_weight: Option<f64>,
-
-    /// 神经重打分的门槛（nat，缺省不设）：路径分落后最优路径超过这么多的不参与重排
-    #[arg(long)]
-    pub neural_margin: Option<f64>,
-
-    /// 神经重打分给模型看的前文字符数（缺省 64，0 为不给前文）
-    #[arg(long)]
-    pub neural_context: Option<usize>,
-
-    /// 神经重打分走后台线程（输入法壳里的接法）：查询先按词级模型出候选，再请求 / 等待重打分后重查一次；结果应与同步一致
-    #[arg(long)]
-    pub neural_async: bool,
-
-    /// 决策模型重排: 后端 (laya 本地服务 / jev 云端接口). 给了就用它做整句重排, 与 `--neural` 二选一
-    #[arg(long, value_name = "后端")]
-    pub decision: Option<qingjian_decision::BackendKind>,
-
-    /// 决策模型的接口地址 (缺省按后端: laya 是 http://127.0.0.1:8080/api/predict, jev 是 https://api.typesafe.ai/v1/systemone)
-    #[arg(long)]
-    pub decision_endpoint: Option<String>,
-
-    /// 决策模型的单次请求超时 (毫秒, 缺省 5000: 云端一次判断要一两秒)
-    #[arg(long)]
-    pub decision_timeout: Option<u64>,
-
-    /// 决策分的跨度 (nat, 缺省 4.0): 同一批候选里模型最偏好的那条相对批内均值最多加这么多分.
-    /// 权重 λ 仍用 `--neural-weight` (缺省 0.5), 前文长度用 `--neural-context`
-    #[arg(long)]
-    pub decision_span: Option<f64>,
-
-    /// 逐键模式：把每个输入当作一键一键敲进去，每个前缀都查一次，打印每键各阶段耗时（性能测试用）
+    /// 逐键模式: 把每个输入当作一键一键敲进去, 每个前缀都查一次, 打印每键各阶段耗时 (性能测试用)
     #[arg(long)]
     pub typing: bool,
 

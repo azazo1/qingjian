@@ -11,17 +11,14 @@ mod composing;
 mod correcting;
 mod decoded;
 mod extras;
-mod gloss;
 mod input_log;
 mod learning;
 mod marked;
 mod mode_keys;
 mod pending;
-mod prediction;
 mod privacy;
 mod query;
 mod raw;
-mod rescoring;
 mod session;
 mod setup;
 mod statistics;
@@ -39,7 +36,6 @@ pub use alignment::Alignment;
 pub use annotation::AnnotationReport;
 pub use aux_code::is_valid_aux_code_key;
 pub use commit::{LastCommit, Transition};
-pub use gloss::{FilledGloss, GlossFiller, NoGlossFiller};
 pub use input_log::{
     CommitEntry, INPUT_LOG_VERSION, InputLogEntry, InputLogger, InputSource, LOGGED_CANDIDATES,
     NoInputLogger,
@@ -49,11 +45,6 @@ pub use learning::{
 };
 pub use marked::{AuxSegment, MarkedKind, MarkedSegment};
 pub use mode_keys::{ModeKeys, QUESTION_PREFIX};
-pub use prediction::{
-    CloudWord, NoPredictor, Prediction, PredictionKind, PredictionPolicy, PredictionRequest,
-    Predictor, SurroundingText,
-};
-pub use rescoring::ModelHint;
 
 pub use query::Query;
 pub use raw::RawPreedit;
@@ -75,10 +66,7 @@ use crate::history::InputHistory;
 use crate::parser::{self, ParseError, Segmentation};
 use crate::punctuation::Punctuation;
 use crate::ranking::{self, Scored};
-use crate::sentence::{
-    self, Conversion, Interpolation, LanguageModel, NoLanguageModel, Personal, ScoreForm,
-    SentenceScorer,
-};
+use crate::sentence::{self, Conversion, Interpolation, LanguageModel, NoLanguageModel, Personal};
 use crate::shortcut;
 use crate::shuangpin::Scheme;
 
@@ -94,8 +82,8 @@ pub struct Engine {
     /// 前缀模式键（表达式 / 问字）。
     modes: ModeKeys,
 
-    /// 附加词库（领域词库、用户导入的），与主词库一起查词、一起进整句词图；不参与语言模型（它们没有 bigram，
-    /// 走词频兜底）。壳按用户目录 `dicts/` 与配置 `[dictionaries]` 装配。
+    /// 附加词库 (领域词库、用户导入的), 与主词库一起查词、一起进整句词图.
+    /// 壳按用户目录 `dicts/` 与配置 `[dictionaries]` 装配.
     extra_dictionaries: Vec<Dictionary>,
 
     /// 录入词组用的反查表: 词 -> (空格分隔的拼音, 词频). 主词库加附加词库, 建一次, 附加词库换掉时作废.
@@ -137,47 +125,10 @@ pub struct Engine {
     /// 关着由壳直接把大写字母交给应用，Core 这一路就不该收——否则 `Cpan` 这种会被当成拼音。
     shift_letter_compose: bool,
 
-    /// 联想提供方，缺省为 [`NoPredictor`]。
-    predictor: Box<dyn Predictor>,
-
-    /// 整句转换的语言模型，缺省为 [`NoLanguageModel`]（退化成一元词频）。
+    /// 整句转换的语言模型, 缺省为 [`NoLanguageModel`] (退化成一元词频).
     language_model: Box<dyn LanguageModel>,
 
-    /// 整句路径的同步神经重打分器（字级 Transformer，查询里当场打分；CLI 评测用）。
-    sentence_scorer: Option<Box<dyn SentenceScorer>>,
-
-    /// 当前打分器给的分是什么量纲 (见 [`ScoreForm`]): 接打分器时从它自己的 [`SentenceScorer::form`] 取一次存下.
-    /// 异步打分器进了后台线程, Engine 手里只剩通道, 所以不能等到重排时再问.
-    scorer_form: ScoreForm,
-
-    /// 当前打分器会不会把前文发到本机之外 ([`SentenceScorer::is_remote`]); 私密输入期间这种打分器不参与重排.
-    scorer_remote: bool,
-
-    /// 当前打分器相对分的满量程 ([`SentenceScorer::relative_scale`]): 有它才把候选的分还原成 0 到 1 的置信度.
-    scorer_scale: Option<f64>,
-
-    /// 最近一次重排里各条文本的模型标注 (名次变化 + 置信度), 壳拿去在候选旁标 `AI 76% ↑2`; 每次重排重建.
-    model_hints: std::cell::RefCell<HashMap<String, rescoring::ModelHint>>,
-
-    /// 异步重打分：后台线程里的打分器，壳在停顿后送任务、轮询结果（见 [`rescoring`]）。
-    rescorer: Option<rescoring::RescoreWorker>,
-
-    /// 「前文 + 整句文本 → 神经分」缓存，同步与异步打分共用。
-    neural_cache: std::cell::RefCell<rescoring::NeuralCache>,
-
-    /// 壳给的应用里光标前的文本；`None` 时前文用本会话历史。
-    rescoring_before: Option<String>,
-
-    /// 重打分时神经得分的权重 λ：最终分 = 路径分 + λ·(神经分 − 静态分)。
-    neural_weight: f64,
-
-    /// 只有路径分与最优路径差距在这么多 nat 以内的路径才参与重排：差距大的多半是个人 n-gram 拉开的，通用模型不该翻盘。
-    neural_margin: f64,
-
-    /// 重打分给模型看的前文长度（本会话最近上屏的字符数），0 为不给前文。
-    neural_context: usize,
-
-    /// 个人 n-gram 与静态模型插值的参数；只有回放调参会改（`set_interpolation`），壳用缺省值。
+    /// 个人 n-gram 与静态模型插值的参数; 只有回放调参会改 (`set_interpolation`), 壳用缺省值.
     interpolation: Interpolation,
 
     /// 敲错纠正的代价；同上，只有回放调参会改（`set_typo_costs`）。
@@ -196,16 +147,13 @@ pub struct Engine {
     /// 输入日志的落盘方；缺省不记，私密输入期间一律不记（[`input_log::MutedLogger`]）。
     logger: input_log::MutedLogger,
 
-    /// 私密输入中（见 [`Self::set_private`]）：不学、不记、不发云端。
+    /// 私密输入中 (见 [`Self::set_private`]): 不学、不记.
     private: bool,
 
     /// 输入日志条目的序号。
     log_sequence: u64,
 
-    /// 最近一次查询的候选顺序是否经过神经重排（`rescore_paths` 置位，`query` 开头清零），写进输入日志。
-    last_rescored: std::cell::Cell<bool>,
-
-    /// 这段组句里第一次退格前的缓冲区：上屏时与最终键串不同就记一条 `retype`。
+    /// 这段组句里第一次退格前的缓冲区: 上屏时与最终键串不同就记一条 `retype`.
     retype_snapshot: Option<String>,
 
     /// 组句外直通给应用的字符，攒到下一次上屏或上文断开时写成一条 `passthrough`。
@@ -223,19 +171,13 @@ pub struct Engine {
     /// 上次记 `break` 之后有没有上屏过：没有就不再记，免得失焦一次记一条。
     committed_since_break: bool,
 
-    /// 最近一次联想请求时的作用域：结果可能在上屏之后才到，日志里要记请求时的拼音。
-    last_prediction_scope: String,
-
-    /// 输入统计的累计方（打了多少字）；缺省不记。
+    /// 输入统计的累计方 (打了多少字); 缺省不记.
     meter: Box<dyn UsageMeter>,
 
     /// 学习语言的词汇记录（见过 / 上屏过哪些译词）；缺省不记也不标生词。
     vocabulary: Box<dyn VocabularyTracker>,
 
-    /// 释义兜底：释义表里没有的词上屏后问云端；缺省不问。
-    gloss_filler: Box<dyn GlossFiller>,
-
-    /// 候选窗口当前页上的译词（壳每次画完告知），上屏时记成「看到过」。
+    /// 候选窗口当前页上的译词 (壳每次画完告知), 上屏时记成「看到过」.
     displayed: Vec<(Language, String)>,
 
     /// 上一次查询的摘要，上屏时写进输入日志。
@@ -247,19 +189,10 @@ pub struct Engine {
     /// 整句转换的格子候选缓存：跨按键复用，学习数据一变就清（见 [`Self::forget_span_cache`]）。
     span_cache: std::cell::RefCell<sentence::SpanCache>,
 
-    /// 本次会话经我们上屏的文本，应用不给上下文时用它联想。
+    /// 本次会话经我们上屏的文本, 个人 n-gram 的句首上下文用它.
     history: InputHistory,
 
-    /// 最近一次联想请求的序号，0 表示还没发过。
-    prediction_sequence: u64,
-
-    /// 最近一次联想请求的种类：只有组句联想的结果要按拼音校验。
-    last_prediction_kind: PredictionKind,
-
-    /// 最近一次问字请求里本地把问题拼音转成的汉字，用来剔掉模型复述问题的「答案」。
-    last_question_guess: String,
-
-    /// 连续上屏的链，个人 n-gram 与自动造词靠它。
+    /// 连续上屏的链, 个人 n-gram 与自动造词靠它.
     chain: CommitChain,
 
     /// 模糊音开关，缺省全关。
@@ -368,30 +301,11 @@ const AUTO_WORD_MAX_CHARS: usize = 4;
 /// 整句是模型自己算出来的，按空格接受它会把这条路径喂回模型，形成自我强化；用户明确改选的词要能压过这种回声。
 pub const EXPLICIT_TRANSITION_WEIGHT: u32 = 2;
 
-/// 拼音短于这个字母数不联想：一两个字母的意图太模糊，白花一次请求。
-const MIN_PREDICTION_LETTERS: usize = 2;
-
-/// 辅码触发键的缺省值（`[general] aux_code_key`）。
+/// 辅码触发键的缺省值 (`[general] aux_code_key`).
 pub const DEFAULT_AUX_CODE_KEY: char = ';';
 
-/// 随联想请求附带的本地候选条数。
-const PREDICTION_CANDIDATE_HINTS: usize = 5;
-
-/// 一次查询最多给壳多少条候选。同音字最多的音节也不到这个数，再往后都是长词，没人会翻到。
+/// 一次查询最多给壳多少条候选. 同音字最多的音节也不到这个数, 再往后都是长词, 没人会翻到.
 const MAX_CANDIDATES: usize = 500;
-
-/// 神经重打分看 Viterbi 的前几条路径：束宽是 8，再多也没有。
-const RESCORE_PATHS: usize = 6;
-
-/// 神经重打分的缺省权重 λ（见 `Engine::neural_weight`）：整句评测集上 0.5 到 1.0 一样好、0.75 最高（见 docs/notes/neural-rescoring.md），
-/// 取 0.5 给个人 n-gram 留余量；回放里看到的「λ 大整句掉」是那把尺子的偏差。
-pub const NEURAL_WEIGHT: f64 = 0.5;
-
-/// 神经重打分的缺省门槛（nat）：路径分落后最优路径超过这么多的不参与重排。缺省不设（4 nat 试过没帮助），留作调参的旋钮。
-pub const NEURAL_MARGIN: f64 = f64::INFINITY;
-
-/// 重打分给模型看的前文：本次会话最近上屏的这么多个字符。
-pub const RESCORE_CONTEXT_CHARS: usize = 64;
 
 impl Engine {
     pub fn new(dictionary: Dictionary) -> Self {
@@ -412,21 +326,9 @@ impl Engine {
             custom_phrases: Vec::new(),
             chinese_first: false,
             shift_letter_compose: false,
-            predictor: Box::new(NoPredictor),
             language_model: Box::new(NoLanguageModel),
-            sentence_scorer: None,
-            scorer_form: ScoreForm::Absolute,
-            scorer_remote: false,
-            scorer_scale: None,
-            model_hints: std::cell::RefCell::new(HashMap::new()),
-            rescorer: None,
-            neural_cache: std::cell::RefCell::new(rescoring::NeuralCache::default()),
-            rescoring_before: None,
-            neural_weight: NEURAL_WEIGHT,
-            neural_margin: NEURAL_MARGIN,
             interpolation: Interpolation::DEFAULT,
             typo_costs: TypoCosts::DEFAULT,
-            neural_context: RESCORE_CONTEXT_CHARS,
             correction_cache: std::cell::RefCell::new(None),
             span_cache: std::cell::RefCell::new(sentence::SpanCache::default()),
             recent_commits: Vec::new(),
@@ -434,24 +336,18 @@ impl Engine {
             logger: input_log::MutedLogger::new(Box::new(NoInputLogger)),
             private: false,
             log_sequence: 0,
-            last_rescored: std::cell::Cell::new(false),
             retype_snapshot: None,
             passthrough_pending: String::new(),
             page_turns: 0,
             composition_started: None,
             application: None,
             committed_since_break: false,
-            last_prediction_scope: String::new(),
             meter: Box::new(NoUsageMeter),
             vocabulary: Box::new(NoVocabularyTracker),
-            gloss_filler: Box::new(NoGlossFiller),
             displayed: Vec::new(),
             last_query: std::cell::RefCell::new(None),
             recording: Vec::new(),
             history: InputHistory::default(),
-            prediction_sequence: 0,
-            last_prediction_kind: PredictionKind::Compose,
-            last_question_guess: String::new(),
             chain: CommitChain::default(),
             fuzzy: FuzzyRules::default(),
             shuangpin: None,
@@ -513,17 +409,6 @@ fn pattern_key(pattern: &[qingjian_dictionary::SyllablePattern<'_>]) -> String {
         key.push(' ');
     }
     key
-}
-
-/// 末尾 `count` 个字符。
-fn take_last_chars(text: &str, count: usize) -> String {
-    let total = text.chars().count();
-    text.chars().skip(total.saturating_sub(count)).collect()
-}
-
-/// 开头 `count` 个字符。
-fn take_first_chars(text: &str, count: usize) -> String {
-    text.chars().take(count).collect()
 }
 
 /// 光标后剩余拼音的显示形式：能切就按音节用 `'` 连上，切不动就原样。

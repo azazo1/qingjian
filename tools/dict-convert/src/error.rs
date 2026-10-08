@@ -12,15 +12,9 @@ pub enum ConvertError {
     Dictionary(#[from] qingjian_dictionary::DictionaryError),
 
     #[error(transparent)]
-    LanguageModel(#[from] qingjian_lm::LmError),
-
-    #[error(transparent)]
     Glossary(#[from] qingjian_translate::GlossaryError),
 
-    #[error(transparent)]
-    Neural(#[from] qingjian_neural::NeuralError),
-
-    /// `pack` 少了必填的元数据（只有 `codes` 有缺省值）。
+    /// `pack` 少了必填的元数据 (只有 `codes` 有缺省值).
     #[error("pack {kind} needs --name")]
     MissingName {
         /// `pack` 的种类名。

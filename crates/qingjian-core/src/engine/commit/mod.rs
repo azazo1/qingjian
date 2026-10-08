@@ -10,7 +10,7 @@ use super::{
     AUTO_WORD_MAX_CHARS, AUTO_WORD_THRESHOLD, AUTO_WORD_THRESHOLD_SAME_BUFFER,
     EXPLICIT_TRANSITION_WEIGHT, Engine, choice_key, segment_longest_prefix,
 };
-use crate::candidate::{Candidate, CandidateKind, CandidateList, Language};
+use crate::candidate::{Candidate, CandidateKind, CandidateList};
 use crate::correction::typo;
 use crate::{parser, sentence};
 use qingjian_dictionary::Dictionary;
@@ -143,23 +143,7 @@ impl Engine {
             }
             // emoji 按它对应词的音节消耗拼音，不记学习
             CandidateKind::Emoji => self.consumed_by(candidate),
-            // 云端词是针对整段作用域要的（拼音可能有错，按音节对不上），上屏吃掉整段；词库里没有的记成用户词
-            CandidateKind::Cloud => {
-                if let Some(syllables) = self.learned_syllables(candidate) {
-                    let learned = Candidate {
-                        syllables,
-                        ..candidate.clone()
-                    };
-                    if !self.knows_word(&learned) {
-                        self.learner.learn_word(&learned.text, &learned.syllables);
-                    }
-                }
-                self.learner.record(candidate);
-                let (consumed, input) = self.whole_scope();
-                self.learner.record_choice(&input, &candidate.text);
-                (consumed, input)
-            }
-            // 英文词与快捷候选对应整段作用域；选中的英文词记次数并进个人英文词表，下次同样的前缀它靠前
+            // 英文词与快捷候选对应整段作用域; 选中的英文词记次数并进个人英文词表, 下次同样的前缀它靠前
             CandidateKind::English | CandidateKind::Shortcut | CandidateKind::Custom(_) => {
                 if candidate.kind == CandidateKind::English {
                     self.learner.record(candidate);
@@ -199,24 +183,12 @@ impl Engine {
                 );
             }
         }
-        // 词库里有、释义表里没有的词：交给释义兜底在后台问云端，写进个人释义表，下次就有译词；私密输入中不问
-        if matches!(
-            candidate.kind,
-            CandidateKind::Chinese | CandidateKind::Cloud | CandidateKind::Code
-        ) && self.gloss_filler.is_enabled()
-            && !self.private
-            && self.translator.language() != Language::Chinese
-            && self.translator.translate(&candidate.text).is_none()
-        {
-            self.gloss_filler
-                .request(self.translator.language(), &candidate.text);
-        }
         self.composition.drain_prefix(consumed);
         // 上屏即收尾：码段清空、回初始态（数字键与「标点先上屏」都走这里）
         self.aux_code = None;
         let buffer_left = !self.composition.is_empty();
         match candidate.kind {
-            CandidateKind::Chinese | CandidateKind::Cloud | CandidateKind::Code => {
+            CandidateKind::Chinese | CandidateKind::Code => {
                 // 形码没有音节，`record_word` 里按音节数做的整段造词自然不会触发
                 self.record_word(
                     &candidate.text,
@@ -269,10 +241,7 @@ impl Engine {
         self.history.record(&candidate.text);
         let learned = matches!(
             candidate.kind,
-            CandidateKind::Chinese
-                | CandidateKind::Code
-                | CandidateKind::Cloud
-                | CandidateKind::Sentence
+            CandidateKind::Chinese | CandidateKind::Code | CandidateKind::Sentence
         );
         let commit = if learned {
             LastCommit {
@@ -281,7 +250,7 @@ impl Engine {
                 input,
                 chosen: matches!(
                     candidate.kind,
-                    CandidateKind::Chinese | CandidateKind::Code | CandidateKind::Cloud
+                    CandidateKind::Chinese | CandidateKind::Code
                 )
                 .then(|| candidate.text.clone()),
                 transitions: std::mem::take(&mut self.recording),

@@ -6,6 +6,6 @@ pub struct TranslationJob {
     /// 选区在应用里的范围，接受时用译文替换它。
     pub range: NSRange,
 
-    /// 云端回来的译文；`None` 表示还在等。
+    /// 本机释义表给出的译文; `None` 表示没有.
     pub result: Option<String>,
 }

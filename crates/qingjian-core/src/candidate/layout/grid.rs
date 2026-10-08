@@ -14,9 +14,6 @@ pub const MAX_CELL_EMS: f32 = 4.0;
 /// 估宽时非宽字符（拉丁字母、数字、半角标点）按几个字宽算。
 const NARROW_EMS: f32 = 0.62;
 
-/// 云端词前面的云朵图标按几个字宽算。
-const CLOUD_EMS: f32 = 1.1;
-
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub struct Grid {
     /// 视口第一行的行号（页号）。
@@ -40,14 +37,11 @@ impl Grid {
             let Some(candidate) = cell.candidate() else {
                 continue;
             };
-            let mut ems: f32 = candidate
+            let ems: f32 = candidate
                 .text
                 .chars()
                 .map(|c| if c.is_ascii() { NARROW_EMS } else { 1.0 })
                 .sum();
-            if matches!(cell, super::Cell::Cloud(_)) {
-                ems += CLOUD_EMS;
-            }
             let width = &mut widths[i % columns];
             *width = width.max(ems.min(MAX_CELL_EMS));
         }
@@ -151,7 +145,7 @@ mod tests {
                 aux_code: None,
             })
             .collect();
-        CandidateLayout::new(candidates, page_size, 0)
+        CandidateLayout::new(candidates, page_size)
     }
 
     #[test]
@@ -201,7 +195,7 @@ mod tests {
         assert_eq!(Grid::at(&layout, 3).rows(&layout), 3..9);
         assert_eq!(Grid::at(&layout, 19).rows(&layout), 14..20);
         // 总共不到一屏：从头显示
-        let short = super::super::CandidateLayout::new(Vec::new(), 5, 0);
+        let short = super::super::CandidateLayout::new(Vec::new(), 5);
         assert_eq!(Grid::at(&short, 0).top(), 0);
     }
 
@@ -223,7 +217,7 @@ mod tests {
             text: "事实上".into(),
             ..candidates[0].clone()
         });
-        let layout = CandidateLayout::new(candidates, 5, 0);
+        let layout = CandidateLayout::new(candidates, 5);
         let ems = Grid::column_ems(&layout);
         assert_eq!(ems.len(), 5);
         assert_eq!(ems[0], 3.0);

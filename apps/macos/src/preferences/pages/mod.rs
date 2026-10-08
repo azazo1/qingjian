@@ -4,7 +4,6 @@
 mod about;
 mod advanced;
 mod candidates;
-mod cloud;
 mod dictionaries;
 mod fuzzy;
 mod general;
@@ -17,7 +16,6 @@ pub(super) use about::build as build_about;
 pub use about::{REPOSITORY_URL, UpdateStatus, WEBSITE_URL};
 pub(super) use advanced::AdvancedPage;
 pub(super) use candidates::CandidatesPage;
-pub(super) use cloud::CloudPage;
 pub(super) use dictionaries::DictionariesPage;
 pub(super) use fuzzy::FuzzyPage;
 pub(super) use general::GeneralPage;

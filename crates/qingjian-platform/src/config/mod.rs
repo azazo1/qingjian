@@ -8,7 +8,6 @@ mod key_combo;
 mod layout_mode;
 mod log_level;
 mod mac_switch;
-mod model;
 mod modifiers;
 mod preedit_mode;
 mod scheme;
@@ -22,7 +21,6 @@ mod update;
 use std::path::Path;
 
 use qingjian_core::FuzzyRules;
-use qingjian_predict::PredictConfig;
 use serde::{Deserialize, Serialize};
 use toml_edit::DocumentMut;
 
@@ -43,10 +41,8 @@ pub use key_combo::KeyCombo;
 pub use layout_mode::LayoutMode;
 pub use log_level::LogLevel;
 pub use mac_switch::{MacModifier, MacSwitchAction, MacSwitchKey, MacSwitchPlan};
-pub use model::LocalModelConfig;
 pub use modifiers::Modifiers;
 pub use preedit_mode::PreeditMode;
-pub use qingjian_decision::DecisionConfig;
 pub use scheme::{Scheme, scheme_label};
 pub use shift_letter::ShiftLetter;
 pub use shortcut::ShortcutConfig;
@@ -58,8 +54,7 @@ pub use update::{UpdateChannel, UpdateConfig};
 /// 用户配置文件（TOML）。所有平台同一份格式，缺省值全部在各分节的 `Default` 里。
 ///
 /// 配置文件是唯一事实源：菜单、设置窗口、手改文件三个入口都只写这个文件，再由壳热加载。
-/// 只派生 `PartialEq`: `[decision] span` 是浮点数, 整份配置不再满足 `Eq` 的自反要求.
-#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct Config {
     /// 常规：学习语言、每页候选数、翻页键、外观。
@@ -81,20 +76,11 @@ pub struct Config {
     /// 辅码码表开关。
     pub aux_code: AuxCodeConfig,
 
-    /// 按应用改行为（哪些应用里英文模式不给候选）。
+    /// 按应用改行为 (哪些应用里英文模式不给候选).
     pub apps: AppsConfig,
 
-    /// 云联想。
-    pub predict: PredictConfig,
-
-    /// 悬浮状态条（桌面上常驻、可拖动的中 / 英浮窗）。
+    /// 悬浮状态条 (桌面上常驻、可拖动的中 / 英浮窗).
     pub status_bar: StatusBarConfig,
-
-    /// 本地整句模型。
-    pub model: LocalModelConfig,
-
-    /// 决策模型: 整句重排的第二个来源 (与 `model` 互斥, 两者都开时用它).
-    pub decision: DecisionConfig,
 
     /// 检查更新.
     pub update: UpdateConfig,
@@ -359,59 +345,8 @@ disabled = []
 # true 且有可用码表（随包或 codes/ 下有 .qj）才生效
 enabled = false
 # 辅码码表：放在配置同目录 codes/ 下的 .qj 文件都会加载，这里列出要关掉的（文件名，不含扩展名）
-# 随包的笔画表也可以在这里关掉；码表由「辅码」设置页导入，或放好文件后在这里管
+# 随包的笔画表也可以在这里关掉; 码表由「辅码」设置页导入, 或放好文件后在这里管
 disabled = []
-
-[model]
-# 本地整句模型：随包的小模型在本机给整句候选重新排序，全程离线；停顿后几十毫秒生效。关掉只用词库统计
-enabled = true
-
-[decision]
-# 决策模型: 整句重排的第二个来源, 与上面的本地整句模型互斥 (这个开着就用它, 本地模型不再加载).
-# 这类模型不生成文本, 只回答 "这几条候选里哪条最顺", 一次前向出答案. 默认关闭. 目前只有 macOS 壳接上 (Windows / Linux 待接).
-enabled = false
-# 后端: laya 本地 HTTP 服务 (laya-serve, 或自己用 laya-mlx 包的同类服务, 全程离线) /
-# jev TypeSafe System One 云端接口 (需要密钥, 光标前文会离开本机)
-backend = "laya"
-# 接口地址; 留空按后端取缺省 (laya 是 http://127.0.0.1:8080/api/predict, jev 是 https://api.typesafe.ai/v1/systemone)
-endpoint = ""
-# 模型名, 只有 jev 用
-model = "jev-latest"
-# 密钥, 只有 jev 用: 填在这里, 或留空并设置 api_key_env 指定的环境变量
-# api_key = ""
-api_key_env = "TYPESAFE_API_KEY"
-# 单次请求超时 (毫秒): 超时这一轮不重排, 按键本来也不等它. 壳等结果的上限跟着它放宽 (多留一秒),
-# 云端一次判断要几秒, 用云端后端时把它调大
-timeout_ms = 1500
-# 给模型看的光标前文最多几个字符 (0 不给)
-context_chars = 48
-# 决策分到路径分的换算跨度 (nat): 模型最偏好的那条相对批内均值最多加这么多分, 越大越敢翻盘
-span = 4.0
-
-[predict]
-# 云联想：把光标附近的文本发到下面的接口，让模型补全整句 / 联想下文。默认关闭。
-# 开启后菜单栏的「中 / 英」旁会带一个云朵标识；Secure Input（密码框）里绝不发送。
-enabled = false
-# OpenAI 兼容接口地址与模型名（DeepSeek 默认值）
-base_url = "https://api.deepseek.com"
-model = "deepseek-v4-flash"
-# 推理强度（reasoning_effort）：none 关掉模型的思考，联想要快；留空则不发这个参数
-reasoning_effort = "none"
-# 输出额度（max_tokens）：联想只要几条短句，200 够；写 0 则请求里不带这个参数，由服务商用自己的缺省值
-max_tokens = 200
-# 密钥：填在这里，或留空并设置 api_key_env 指定的环境变量（偏好设置里填的密钥写进配置同目录的 .env）
-# api_key = ""
-api_key_env = "QINGJIAN_API_KEY"
-# 单次请求超时（毫秒）、停止敲键多久后才发请求（毫秒）
-timeout_ms = 5000
-debounce_ms = 300
-# 光标前 / 后最多发多少个字符——这是发往云端的上下文上限
-lookback = 64
-lookahead = 32
-# 云端词到了补进候选窗口第一页末尾几格（比如 2 就是 8、9 两格），前面的本地候选不动；0 表示不要云端词
-slots = 2
-# 组句中除了词候选还要不要整句补全（preedit 右侧，Tab 接受）
-sentence = true
 
 [status_bar]
 # 桌面上常驻、可拖动的悬浮状态条（Windows）：「中 / 英」格点一下切换模式（开着双拼时还显示方案名）、「，。」格切全角 / 半角标点、齿轮打开设置。
@@ -518,15 +453,10 @@ impl Config {
                 });
             }
         };
-        let config: Self = toml::from_str(&source).map_err(|source| ConfigError::Parse {
+        toml::from_str(&source).map_err(|source| ConfigError::Parse {
             path: path.to_owned(),
             source: Box::new(source),
-        })?;
-        // 配置或环境变量里的密钥登记给日志掩码；各进程都从这里加载配置，登记在这一处就够
-        if let Some(key) = config.predict.resolve_api_key() {
-            crate::logs::secrets::register(&key);
-        }
-        Ok(config)
+        })
     }
 
     /// 原地改一个布尔键，见 [`Self::set_value`]。
@@ -557,7 +487,7 @@ impl Config {
             path: path.to_owned(),
             source: Box::new(source),
         })?;
-        // 分节不存在时先建成标准表，否则 toml_edit 会写成顶层的行内表 `predict = { enabled = true }`
+        // 分节不存在时先建成标准表, 否则 toml_edit 会写成顶层的行内表 `fuzzy = { z_zh = true }`
         if !document.get(section).is_some_and(|item| item.is_table()) {
             document[section] = toml_edit::table();
         }
@@ -635,12 +565,9 @@ mod tests {
 
     #[test]
     fn partial_file_keeps_other_defaults() {
-        let config: Config = toml::from_str("[predict]\nenabled = true\nlookback = 10\n").unwrap();
-        assert!(config.predict.enabled);
-        assert_eq!(config.predict.lookback, 10);
-        assert_eq!(config.predict.model, "deepseek-v4-flash");
-        assert_eq!(config.predict.reasoning_effort, "none");
-        assert_eq!(config.predict.api_key_env, "QINGJIAN_API_KEY");
+        let config: Config = toml::from_str("[fuzzy]\nz_zh = true\n").unwrap();
+        assert!(config.fuzzy.z_zh);
+        assert!(!config.fuzzy.n_l);
     }
 
     #[test]
@@ -700,14 +627,14 @@ mod tests {
         )
         .unwrap();
         Config::set_bool(&path, "fuzzy", "z_zh", true).unwrap();
-        Config::set_bool(&path, "predict", "enabled", true).unwrap();
+        Config::set_bool(&path, "status_bar", "enabled", true).unwrap();
         let text = std::fs::read_to_string(&path).unwrap();
         assert!(
             text.starts_with("# 头注释\n[fuzzy]\n# 说明\nz_zh = true\nn_l = true\n"),
             "{text}"
         );
         let config = Config::load(&path).unwrap();
-        assert!(config.fuzzy.z_zh && config.fuzzy.n_l && config.predict.enabled);
+        assert!(config.fuzzy.z_zh && config.fuzzy.n_l && config.status_bar.enabled);
         let _ = std::fs::remove_file(&path);
     }
 
@@ -721,8 +648,8 @@ mod tests {
         assert_eq!(std::fs::read_to_string(&path).unwrap(), TEMPLATE);
         // 没有模板直接保存也行
         std::fs::remove_dir_all(&dir).unwrap();
-        Config::set_bool(&path, "predict", "enabled", true).unwrap();
-        assert!(Config::load(&path).unwrap().predict.enabled);
+        Config::set_bool(&path, "status_bar", "enabled", true).unwrap();
+        assert!(Config::load(&path).unwrap().status_bar.enabled);
         std::fs::remove_dir_all(&dir).unwrap();
     }
 
@@ -730,10 +657,10 @@ mod tests {
     fn set_bool_starts_from_template_when_missing() {
         let path = std::env::temp_dir().join("qingjian-config-set-bool-missing-test.toml");
         let _ = std::fs::remove_file(&path);
-        Config::set_bool(&path, "predict", "enabled", true).unwrap();
+        Config::set_bool(&path, "status_bar", "enabled", true).unwrap();
         let text = std::fs::read_to_string(&path).unwrap();
         assert!(text.contains("# 青简输入法配置"));
-        assert!(Config::load(&path).unwrap().predict.enabled);
+        assert!(Config::load(&path).unwrap().status_bar.enabled);
         let _ = std::fs::remove_file(&path);
     }
 

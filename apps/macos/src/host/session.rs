@@ -1,8 +1,7 @@
-//! 当前输入会话的 UI 状态：候选排布、高亮、页码、preedit。
+//! 当前输入会话的 UI 状态: 候选排布、高亮、页码、preedit.
 //!
-//! 放在 Host 里而不是控制器的 ivars 里，是因为联想结果由定时器送达，那时手上没有控制器；
-//! 反正 Engine 的缓冲区也是全进程一份，会话状态跟着它走。
-//! 候选的分页与云端词的位置由 Core 的 [`CandidateLayout`] 定，这里只管高亮与页码。
+//! 放在 Host 里而不是控制器的 ivars 里: Engine 的缓冲区是全进程一份, 会话状态跟着它走.
+//! 候选的分页由 Core 的 [`CandidateLayout`] 定, 这里只管高亮与页码.
 
 use qingjian_core::{Candidate, CandidateLayout, Cell, GRID_ROWS, Grid};
 
@@ -10,7 +9,7 @@ use crate::candidates::Preedit;
 
 #[derive(Debug, Default)]
 pub struct Session {
-    /// 上一次查询的候选排布（本地候选 + 云端词）。
+    /// 上一次查询的候选排布.
     pub layout: CandidateLayout,
 
     /// 高亮的格子下标（在整个排布里的绝对位置）。
@@ -19,7 +18,7 @@ pub struct Session {
     /// 当前页。
     pub page: usize,
 
-    /// 这轮查询里用户用方向键 / 翻页键动过高亮。动过就不再拿重排结果换掉候选。
+    /// 这轮查询里用户用方向键 / 翻页键动过高亮.
     pub navigated: bool,
 
     /// 候选窗口顶部显示的拼音行（分段 + 光标）。
@@ -36,10 +35,9 @@ impl Session {
         preedit: Option<Preedit>,
         candidates: Vec<Candidate>,
         page_size: usize,
-        slots: usize,
     ) {
         self.preedit = preedit;
-        self.layout = CandidateLayout::new(candidates, page_size, slots);
+        self.layout = CandidateLayout::new(candidates, page_size);
         self.highlighted = (0..self.layout.len())
             .find(|&i| self.layout.candidate(i).is_some())
             .unwrap_or(0);
@@ -207,7 +205,7 @@ mod tests {
     #[test]
     fn vertical_keys_expand_the_row_into_a_scrolling_grid() {
         let mut session = Session::default();
-        session.reset(None, candidates(100), 5, 0);
+        session.reset(None, candidates(100), 5);
         assert!(session.grid_cells().is_none());
         // 左右键在单行时不归候选管
         assert!(!session.move_cells(1));
@@ -234,7 +232,7 @@ mod tests {
         assert_eq!(session.page, 13);
         // 新一轮查询回到单行
         session.move_rows(1);
-        session.reset(None, candidates(3), 5, 0);
+        session.reset(None, candidates(3), 5);
         assert!(session.grid.is_none());
         // 只有一行时往上：展开但不动，仍要重画
         assert!(session.move_rows(-1));
@@ -245,7 +243,7 @@ mod tests {
     #[test]
     fn highlight_text_lands_on_the_named_candidate_and_follows_the_page() {
         let mut session = Session::default();
-        session.reset(None, candidates(12), 5, 0);
+        session.reset(None, candidates(12), 5);
         assert_eq!((session.highlighted, session.page), (0, 0));
         // 按文本落到第 8 个候选（第 2 页）：页码跟着走
         assert!(session.highlight_text("本7"));
@@ -260,7 +258,7 @@ mod tests {
     #[test]
     fn digits_map_to_cells_on_the_current_page() {
         let mut session = Session::default();
-        session.reset(None, candidates(3), 9, 2);
+        session.reset(None, candidates(3), 9);
         assert_eq!(session.index_on_page(2), Some(2));
         assert_eq!(session.index_on_page(3), None);
         assert!(session.move_highlight(1));
@@ -272,7 +270,7 @@ mod tests {
     #[test]
     fn paging_follows_the_layout() {
         let mut session = Session::default();
-        session.reset(None, candidates(12), 9, 2);
+        session.reset(None, candidates(12), 9);
         assert_eq!(session.pages(), 2);
         assert!(session.turn_page(1));
         assert_eq!(session.highlighted, 9);
@@ -283,19 +281,19 @@ mod tests {
     #[test]
     fn navigation_is_remembered_until_the_next_query() {
         let mut session = Session::default();
-        session.reset(None, candidates(12), 9, 2);
+        session.reset(None, candidates(12), 9);
         assert!(!session.navigated);
         // 顶到边界没动算没导航
         assert!(!session.move_highlight(-1));
         assert!(!session.navigated);
         assert!(session.move_highlight(1));
         assert!(session.navigated);
-        session.reset(None, candidates(3), 9, 2);
+        session.reset(None, candidates(3), 9);
         assert!(!session.navigated);
         // 只有一页时翻页没动，也不算导航
         assert!(!session.turn_page(1));
         assert!(!session.navigated);
-        session.reset(None, candidates(12), 9, 2);
+        session.reset(None, candidates(12), 9);
         assert!(session.turn_page(1));
         assert!(session.navigated);
     }
@@ -305,11 +303,11 @@ mod tests {
         let mut words = candidates(1);
         words[0].kind = CandidateKind::Custom(9);
         let mut session = Session::default();
-        session.reset(None, words.clone(), 5, 2);
+        session.reset(None, words.clone(), 5);
         assert_eq!((session.page, session.highlighted), (1, 8));
         assert!(!session.turn_page(-1));
         words.extend(candidates(1));
-        session.reset(None, words, 5, 2);
+        session.reset(None, words, 5);
         assert_eq!((session.page, session.highlighted), (0, 0));
         assert!(session.turn_page(1));
         assert_eq!((session.page, session.highlighted), (1, 8));

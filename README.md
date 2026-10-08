@@ -6,18 +6,17 @@
 
 这是自用 fork, `upstream` 指向 [qingjian-team/qingjian](https://github.com/qingjian-team/qingjian). 相对上游的改动都记在这里, 便于日后 merge upstream 时对照.
 
+- 拆除整句语言模型 / 本地神经重排 / jev 决策模型 / 云联想: 去掉 `qingjian-lm` `qingjian-neural` `qingjian-decision` `qingjian-predict` 四个 crate, 以及配置 `[predict]` `[model]` `[decision]` 与偏好设置「云服务」页. 候选只走词库词频与用户学习; 整句格子仍在, 但壳不再注入语言模型. 格式里的 `Kind::LanguageModel` / `Kind::Model` 只为读旧文件保留编号.
 - macOS 输入法菜单「录入词组…」: 填一个词, 拼音按词库自动生成且可改, 确认后效果等同于打这段全拼并选一次该词 (词库没有则记成用户词). 见 `docs/user/settings/preferences.md`.
 - 输入法菜单多一项「重启输入法」: macOS 在输入法菜单里, Windows 在任务栏「中 / 英」图标的右键菜单里. 点一下先把学习数据与输入统计落盘, 再让输入法进程退出, 由系统 / 前台应用的 DLL 按需把新进程拉起来 (macOS 走 `NSApplication::stop:` 让 run loop 正常返回, 日志才落盘; Windows 只重启后台的 `qingjian-server`, 不动已加载进应用进程的 DLL, 新进程由 DLL 的下一拍轮询补连时拉起, 期间约一两秒打不了字), 正在组的拼音会丢. 见 `docs/user/settings/preferences.md`.
 - CI 在 push main 与手动触发时, 除原有检查外还各打一份未签名的测试包传成 Actions artifact (macOS 的 pkg 两个架构、Windows 的 Inno 安装包), PR 只跑检查不打包. 见 `docs/notes/release.md`.
-- 决策模型接入: 新增 `crates/qingjian-decision` 与配置 `[decision]`, 把 jev (云端接口) 与 laya (本地服务) 这类 typed decision 模型接成整句重排的第二个来源 (与 `[model]` 的本地字级模型互斥, 只走 HTTP 不内嵌推理栈); macOS 壳与偏好设置 "云服务" 页已接上, 见 `docs/design/decision-models.md` 与 `docs/user/input/decision-model.md`. 试用后 jev / laya 的重排效果不满意, 这条线已停止开发; Windows 壳未接入, 也不打算接入.
+- 决策模型接入 (已拆除): 曾新增 `crates/qingjian-decision` 与配置 `[decision]`, 把 jev / laya 接成整句重排; 试用后效果不满意, 现与云联想, 本地字级模型一并拆掉.
 - macOS 的中 / 英切换可配: `[shortcut] mac_switch_single` (单键切换, 键在 `mac_switch_toggle`) 与 `mac_switch_dual` (双键切换, 键在 `mac_switch_english` / `mac_switch_chinese`) 两个开关可同时开, 键可以是带左右的修饰键 (`left-command` / `right-command` 等) 或组合键 (`control+option+z`), 例如左 ⌘ 切英文、右 ⌘ 切中文; `[shortcut] mac_caps_lock_switch` 决定 Caps Lock 是否也切 (`false` 时它只当大小写锁), `[general] english_mode` 关掉后 macOS 也固定中文模式. 实现照 Rime 的 Squirrel: 在 `recognizedEvents:` 里多要一个 flagsChanged, 单击判定与 Windows 的 `KeyTap` 同一套. 见 `docs/user/input/english-mode.md`.
 - macOS 切换中 / 英时光标旁闪一下当前模式: 新增 `menubar/badge.rs` (一块浮动小面板, 一秒后自己收, 配置 `[general] mode_badge` 缺省开), 与菜单栏状态项是同一件事的两种显示; 建面板与摆放逻辑从候选窗口抽成 `candidates::window` 的 `build_float_panel` / `place_at_caret` 共用.
 - 快捷键可以设成不用: `[shortcut]` 的 `translation` / `translation_second` / `delete_candidate` / `translate_selection` 四项都改走新的 `KeyBinding` 类型 (`config/key_binding.rs`), 值写 `none` 就是这项键不用 (不再占着那个组合, 事件照常交给应用); macOS 偏好设置的快捷键页录制时按 ⌫ 即清空 (按钮显示「未设置」), Windows 设置的快捷键页多一项「不使用」, 两个 Server 的匹配与 TSF 的保留键登记对关掉的项一律不认.
-- 偏好设置的「云服务」页多一项「推理强度」文本框 (配置 `[predict] reasoning_effort`), 直接对应请求里的同名字段, 换服务商时不必再手改 TOML: 接口回 400 说这个参数只认哪几个值 (例如只认 `low` / `medium` / `high` / `xhigh` / `max`, 不认缺省的 `none`) 时, 在界面上照它填或留空 (留空即请求里不带这个参数) 即可; macOS 与 Windows 两端同形.
-- 同一页再增一项「输出额度」文本框 (配置 `[predict] max_tokens`, 缺省 `200`): 填 0 或留空则请求里不带 `max_tokens`, 由服务商用自己的缺省值 —— 给不认这个参数 (新式推理模型要求 `max_completion_tokens`) 或要按服务商缺省跑的服务商. 释义兜底一次要写 8 个词的译词, 额度取配置值与自己的 600 里大的那个, 配置写 0 时它也不发.
-- macOS 偏好设置「云服务」页补上「整句补全」开关 (配置 `[predict] sentence`, 缺省开), 与 Windows 设置页同一项: 关掉后云联想只要云端词, 拼音行右侧不再出 Tab 可接受的整句.
+- 偏好设置「云服务」页曾加过推理强度 / 输出额度 / 整句补全三项 (配置 `[predict]`), 现随云联想一并拆除.
 - 组句里的上屏改成延迟: 一段拼音还没选完时 (例如双拼 `bilw` 先选了 `避`, 还剩 `lw`), 选中的词先留在 preedit 里 (`避lw`), 等这段拼音选完、回车原样上屏、取消组句或失焦时才真正交给应用. 退格按后进先出先把这个词拆回候选 (键还回缓冲区, 候选重新按整段拼音算), 拆完再删拼音字符, 与 Rime 的退格手感一致; 见 `docs/notes/crate-notes.md` 的 Engine 一节.
-- 候选旁的模型标注: 被整句打分器重排过的候选, macOS 壳在其后标一个小字, 决策模型是 `AI 76% ↑2` (模型给这条的概率, 以及名次被抬了几位), 本地字级模型只标 `AI ↑2` (它的整句 log 概率不是概率, 折成百分比是假精度). Core 侧由 `Engine::model_hint` 给出 `ModelHint` (位移 + 置信度), 见 `docs/design/decision-models.md` 的模型标注一节.
+- 候选旁的模型标注 (已拆除): 曾由 `Engine::model_hint` 给决策模型 / 本地字级模型标 `AI 76% ↑2` 一类小字, 随打分器一起拆掉.
 - macOS 候选窗 / 模式徽标的 NSPanel 层级从 `kCGPopUpMenuWindowLevel` (101) 抬到 `CGShieldingWindowLevel()`, 截屏软件标注界面里也能看到拼音行和候选 (popup menu 会被截屏覆盖层压住).
 - 候选词频次可调: 组句时按住调频键 (配置 `[shortcut] adjust_frequency`, 缺省 Ctrl) 时候选右侧显示每个词被选过的次数 (`频 全局/本串`), 同时按 K 升, 按 J 降当前高亮的候选, 每次升降等价于又选一次 / 撤销一次选择 (`Learner::adjust_frequency`), 降到底就停. 不在组句时这几个键一个都不拦 (终端里 Ctrl+J 仍是换行). macOS 壳在自己渲染时现算, Windows Server 的自绘候选窗与 Linux 的 fcitx5 面板走帧里的 `Frame::frequencies`. 见 `docs/user/getting-started/keys.md`.
 - 组句中标点可先上屏候选: 新增配置 `[general] punctuation_first` (缺省 false, 保持 upstream 的「标点进英文直输段」行为), 打开后拼音打完直接敲 `,` `.` `?` 等先把高亮候选上屏、再按全角设置补上这个标点 (`ni'hao,` 出「你好，」), 不必先按空格; 表达式 / 问字模式、英文直输段、英文模式与配成翻页键的标点不受影响. Core 侧判据是 `Engine::punctuation_commits_candidate`, macOS 与 Windows / Linux 三个壳都接上, 偏好设置 / 设置的通用页各有一项.

@@ -13,10 +13,7 @@ pub struct InputMenu {
     /// 菜单。挂到状态项和 IMK `menu` 回调的是同一个对象。
     menu: Retained<NSMenu>,
 
-    /// 「云联想」勾选项。
-    cloud: Retained<NSMenuItem>,
-
-    /// 「中文标点」勾选项（中文模式下敲的标点转不转全角）。
+    /// 「中文标点」勾选项 (中文模式下敲的标点转不转全角).
     punctuation: Retained<NSMenuItem>,
 
     /// 模糊音子菜单的九条勾选项，顺序同 [`FuzzyRules::NAMES`]。
@@ -38,9 +35,6 @@ impl InputMenu {
         let menu = NSMenu::new(mtm);
         // 不让 AppKit 按响应链判断可用性：它找不到 target 就会把整份菜单灰掉
         menu.setAutoenablesItems(false);
-
-        let cloud = action_item(mtm, "云联想", Some(MenuAction::ToggleCloud), &target);
-        menu.addItem(&cloud);
 
         let punctuation = action_item(
             mtm,
@@ -111,7 +105,6 @@ impl InputMenu {
 
         Self {
             menu,
-            cloud,
             punctuation,
             fuzzy,
             error,
@@ -137,15 +130,8 @@ impl InputMenu {
         self.menu.clone()
     }
 
-    /// 按当前配置刷新勾选状态。`cloud_active` 是 Engine 里真接上了 Predictor：
-    /// 配置开了但没接上（多半是没密钥）时不打勾，标题说明原因，不能显示开了实际没开。
-    pub fn sync(&self, config: &Config, cloud_active: bool, error: Option<&str>) {
-        let title = match (config.predict.enabled, cloud_active) {
-            (true, false) => "云联想（启用失败，见日志）",
-            _ => "云联想",
-        };
-        self.cloud.setTitle(&NSString::from_str(title));
-        set_checked(&self.cloud, cloud_active);
+    /// 按当前配置刷新勾选状态.
+    pub fn sync(&self, config: &Config, error: Option<&str>) {
         set_checked(&self.punctuation, config.general.full_width_punctuation);
         for (item, name) in self.fuzzy.iter().zip(FuzzyRules::NAMES) {
             set_checked(item, config.fuzzy.is_on(name));

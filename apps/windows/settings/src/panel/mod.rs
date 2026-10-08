@@ -2,7 +2,6 @@
 //! 界面始终反映文件内容；Server 每秒看 mtime 热加载。
 //! 状态在这里，消息在 [`message`]，生命周期在 [`component`]，表单零件在 [`controls`]，各页在 [`pages`]。
 
-mod cloud_status;
 mod component;
 mod controls;
 mod message;
@@ -15,11 +14,10 @@ use std::path::{Path, PathBuf};
 use qingjian_platform::Config;
 use windows_reactor::*;
 
-use self::cloud_status::CloudStatus;
 pub(crate) use self::message::Message;
 use self::notice::Notice;
 use self::pages::{
-    about, advanced, aux_code, candidates, cloud, dictionaries, fuzzy, general, shortcut, usage,
+    about, advanced, aux_code, candidates, dictionaries, fuzzy, general, shortcut, usage,
 };
 use self::recorder::Recorder;
 
@@ -34,13 +32,10 @@ pub(crate) struct Settings {
     /// `config.toml` 路径。
     path: PathBuf,
 
-    /// 当前导航分节 tag。
+    /// 当前导航分节 tag.
     page: String,
 
-    /// 云服务「测试连接」的状态。
-    cloud_status: CloudStatus,
-
-    /// 「辅码」页的触发键录制状态。
+    /// 「辅码」页的触发键录制状态.
     recorder: Recorder,
 
     /// 触发键录制框（密码框：不走输入法，按 A–Z 直接进字符、不弹输入法候选窗）：
@@ -118,7 +113,6 @@ impl Settings {
         match self.page.as_str() {
             "candidates" => candidates::view(self, context),
             "shortcut" => shortcut::view(self, context),
-            "cloud" => cloud::view(self, context),
             "fuzzy" => fuzzy::view(self, context),
             "dictionaries" => dictionaries::view(self, context),
             "aux_code" => aux_code::view(self, context),

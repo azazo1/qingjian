@@ -41,21 +41,6 @@ pub(crate) enum Message {
     Font(String),
     StatusBar(bool),
 
-    // 云服务页
-    LocalModel(bool),
-    CloudEnabled(bool),
-    CloudApiKey(String),
-    CloudModel(String),
-    CloudBaseUrl(String),
-    /// 推理强度（`[predict] reasoning_effort`），留空表示不发这个参数。
-    CloudReasoningEffort(String),
-    /// 输出额度（`[predict] max_tokens`），0 或留空表示不发这个参数。
-    CloudMaxTokens(String),
-    CloudSlots(Option<f64>),
-    CloudSentence(bool),
-    TestConnection,
-    CloudTestDone(Result<String, String>),
-
     // 快捷键页
     PageKeys(Option<usize>),
     ModeExpression(Option<usize>),

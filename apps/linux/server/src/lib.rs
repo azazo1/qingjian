@@ -5,6 +5,6 @@ pub mod error;
 #[cfg(target_os = "linux")]
 pub mod ipc;
 pub mod protocol;
-pub use assembly::{AssemblySpec, LanguageModelFiles};
-pub use dispatch::{Router, RouterConfig, find_model};
+pub use assembly::AssemblySpec;
+pub use dispatch::{Router, RouterConfig};
 pub use error::ServerError;

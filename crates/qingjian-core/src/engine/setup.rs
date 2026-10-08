@@ -1,4 +1,4 @@
-//! 注入与开关：词库、模糊音、双拼、翻译 / 学习 / 联想等 trait 实现的挂接，以及相应的只读访问。
+//! 注入与开关: 词库、模糊音、双拼、翻译 / 学习等 trait 实现的挂接, 以及相应的只读访问.
 
 use super::aux_code::is_valid_aux_code_key;
 use super::*;
@@ -243,66 +243,7 @@ impl Engine {
         self.fuzzy
     }
 
-    pub fn with_predictor(mut self, predictor: Box<dyn Predictor>) -> Self {
-        self.predictor = predictor;
-        self
-    }
-
-    /// 运行时换掉 Predictor（菜单开关云联想 / 配置热加载）；正在等的联想一并作废。
-    pub fn set_predictor(&mut self, predictor: Box<dyn Predictor>) {
-        self.cancel_prediction();
-        self.predictor = predictor;
-    }
-
-    /// 挂上同步的整句重打分器（字级 Transformer，查询里当场打分，评测用）。`weight` 是神经分的权重 λ，
-    /// `margin` 是参与重排的路径分门槛（nat），`context` 是给模型看的前文字符数；
-    /// `None` 用缺省 [`NEURAL_WEIGHT`] / [`NEURAL_MARGIN`] / [`RESCORE_CONTEXT_CHARS`]。
-    pub fn with_sentence_scorer(
-        mut self,
-        scorer: Box<dyn SentenceScorer>,
-        weight: Option<f64>,
-        margin: Option<f64>,
-        context: Option<usize>,
-    ) -> Self {
-        self.scorer_form = scorer.form();
-        self.scorer_remote = scorer.is_remote();
-        self.scorer_scale = scorer.relative_scale();
-        self.sentence_scorer = Some(scorer);
-        self.rescorer = None;
-        self.set_neural_parameters(weight, margin, context);
-        self
-    }
-
-    /// 挂上异步的整句重打分器：打分在后台线程，查询不等它，壳在停顿后 [`Self::request_rescoring`]、
-    /// 结果到了 [`Self::poll_rescoring`] 后再查一次。参数同 [`Self::with_sentence_scorer`]。
-    pub fn with_async_sentence_scorer(
-        mut self,
-        scorer: Box<dyn SentenceScorer>,
-        weight: Option<f64>,
-        margin: Option<f64>,
-        context: Option<usize>,
-    ) -> Self {
-        self.set_async_sentence_scorer(Some(scorer));
-        self.set_neural_parameters(weight, margin, context);
-        self
-    }
-
-    /// 运行时换 / 卸异步重打分器 (壳里模型在后台加载完才接上, 配置关掉就卸). 换打分器时连它的分的量纲一起记下:
-    /// 打分器随后进了后台线程, 重排时问不到.
-    pub fn set_async_sentence_scorer(&mut self, scorer: Option<Box<dyn SentenceScorer>>) {
-        self.sentence_scorer = None;
-        self.scorer_form = scorer
-            .as_ref()
-            .map_or(ScoreForm::Absolute, |scorer| scorer.form());
-        self.scorer_remote = scorer.as_ref().is_some_and(|scorer| scorer.is_remote());
-        self.scorer_scale = scorer.as_ref().and_then(|scorer| scorer.relative_scale());
-        self.rescorer = scorer.map(super::rescoring::RescoreWorker::spawn);
-        *self.neural_cache.borrow_mut() = super::rescoring::NeuralCache::default();
-        self.model_hints.borrow_mut().clear();
-        self.forget_span_cache();
-    }
-
-    /// 换一组个人 n-gram 插值参数（回放调参用）；整句格子缓存作废。
+    /// 换一组个人 n-gram 插值参数 (回放调参用); 整句格子缓存作废.
     pub fn set_interpolation(&mut self, interpolation: Interpolation) {
         self.interpolation = interpolation;
         self.forget_span_cache();
@@ -331,24 +272,6 @@ impl Engine {
         }
     }
 
-    /// 神经分的权重 λ（0 到 1）。
-    pub fn set_neural_weight(&mut self, weight: f64) {
-        self.neural_weight = weight.clamp(0.0, 1.0);
-        self.forget_span_cache();
-    }
-
-    fn set_neural_parameters(
-        &mut self,
-        weight: Option<f64>,
-        margin: Option<f64>,
-        context: Option<usize>,
-    ) {
-        self.neural_weight = weight.unwrap_or(NEURAL_WEIGHT).clamp(0.0, 1.0);
-        self.neural_margin = margin.unwrap_or(NEURAL_MARGIN).max(0.0);
-        self.neural_context = context.unwrap_or(RESCORE_CONTEXT_CHARS);
-        self.forget_span_cache();
-    }
-
     pub fn with_language_model(mut self, model: Box<dyn LanguageModel>) -> Self {
         self.language_model = model;
         self
@@ -367,8 +290,8 @@ impl Engine {
         &mut self.history
     }
 
-    /// 进入 / 离开英文模式。英文模式下 [`Self::query`] 只给英文词表的候选，回车与空格仍由壳原样上屏敲的字母，
-    /// 不发云联想，也不把原样上屏记成「不纠这个串」。
+    /// 进入 / 离开英文模式. 英文模式下 [`Self::query`] 只给英文词表的候选, 回车与空格仍由壳原样上屏敲的字母,
+    /// 也不把原样上屏记成「不纠这个串」.
     pub fn set_english_mode(&mut self, on: bool) {
         self.english_mode = on;
     }
@@ -469,16 +392,6 @@ impl Engine {
         self
     }
 
-    pub fn with_gloss_filler(mut self, filler: Box<dyn GlossFiller>) -> Self {
-        self.gloss_filler = filler;
-        self
-    }
-
-    /// 运行时换释义兜底（随云联想开关）。
-    pub fn set_gloss_filler(&mut self, filler: Box<dyn GlossFiller>) {
-        self.gloss_filler = filler;
-    }
-
     pub fn dictionary(&self) -> &Dictionary {
         &self.dictionary
     }
@@ -526,4 +439,20 @@ impl Engine {
     pub fn learning_language(&self) -> Language {
         self.translator.language()
     }
+
+    /// 查本机释义表: 中文走学习语言, 外文走英译中. 没有就 `None`.
+    pub fn translate_text(&self, text: &str) -> Option<String> {
+        let text = text.trim();
+        if text.is_empty() {
+            return None;
+        }
+        first_sense(&*self.translator, text)
+            .or_else(|| first_sense(&*self.english_translator, text))
+    }
+}
+
+fn first_sense(translator: &dyn Translator, text: &str) -> Option<String> {
+    translator
+        .translate(text)
+        .and_then(|translation| translation.senses().first().map(|sense| sense.text.clone()))
 }

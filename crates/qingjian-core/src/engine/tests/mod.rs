@@ -1,7 +1,6 @@
 //! Engine 的测试：共用的样例词库、辅助函数与 mock 在这里，用例按主题分文件。
 
 mod aux_code;
-mod cloud;
 mod code;
 mod correction;
 mod custom;
@@ -156,84 +155,7 @@ impl Translator for FixedTranslator {
     }
 }
 
-/// 把请求记下来、按序号原样回一条结果的假联想器。
-struct EchoPredictor {
-    submitted: std::rc::Rc<std::cell::RefCell<Vec<PredictionRequest>>>,
-    replies: Vec<Prediction>,
-    sentence: bool,
-}
-
-// 测试里单线程用，Rc 不 Send 但 trait 要求 Send；这里只在本线程访问
-unsafe impl Send for EchoPredictor {}
-
-impl Predictor for EchoPredictor {
-    fn policy(&self) -> PredictionPolicy {
-        PredictionPolicy {
-            before: 4,
-            after: 2,
-            slots: 2,
-            max_items: 2,
-            sentence: self.sentence,
-        }
-    }
-
-    fn submit(&mut self, request: PredictionRequest) {
-        self.submitted.borrow_mut().push(request);
-    }
-
-    fn poll(&mut self) -> Option<Prediction> {
-        self.replies.pop()
-    }
-}
-
-fn cloud(text: &str, syllables: &[&str]) -> CloudWord {
-    CloudWord {
-        text: text.into(),
-        syllables: syllables.iter().map(|s| (*s).to_owned()).collect(),
-        reading: None,
-    }
-}
-
-/// 记请求、按需吐结果的假释义兜底。
-#[derive(Default)]
-struct MemoryFiller {
-    requested: Arc<Mutex<Vec<String>>>,
-    ready: Arc<Mutex<Vec<FilledGloss>>>,
-}
-
-impl GlossFiller for MemoryFiller {
-    fn request(&mut self, language: Language, word: &str) {
-        assert_eq!(language, Language::English);
-        self.requested.lock().unwrap().push(word.to_owned());
-    }
-
-    fn poll(&mut self) -> Vec<FilledGloss> {
-        std::mem::take(&mut *self.ready.lock().unwrap())
-    }
-}
-
-/// 会记住学到的释义的译者：随包只有 开发。
-#[derive(Default)]
-struct LearningTranslator(HashMap<String, Translation>);
-
-impl Translator for LearningTranslator {
-    fn language(&self) -> Language {
-        Language::English
-    }
-
-    fn translate(&self, text: &str) -> Option<Translation> {
-        self.0
-            .get(text)
-            .cloned()
-            .or_else(|| FixedTranslator.translate(text))
-    }
-
-    fn learn(&mut self, word: &str, translation: Translation) {
-        self.0.insert(word.to_owned(), translation);
-    }
-}
-
-/// (看到轮次, 上屏次数, 用过次数)。
+/// (看到轮次, 上屏次数, 用过次数).
 type VocabularyCounts = HashMap<(Language, String), (u32, u32, u32)>;
 
 /// 记在内存里的词汇记录。
@@ -284,21 +206,7 @@ impl InputLogger for MemoryLogger {
     }
 }
 
-struct SentenceModel;
-
-impl LanguageModel for SentenceModel {
-    fn log_prob(&self, _previous: Option<&str>, word: &str) -> Option<f64> {
-        match word {
-            "开发" => Some(-5.0),
-            "输入法" => Some(-6.0),
-            "很" | "好" | "用" => Some(-7.0),
-            "好用" => Some(-6.5),
-            _ => None,
-        }
-    }
-}
-
-/// 记用户词与词转移的假学习器；`shared` 让测试从外面看到记了什么。
+/// 记用户词与词转移的假学习器; `shared` 让测试从外面看到记了什么.
 #[derive(Default)]
 struct WordLearner {
     words: Vec<(String, Vec<String>)>,

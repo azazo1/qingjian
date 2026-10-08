@@ -1,4 +1,4 @@
-//! 启动：加载词库 / 语言模型 / 释义表 / 学习数据，建 Engine 与候选窗口，装进线程局部的 HOST。
+//! 启动: 加载词库 / 释义表 / 学习数据, 建 Engine 与候选窗口, 装进线程局部的 HOST.
 
 use super::*;
 
@@ -94,26 +94,6 @@ pub fn init(mtm: MainThreadMarker, info: &BundleInfo) -> Result<(), HostError> {
         tracing::info!(words = table.len(), "emoji 表已加载");
         engine = engine.with_emoji(table);
     }
-    // 语言模型可选：没有就退化成一元词频整句；打包过的 lm.qj 优先
-    let model = if let Ok(packed) = paths::resource("lm.qj") {
-        Some(BigramModel::from_path(&packed)?)
-    } else if let (Ok(unigram), Ok(bigram)) = (
-        paths::resource("lm-unigram.tsv"),
-        paths::resource("lm-bigram.tsv"),
-    ) {
-        Some(BigramModel::from_paths(&unigram, &bigram)?)
-    } else {
-        None
-    };
-    if let Some(model) = model {
-        tracing::info!(
-            words = model.word_count(),
-            bigrams = model.bigram_count(),
-            total_ms = started.elapsed().as_millis(),
-            "语言模型已加载"
-        );
-        engine = engine.with_language_model(Box::new(model));
-    }
     let window = CandidateWindow::new(mtm);
     let indicator = ModeIndicator::new(mtm);
     let badge = ModeBadge::new(mtm);
@@ -121,7 +101,6 @@ pub fn init(mtm: MainThreadMarker, info: &BundleInfo) -> Result<(), HostError> {
     indicator.set_menu(&menu.ns_menu());
     let preferences = PreferencesWindow::new(mtm, &languages, version, &info.build);
     let learn_phrase = LearnPhraseWindow::new(mtm);
-    let monitor = PredictMonitor::new(mtm);
     let watch = ConfigWatch::new(mtm);
     HOST.with(|host| {
         *host.borrow_mut() = Some(Host {
@@ -135,7 +114,6 @@ pub fn init(mtm: MainThreadMarker, info: &BundleInfo) -> Result<(), HostError> {
             settings,
             watch,
             last_flush: std::time::Instant::now(),
-            applied_predict: PredictConfig::default(),
             applied_dictionaries: DictionariesConfig::default(),
             dictionary_list: Vec::new(),
             learning_language,
@@ -143,7 +121,6 @@ pub fn init(mtm: MainThreadMarker, info: &BundleInfo) -> Result<(), HostError> {
             version: version.to_owned(),
             build: info.build.clone(),
             page_size: 9,
-            cloud_slots: 2,
             page_keys: qingjian_platform::DEFAULT_PAGE_KEYS,
             translation_keys: {
                 let (first, second) = ShortcutConfig::default().translation_keys();
@@ -175,18 +152,10 @@ pub fn init(mtm: MainThreadMarker, info: &BundleInfo) -> Result<(), HostError> {
             switch_keys: SwitchMatcher::default(),
             text_replacements: Vec::new(),
             apps: AppsConfig::default(),
-            monitor,
-            cloud_test: None,
-            cloud_test_monitor: CloudTestMonitor::new(mtm),
-            rescore: RescoreMonitor::new(mtm),
-            model_loader: None,
-            applied_model: None,
-            applied_decision: None,
             updates: paths::user_data_dir()
                 .map(|dir| qingjian_update::Checker::new(dir.join(UPDATE_STATE_FILE), version)),
             update_status: UpdateStatus::default(),
             session: Session::default(),
-            sentence: None,
             anchor: NSRect::ZERO,
         })
     });

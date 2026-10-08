@@ -171,62 +171,6 @@ fn commit_feeds_learner_and_reorders() {
 }
 
 #[test]
-fn missing_glosses_are_requested_on_commit_and_learned_when_they_arrive() {
-    let filler = MemoryFiller::default();
-    let requested = filler.requested.clone();
-    let ready = filler.ready.clone();
-    let mut engine = engine()
-        .with_translator(Box::new(LearningTranslator::default()))
-        .with_gloss_filler(Box::new(filler));
-    // 开发 有释义，不问；开放 没有，上屏后问
-    for input in ["kaifa", "kaifang"] {
-        engine.set_input(input);
-        let query = engine.query().unwrap();
-        let candidate = query.candidates.items[0].clone();
-        engine.commit(&candidate);
-    }
-    assert_eq!(*requested.lock().unwrap(), vec!["开放".to_owned()]);
-    assert_eq!(engine.poll_glosses(), 0);
-    let translation = Translation::new(
-        Language::English,
-        vec![Sense {
-            part_of_speech: Some(PartOfSpeech::Adjective),
-            text: "open".into(),
-            reading: None,
-            fresh: false,
-        }],
-    );
-    ready.lock().unwrap().push(FilledGloss {
-        word: "开放".into(),
-        translation: translation.clone(),
-    });
-    // 语言对不上的丢掉
-    ready.lock().unwrap().push(FilledGloss {
-        word: "开放".into(),
-        translation: Translation::new(Language::Japanese, Vec::new()),
-    });
-    assert_eq!(engine.poll_glosses(), 1);
-    engine.set_input("kaifang");
-    let mut query = engine.query().unwrap();
-    engine.annotate(&mut query.candidates);
-    assert_eq!(
-        query.candidates.items[0]
-            .translation
-            .as_ref()
-            .unwrap()
-            .senses()[0]
-            .text,
-        "open"
-    );
-    // 没有释义兜底时不问
-    let mut plain = Engine::new(Dictionary::parse(SAMPLE).unwrap())
-        .with_translator(Box::new(LearningTranslator::default()));
-    plain.set_input("kaifang");
-    let candidate = plain.query().unwrap().candidates.items[0].clone();
-    plain.commit(&candidate);
-}
-
-#[test]
 fn fresh_translations_are_marked_until_seen_enough_times_at_commit() {
     let book = Arc::new(Mutex::new(HashMap::new()));
     let mut engine = engine()

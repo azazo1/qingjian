@@ -1,7 +1,7 @@
-//! 协议分派：把 DLL 发来的 [`ClientMessage`] 交给 Engine，产出回给 DLL 的 [`ServerMessage`]。
-//! 消息分派在 [`message`]，会话在 [`session`]，组句展示状态在 [`composed`]，按键在 [`key`]，
-//! 候选窗口输出在 [`candidates`]，状态条在 [`status`]，翻译选中文字在 [`translate`]，配置热加载在 [`reload`]，
-//! 本地整句模型在 [`rescore`]，形码码表在 [`code`]，录入词组在 [`learn_phrase`]。
+//! 协议分派: 把 DLL 发来的 [`ClientMessage`] 交给 Engine, 产出回给 DLL 的 [`ServerMessage`].
+//! 消息分派在 [`message`], 会话在 [`session`], 组句展示状态在 [`composed`], 按键在 [`key`],
+//! 候选窗口输出在 [`candidates`], 状态条在 [`status`], 翻译选中文字在 [`translate`], 配置热加载在 [`reload`],
+//! 形码码表在 [`code`], 录入词组在 [`learn_phrase`].
 
 mod candidates;
 mod code;
@@ -11,7 +11,6 @@ mod key;
 mod learn_phrase;
 mod message;
 mod reload;
-mod rescore;
 mod session;
 mod status;
 mod translate;
@@ -21,7 +20,6 @@ use std::path::PathBuf;
 use std::time::{Duration, Instant};
 
 use qingjian_core::Engine;
-use qingjian_platform::LocalModelConfig;
 use qingjian_platform::protocol::{
     ClientMessage, Frame, IndicatorState, InputSettings, ScreenRect, ServerMessage, SessionId,
 };
@@ -32,9 +30,7 @@ use self::composed::Composed;
 pub use self::config::RouterConfig;
 pub use self::learn_phrase::{LearnPhraseReply, LearnPhraseWork};
 use self::reload::ConfigReload;
-pub use self::reload::{DataDirs, attach_cloud};
-pub use self::rescore::find_model;
-use self::rescore::{ModelLoader, RescoreState};
+pub use self::reload::DataDirs;
 use self::session::SessionInfo;
 pub use self::status::{BadgeView, NoopStatusSink, StatusEvent, StatusSink, StatusView};
 use self::translate::Translation;
@@ -47,7 +43,7 @@ pub struct Router {
     /// 输入内核，进程内唯一。
     engine: Engine,
 
-    /// 每页候选数 / 云端槽位 / 排布 / 外观 / 翻页键等。
+    /// 每页候选数 / 排布 / 外观 / 翻页键等.
     config: RouterConfig,
 
     /// 活跃会话及各自的宿主应用。
@@ -68,10 +64,7 @@ pub struct Router {
     /// 「翻译选中文字」请求号计数器。
     selection_seq: u64,
 
-    /// 整句补全（preedit 右侧、Tab 上屏）；缓冲变化时清空。
-    sentence: Option<String>,
-
-    /// 删候选后的屏幕提示，随下一帧下发、下一次按键清。
+    /// 删候选后的屏幕提示, 随下一帧下发, 下一次按键清.
     notice: Option<String>,
 
     /// 调频键（`[shortcut] adjust_frequency`，缺省 Ctrl）正按着：自绘候选窗在每行前面显示频次。
@@ -103,7 +96,7 @@ pub struct Router {
     /// 应用退出不影响它，状态条是桌面常驻的。
     ime_active: bool,
 
-    /// 聚焦会话最近报来的光标矩形；云联想异步到达时按它原地重摆候选窗口。
+    /// 聚焦会话最近报来的光标矩形; 候选变化时按它原地重摆候选窗口.
     last_rect: Option<ScreenRect>,
 
     /// 最近一次光标矩形，组句结束也不清：模式徽标按它摆在光标旁（没有就用鼠标位置兜底）。
@@ -112,22 +105,10 @@ pub struct Router {
     /// 上次真正显示的帧与位置：没变就不重画（组字期间的空转 Poll 很多）。
     last_shown: Option<(Frame, ScreenRect)>,
 
-    /// 本地整句模型（`.qjm` 或三件套目录）；没有模型文件为 `None`。
-    model_path: Option<PathBuf>,
-
-    /// 形码码表（`wubi/wubi86.tsv`，启动时找好的，见 [`code::find_code_table`]）；没有为 `None`。
+    /// 形码码表 (`wubi/wubi86.tsv`, 启动时找好的, 见 [`code::find_code_table`]); 没有为 `None`.
     code_table: Option<PathBuf>,
 
-    /// 进行中的模型加载；加载完接到 Engine 上就清掉。
-    model_loader: Option<ModelLoader>,
-
-    /// 上次套用的 `[model]`，变了才重载 / 卸载。
-    applied_model: LocalModelConfig,
-
-    /// 重排的防抖 / 轮询进行态。
-    rescore: RescoreState,
-
-    /// 菜单里点过「重启输入法」：学习数据已经落盘，工人循环看到它就把 `serve_pipe` 退出来，
+    /// 菜单里点过「重启输入法」: 学习数据已经落盘, 工人循环看到它就把 `serve_pipe` 退出来,
     /// 让 `main` 正常返回（见 [`Self::restart_requested`]）。
     restarting: bool,
 }
@@ -146,7 +127,6 @@ impl Router {
             translation: None,
             pending_selection: None,
             selection_seq: 0,
-            sentence: None,
             notice: None,
             preview_frequency: false,
             highlight: 0,
@@ -160,11 +140,7 @@ impl Router {
             last_rect: None,
             badge_anchor: None,
             last_shown: None,
-            model_path: None,
             code_table: None,
-            model_loader: None,
-            applied_model: LocalModelConfig::default(),
-            rescore: RescoreState::default(),
             restarting: false,
         }
     }
@@ -236,4 +212,7 @@ impl Router {
         self.engine.flush_learning();
         self.last_flush = Instant::now();
     }
+
+    /// 空闲节拍: 学习落盘由 [`Self::handle`] 顺带做, 这里留给管道循环对齐 Linux 的 `tick`.
+    pub fn tick(&mut self) {}
 }

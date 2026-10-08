@@ -8,7 +8,6 @@ use qingjian_dictionary::Dictionary;
 use qingjian_platform::{
     AuxCodeConfig, DictionariesConfig, UpdateConfig, code_tables, extra_dictionaries,
 };
-use qingjian_predict::PredictConfig;
 
 /// 随包与用户数据目录：启动与热加载用的是同一批（词库、码表）。
 /// 分开传参数会越传越长，且热加载与原路径不一致时找不到文件。
@@ -66,13 +65,10 @@ pub(crate) struct ConfigReload {
     /// `.qj` 后补全，都靠它即时生效。
     pub(super) code_files: Vec<(PathBuf, Option<SystemTime>, u64)>,
 
-    /// 上次看到的 mtime。
+    /// 上次看到的 mtime.
     pub(super) last_mtime: Option<SystemTime>,
 
-    /// 已应用的 `[predict]`。
-    pub(super) applied_predict: PredictConfig,
-
-    /// 已应用的 `[dictionaries]`。
+    /// 已应用的 `[dictionaries]`.
     pub(super) applied_dictionaries: DictionariesConfig,
 
     /// 已应用的 `[aux_code]`。

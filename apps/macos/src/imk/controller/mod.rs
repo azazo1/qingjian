@@ -9,7 +9,7 @@ use objc2::{define_class, msg_send, sel};
 use objc2_app_kit::{NSEvent, NSEventMask, NSEventModifierFlags, NSEventType, NSMenu};
 use objc2_foundation::NSObjectProtocol;
 use objc2_input_method_kit::{IMKInputController, IMKServer};
-use qingjian_core::{Candidate, QUESTION_PREFIX};
+use qingjian_core::QUESTION_PREFIX;
 use qingjian_platform::{KeyCombo, MacSwitchAction, Modifiers};
 
 use super::{TextClient, catch_panic, modifiers, recover_from_panic, secure_input, synthetic};
@@ -89,7 +89,6 @@ define_class!(
                     self.commit_raw(client);
                 }
                 host::with(|h| {
-                    h.cancel_prediction();
                     h.window.hide();
                 });
             });
@@ -145,7 +144,6 @@ define_class!(
                 }
                 // 切换输入源时无论如何都收掉候选框，不能留一个孤儿窗口在屏幕上
                 host::with(|h| {
-                    h.cancel_prediction();
                     h.window.hide();
                     h.indicator.deactivate();
                     h.watch.stop();
@@ -169,13 +167,10 @@ define_class!(
     unsafe impl NSObjectProtocol for QingjianInputController {}
 );
 
-/// 翻译选中文字最多接受多少个字符：再长既慢又贵，也不是输入法该干的事。
+/// 翻译选中文字最多接受多少个字符: 再长既慢又贵, 也不是输入法该干的事.
 const MAX_TRANSLATE_CHARS: usize = 500;
 
-/// 给本地整句模型看的光标前文最多读多少字符（Engine 自己再按它的前文长度截）。
-const RESCORE_LOOKBACK: usize = qingjian_core::RESCORE_CONTEXT_CHARS;
-
-/// 登录 / 锁屏窗口的 bundle identifier。
+/// 登录 / 锁屏窗口的 bundle identifier.
 const LOGIN_WINDOW: &str = "com.apple.loginwindow";
 
 /// 数字行与小键盘的键码对应的数字 1–9（ANSI 布局的物理键）。

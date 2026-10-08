@@ -1,4 +1,4 @@
-/// 整句转换的打分来源：词级语言模型。实现放兄弟 crate（`qingjian-lm`），Core 只认这个 trait。
+/// 整句转换的打分来源: 词级语言模型. 壳不再注入实现, 运行时走 [`NoLanguageModel`].
 pub trait LanguageModel: Send {
     /// `log P(word | previous)`；`previous` 为 `None` 表示句首。模型不认识 `word` 时返回 `None`，
     /// 由 Core 用词库词频兜底。

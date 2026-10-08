@@ -8,13 +8,10 @@ pub struct RouterConfig {
     /// 每页候选数（`[general] page_size`）。
     pub page_size: usize,
 
-    /// 应用与窗口拼音显示位置。
+    /// 应用与窗口拼音显示位置.
     pub preedit: PreeditMode,
 
-    /// 云端候选在第一页预留的格数（`[predict] slots`）。
-    pub cloud_slots: usize,
-
-    /// 候选排布（`[general] layout`）。
+    /// 候选排布 (`[general] layout`).
     pub layout: LayoutMode,
 
     /// 候选窗口外观（`[general] theme`）。
@@ -77,7 +74,6 @@ impl From<&Config> for RouterConfig {
         Self {
             page_size: config.general.page_size(),
             preedit: config.general.preedit,
-            cloud_slots: 0,
             layout: config.general.layout,
             theme: config.general.theme,
             page_keys: config.general.page_keys(),

@@ -42,7 +42,6 @@ impl From<CandidateKind> for InputSource {
         match kind {
             // 形码的词也是词库里的词，输入日志的来源不另分（方案记在别的字段）
             CandidateKind::Chinese | CandidateKind::Code => Self::Word,
-            CandidateKind::Cloud => Self::Cloud,
             CandidateKind::Sentence => Self::Sentence,
             CandidateKind::English => Self::English,
             CandidateKind::Shortcut => Self::Shortcut,

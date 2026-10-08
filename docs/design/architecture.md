@@ -40,11 +40,8 @@ qingjian/
 │   ├── qingjian-core/          # composition / parser / correction / candidate / ranking / sentence / engine …（下面单列）
 │   ├── qingjian-dictionary/    # 词库加载与查询
 │   ├── qingjian-translate/     # 候选翻译 annotation
-│   ├── qingjian-learning/      # 用户词频、用户词、个人英文词、个人 n-gram、个人敲错表（user.tsv / user-words.tsv / user-english.tsv / user-ngram.tsv / user-typos.tsv）、输入日志（input-log.jsonl）、输入统计（usage.tsv）、词汇记录（user-vocab.tsv）
-│   ├── qingjian-predict/       # 云联想：Predictor 的网络实现（OpenAI 兼容接口）
-│   ├── qingjian-lm/            # 整句转换的 bigram 语言模型：LanguageModel 的实现
-│   ├── qingjian-neural/        # 字级 Transformer 的本地推理（candle）：SentenceScorer 的实现，给整句前几条路径重打分
-│   ├── qingjian-format/        # .qj 数据容器：mmap 打开、零拷贝视图、写入器、可落盘的哈希索引（dictionary / lm 依赖它）
+│   ├── qingjian-learning/      # 用户词频, 用户词, 个人英文词, 个人 n-gram, 个人敲错表, 输入日志, 输入统计, 词汇记录
+│   ├── qingjian-format/        # .qj 数据容器: mmap 打开, 零拷贝视图, 写入器, 可落盘的哈希索引
 │   └── qingjian-platform/      # 平台层共用的部分：配置文件、协议类型
 │
 ├── apps/
@@ -140,13 +137,13 @@ qingjian-core
 ```text
 qingjian-dictionary        （纯数据加载与查询，不依赖任何兄弟 crate）
         ▲
-qingjian-core              （定义 Translator / Learner / Predictor trait，依赖 dictionary）
-        ▲           ▲            ▲
-qingjian-translate  qingjian-learning  qingjian-predict  qingjian-lm  qingjian-neural   （实现 core 的 trait，依赖 core；learning 另依赖 translate 的 LevelTable 做词汇按级汇总）
-        ▲           ▲            ▲
-qingjian-platform          （配置文件 Config：general / shortcut / fuzzy / predict 分节，toml_edit 原地改键保留注释；协议类型，可序列化；依赖 core、predict）
+qingjian-core              (定义 Translator / Learner trait, 依赖 dictionary)
+        ▲           ▲
+qingjian-translate  qingjian-learning   (实现 core 的 trait, 依赖 core; learning 另依赖 translate 的 LevelTable 做词汇按级汇总)
+        ▲           ▲
+qingjian-platform          (配置文件 Config: general / shortcut / fuzzy 分节, toml_edit 原地改键保留注释; 协议类型, 可序列化; 依赖 core)
         ▲
-apps/*                     （组装：Engine::new(dict).with_translator(..).with_learner(..).with_predictor(..)）
+apps/*                     (组装: Engine::new(dict).with_translator(..).with_learner(..))
 ```
 
 `apps/cli` 是 Phase 1 的测试壳：`cargo run -p qingjian-cli -- kaifa` 直接查询，
@@ -212,10 +209,9 @@ CSR 偏移与后继）原样落盘，打开时 mmap 整个文件、校验一遍�
   悄悄改了算法（或换了默认种子）就会让用户机器上所有 `.qj` 失效，而这个函数总共 12 行、有测试钉死输出值，
   自己写风险最小。若以后碰撞或分布出问题，换成 xxh3 并把 `FORMAT_VERSION` 加一。
 - 写文件先写同目录 `.qj.tmp` 再改名；数据文件只整体替换，从不就地修改（mmap 的安全前提）。
-- 生成：`cargo run --release -p qingjian-dict-convert -- pack dict --name … --license … --source …` → `dict.qj`，
-  `pack lm --name … --license …` → `lm.qj`（`bundle.sh` 在 TSV 比 `.qj` 新时自动重打）。`Dictionary::from_path` 按魔数自动选
-  `.qj` / TSV 路径，`BigramModel::from_path`（`.qj`）与 `from_paths`（TSV）分开；输入法与 CLI 有 `.qj` 就用它。
-  释义表、emoji 表、英文词表还是 TSV（加载各 20 ms 以内，等有需要再进容器）。
+- 生成: `cargo run --release -p qingjian-dict-convert -- pack dict --name … --license … --source …` → `dict.qj`
+  (`bundle.sh` 在 TSV 比 `.qj` 新时自动重打). `Dictionary::from_path` 按魔数自动选 `.qj` / TSV 路径.
+  释义表, emoji 表, 英文词表还是 TSV (加载各 20 ms 以内, 等有需要再进容器).
 - 格式版本不兼容时 `FORMAT_VERSION` 加一，读旧版的代码按需保留；`Kind` 编号只增不改。
 
 ### 候选生成需要整句转换

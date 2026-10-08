@@ -128,15 +128,14 @@ fn commit_returns_raw_text() {
     server.join().unwrap();
 }
 
-/// 「翻译选中文字」快捷键在云服务关着时不劫持：样例词库没配 predictor，Ctrl+Alt+T 不该要求读选区，
-/// 而是走常规分派（带 Ctrl/Alt 的键 Router 一律 Passthrough 交回应用）。真正的翻译闭环靠真机测（要云服务）。
+/// 「翻译选中文字」快捷键查本机释义表: 没在组句时 Ctrl+Alt+T 请 DLL 读选区.
 #[test]
-fn translate_combo_is_dormant_without_cloud() {
+fn translate_combo_requests_selection() {
     let (client_end, server_end) = UnixStream::pair().unwrap();
     let server = spawn_server(server_end);
 
     let (mut client, _input) = EngineClient::open(client_end, SESSION, None).expect("open session");
-    // Ctrl+Alt+T（缺省 translate_selection）：character = 't'，修饰键 ctrl+alt。
+    // Ctrl+Alt+T (缺省 translate_selection): character = 't', 修饰键 ctrl+alt.
     let combo = KeyEvent::new(
         b'T' as u32,
         Some('t'),
@@ -148,15 +147,10 @@ fn translate_combo_is_dormant_without_cloud() {
     );
     let reply = client.key(combo).expect("combo round-trips");
     match reply {
-        KeyReply::Result(response) => {
-            assert_eq!(
-                response.outcome,
-                KeyOutcome::Passthrough,
-                "云服务关着，带 Ctrl/Alt 的键应放行给应用"
-            );
-            assert!(response.frame.is_empty(), "不该起组句 / 候选");
+        KeyReply::NeedSelection { request } => {
+            assert!(request > 0, "读选区请求应带序号");
         }
-        KeyReply::NeedSelection { .. } => panic!("云服务关着不该要求读选区"),
+        KeyReply::Result(_) => panic!("翻译快捷键应要求读选区"),
     }
 
     client.close().expect("close session");

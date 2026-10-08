@@ -3,9 +3,7 @@ use std::path::PathBuf;
 use qingjian_core::Language;
 use qingjian_platform::{AuxCodeConfig, DictionariesConfig};
 
-use super::LanguageModelFiles;
-
-/// 装配要用的数据文件。除词库外都可选：缺哪个就少哪个功能。
+/// 装配要用的数据文件. 除词库外都可选: 缺哪个就少哪个功能.
 pub struct AssemblySpec {
     /// 主词库（`.qj` 或 TSV）。
     pub dict: PathBuf,
@@ -19,13 +17,10 @@ pub struct AssemblySpec {
     /// 英文词表。
     pub english: Option<PathBuf>,
 
-    /// emoji 表（多张合成一张）。
+    /// emoji 表 (多张合成一张).
     pub emoji: Vec<PathBuf>,
 
-    /// 语言模型；没有就退化成一元词频整句。
-    pub language_model: Option<LanguageModelFiles>,
-
-    /// 随包领域词库目录。
+    /// 随包领域词库目录.
     pub bundled_dicts_dir: Option<PathBuf>,
 
     /// `[dictionaries]` 配置。
@@ -55,7 +50,6 @@ impl AssemblySpec {
             english_glossary: None,
             english: None,
             emoji: Vec::new(),
-            language_model: None,
             bundled_dicts_dir: None,
             dictionaries: DictionariesConfig::default(),
             bundled_codes_dir: None,

@@ -1,9 +1,8 @@
-//! 各模块共用的零件：造 Router、造按键、拆回话、假的状态条与打分器。
+//! 各模块共用的零件: 造 Router, 造按键, 拆回话, 假的状态条.
 
 pub use std::path::PathBuf;
 pub use std::sync::{Arc, Mutex};
 
-pub use qingjian_core::sentence::SentenceScorer;
 pub use qingjian_core::{Language, ModeKeys, ShuangpinScheme};
 pub use qingjian_platform::protocol::{
     ClientMessage, Frame, KeyEvent, KeyModifiers, KeyOutcome, PROTOCOL_VERSION, ScreenRect,
@@ -280,54 +279,7 @@ pub fn function_key(virtual_key: u32) -> KeyEvent {
     KeyEvent::new(virtual_key, None, Default::default())
 }
 
-/// 假打分器：偏爱某个文本，其余都给低分（与 Core 的重打分测试同款）。
-pub struct Prefers(pub &'static str);
-
-impl SentenceScorer for Prefers {
-    fn score(&self, _context: &str, texts: &[&str]) -> Vec<f64> {
-        texts
-            .iter()
-            .map(|t| if *t == self.0 { -1.0 } else { -20.0 })
-            .collect()
-    }
-}
-
-/// 接了假模型的 Router：本地整句模型在壳里是异步接法，按键先按词级出候选，停顿后 tick 才换。
-pub fn router_with_scorer(preferred: &'static str) -> Router {
-    let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../..");
-    let mut engine = assembly::assemble(&AssemblySpec::new(root.join("assets/sample/dict.tsv")))
-        .expect("assemble engine from sample data");
-    engine.set_async_sentence_scorer(Some(Box::new(Prefers(preferred))));
-    let mut router = Router::new(engine, RouterConfig::default());
-    router.handle(ClientMessage::OpenSession {
-        session: SESSION,
-        app: None,
-        protocol: PROTOCOL_VERSION,
-    });
-    router
-}
-
-/// 一直 tick 到首选变成 `text` 或等满 `timeout`；返回最后一帧。
-pub fn tick_until_first(router: &mut Router, text: &str, timeout: std::time::Duration) -> Frame {
-    let started = std::time::Instant::now();
-    loop {
-        std::thread::sleep(router.next_tick().min(std::time::Duration::from_millis(20)));
-        router.tick();
-        let frame = match router.handle(ClientMessage::Poll { session: SESSION }) {
-            Some(ServerMessage::Update { frame, .. }) => frame,
-            other => panic!("expected Update, got {other:?}"),
-        };
-        if candidate_texts(&frame).first() == Some(&text) || started.elapsed() > timeout {
-            return frame;
-        }
-    }
-}
-
-pub fn press_in(router: &mut Router, session: SessionId, event: KeyEvent) {
-    let _ = router.handle(ClientMessage::Key { session, event });
-}
-
-/// 记录自绘候选窗收到的帧。
+/// 记录自绘候选窗收到的帧.
 #[derive(Clone, Default)]
 pub struct RecordingCandidates(pub Arc<Mutex<Vec<Frame>>>);
 

@@ -1,29 +1,21 @@
 use super::super::{Candidate, CandidateKind};
 use super::Cell;
 
-/// 本地候选 + 云端词的分页排布。索引空间是「格」：第一页先本地后云端，之后各页全是本地候选。
+/// 本地候选的分页排布. 索引空间是「格」: 自定义短语占固定位置, 其余按顺序填空格.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct CandidateLayout {
-    /// 本地候选，顺序就是 Engine 排好的顺序。
+    /// 本地候选, 顺序就是 Engine 排好的顺序.
     local: Vec<Candidate>,
 
-    /// 已到的云端词（≤ 槽位数，与本地候选去过重）。
-    cloud: Vec<Candidate>,
-
-    /// 每页几格。
+    /// 每页几格.
     page_size: usize,
-
-    /// 配置的云端槽位数；0 表示不要云端词。
-    slots: usize,
 }
 
 impl CandidateLayout {
-    pub fn new(local: Vec<Candidate>, page_size: usize, slots: usize) -> Self {
+    pub fn new(local: Vec<Candidate>, page_size: usize) -> Self {
         Self {
             local,
-            cloud: Vec::new(),
             page_size: page_size.max(1),
-            slots,
         }
     }
 
@@ -35,46 +27,7 @@ impl CandidateLayout {
         &self.local
     }
 
-    pub fn cloud(&self) -> &[Candidate] {
-        &self.cloud
-    }
-
-    /// 第一页最多给云端几格：本地候选至少占第一格；没有本地候选（问字模式）时整页都给云端。
-    pub fn capacity(&self) -> usize {
-        if self.local.is_empty() {
-            self.page_size
-        } else {
-            let fixed = self
-                .local
-                .iter()
-                .filter_map(|c| match c.kind {
-                    CandidateKind::Custom(n) => Some(n),
-                    _ => None,
-                })
-                .max()
-                .unwrap_or(1);
-            self.slots.min(self.page_size.saturating_sub(fixed.max(1)))
-        }
-    }
-
-    /// 云端词到了：与本地候选同文的不要（本地已经能给），其余按顺序填进第一页末尾，多出来的丢掉。返回填进去的条数。
-    pub fn set_cloud(&mut self, words: Vec<Candidate>) -> usize {
-        self.cloud.clear();
-        let capacity = self.capacity();
-        for mut word in words {
-            if self.cloud.len() >= capacity
-                || self.local.iter().any(|c| c.text == word.text)
-                || self.cloud.iter().any(|c| c.text == word.text)
-            {
-                continue;
-            }
-            word.kind = CandidateKind::Cloud;
-            self.cloud.push(word);
-        }
-        self.cloud.len()
-    }
-
-    /// 本地格数包含最大固定位置之前的空格。
+    /// 本地格数包含最大固定位置之前的空格.
     fn local_len(&self) -> usize {
         self.local
             .iter()
@@ -87,7 +40,7 @@ impl CandidateLayout {
             .max(self.local.len())
     }
 
-    /// 真实本地候选按固定位置放置，其余候选依次填入空格。
+    /// 真实本地候选按固定位置放置, 其余候选依次填入空格.
     fn local_cells(&self) -> Vec<Cell<'_>> {
         let mut cells = vec![Cell::Empty; self.local_len()];
         for candidate in &self.local {
@@ -111,16 +64,13 @@ impl CandidateLayout {
         cells
     }
 
-    /// 全部格子按索引顺序排开；空位只属于布局。
+    /// 全部格子按索引顺序排开; 空位只属于布局.
     pub fn cells(&self) -> Vec<Cell<'_>> {
-        let mut cells = self.local_cells();
-        let first = cells.len().min(self.page_size - self.cloud.len());
-        cells.splice(first..first, self.cloud.iter().map(Cell::Cloud));
-        cells
+        self.local_cells()
     }
 
     pub fn len(&self) -> usize {
-        self.local_len() + self.cloud.len()
+        self.local_len()
     }
 
     pub fn is_empty(&self) -> bool {
@@ -131,12 +81,12 @@ impl CandidateLayout {
         self.len().div_ceil(self.page_size)
     }
 
-    /// 第 `index` 格的候选；越界返回 `None`。
+    /// 第 `index` 格的候选; 越界返回 `None`.
     pub fn candidate(&self, index: usize) -> Option<&Candidate> {
         self.cells().get(index).and_then(|cell| cell.candidate())
     }
 
-    /// 第 `page` 页的格子。
+    /// 第 `page` 页的格子.
     pub fn page(&self, page: usize) -> Vec<Cell<'_>> {
         self.cells()
             .into_iter()
@@ -161,19 +111,11 @@ mod tests {
         }
     }
 
-    fn cloud(text: &str) -> Candidate {
-        Candidate {
-            kind: CandidateKind::Cloud,
-            ..local(text)
-        }
-    }
-
     fn texts(cells: &[Cell<'_>]) -> Vec<String> {
         cells
             .iter()
             .map(|cell| match cell {
                 Cell::Local(c) => c.text.clone(),
-                Cell::Cloud(c) => format!("☁{}", c.text),
                 Cell::Empty => "<empty>".into(),
             })
             .collect()
@@ -184,75 +126,17 @@ mod tests {
     }
 
     #[test]
-    fn cloud_words_take_the_end_of_the_first_page_and_only_bump_those_cells() {
-        let mut layout = CandidateLayout::new(many(12), 9, 3);
+    fn pages_split_local_candidates() {
+        let layout = CandidateLayout::new(many(12), 9);
         assert_eq!(
             texts(&layout.page(0)),
             [
                 "本0", "本1", "本2", "本3", "本4", "本5", "本6", "本7", "本8"
             ]
         );
-        assert_eq!(layout.pages(), 2);
-
-        // 四条云端词只取前三条；前六格不动，原来 7–9 格的本地候选挪到第二页开头
-        let filled = layout.set_cloud(vec![cloud("云0"), cloud("云1"), cloud("云2"), cloud("云3")]);
-        assert_eq!(filled, 3);
-        assert_eq!(
-            texts(&layout.page(0)),
-            [
-                "本0", "本1", "本2", "本3", "本4", "本5", "☁云0", "☁云1", "☁云2"
-            ]
-        );
-        assert_eq!(
-            texts(&layout.page(1)),
-            ["本6", "本7", "本8", "本9", "本10", "本11"]
-        );
-        assert_eq!(layout.candidate(6).unwrap().text, "云0");
-        assert_eq!(layout.candidate(9).unwrap().text, "本6");
-    }
-
-    #[test]
-    fn duplicates_of_local_candidates_are_dropped_and_fewer_words_take_fewer_cells() {
-        let mut layout = CandidateLayout::new(many(4), 9, 2);
-        assert_eq!(layout.set_cloud(vec![cloud("本2"), cloud("云0")]), 1);
-        assert_eq!(texts(&layout.page(0)), ["本0", "本1", "本2", "本3", "☁云0"]);
-        assert_eq!(layout.local()[2].kind, CandidateKind::Chinese);
-        assert_eq!(layout.pages(), 1);
-    }
-
-    #[test]
-    fn no_words_means_nothing_changes() {
-        let mut layout = CandidateLayout::new(many(12), 9, 2);
-        assert_eq!(layout.set_cloud(Vec::new()), 0);
-        assert_eq!(layout.page(0).len(), 9);
         assert_eq!(texts(&layout.page(1)), ["本9", "本10", "本11"]);
-    }
-
-    #[test]
-    fn zero_slots_means_no_cloud_cells_at_all() {
-        let mut layout = CandidateLayout::new(many(3), 9, 0);
-        assert_eq!(layout.set_cloud(vec![cloud("云0")]), 0);
-        assert_eq!(texts(&layout.page(0)), ["本0", "本1", "本2"]);
-    }
-
-    #[test]
-    fn without_local_candidates_the_whole_page_goes_to_the_cloud() {
-        let mut layout = CandidateLayout::new(Vec::new(), 9, 2);
-        assert_eq!(
-            layout.set_cloud(vec![cloud("森"), cloud("淼"), cloud("焱")]),
-            3
-        );
-        assert_eq!(texts(&layout.page(0)), ["☁森", "☁淼", "☁焱"]);
-        assert_eq!(layout.candidate(0).unwrap().text, "森");
-    }
-
-    #[test]
-    fn slots_never_push_the_first_local_candidate_off_the_first_page() {
-        let mut layout = CandidateLayout::new(many(5), 3, 5);
-        assert_eq!(layout.capacity(), 2);
-        layout.set_cloud(vec![cloud("云0"), cloud("云1"), cloud("云2")]);
-        assert_eq!(texts(&layout.page(0)), ["本0", "☁云0", "☁云1"]);
-        assert_eq!(texts(&layout.page(1)), ["本1", "本2", "本3"]);
+        assert_eq!(layout.pages(), 2);
+        assert_eq!(layout.candidate(9).unwrap().text, "本9");
     }
 
     #[test]
@@ -261,27 +145,22 @@ mod tests {
             kind: CandidateKind::Custom(3),
             ..local("短语")
         };
-        let mut layout = CandidateLayout::new(vec![fixed, local("普通")], 5, 2);
+        let layout = CandidateLayout::new(vec![fixed, local("普通")], 5);
         assert_eq!(layout.local().len(), 2);
         assert_eq!(texts(&layout.page(0)), ["普通", "<empty>", "短语"]);
         assert!(layout.candidate(1).is_none());
-        assert_eq!(layout.set_cloud(vec![cloud("云")]), 1);
-        assert_eq!(texts(&layout.page(0)), ["普通", "<empty>", "短语", "☁云"]);
     }
 
     #[test]
-    fn ninth_position_stays_on_second_page_without_cloud_displacement() {
-        let mut layout = CandidateLayout::new(
+    fn ninth_position_stays_on_second_page() {
+        let layout = CandidateLayout::new(
             vec![Candidate {
                 kind: CandidateKind::Custom(9),
                 ..local("第九")
             }],
             5,
-            2,
         );
         assert_eq!(layout.pages(), 2);
-        assert_eq!(layout.capacity(), 0);
-        assert_eq!(layout.set_cloud(vec![cloud("云")]), 0);
         assert_eq!(layout.candidate(8).unwrap().text, "第九");
         assert!(layout.candidate(7).is_none());
     }

@@ -10,8 +10,8 @@ use super::init::load_glossary;
 use super::*;
 
 impl Host {
-    /// 把当前配置推给 Engine 与界面：模糊音 / 模式键 / 翻页 / 外观直接设；学习语言变了换释义表；
-    /// `[predict]` 变了（或 `force`）才重建 Predictor；最后刷新云朵标识、菜单勾选与设置窗口。
+    /// 把当前配置推给 Engine 与界面: 模糊音 / 模式键 / 翻页 / 外观直接设; 学习语言变了换释义表;
+    /// 最后刷新菜单勾选与设置窗口.
     pub fn apply_config(&mut self, force: bool) {
         let config = self.settings.config().clone();
         self.engine.set_fuzzy(config.fuzzy);
@@ -39,7 +39,6 @@ impl Host {
         self.learn_phrase_keys = config.shortcut.learn_phrase.key();
         self.punctuation_toggle_keys = config.shortcut.punctuation_toggle.key();
         self.page_size = config.general.page_size();
-        self.cloud_slots = config.predict.slots;
         self.page_keys = config.general.page_keys();
         self.preedit_mode = config.general.preedit;
         self.english_candidates = config.general.english_candidates;
@@ -66,69 +65,19 @@ impl Host {
             self.input_log_enabled = Some(config.general.input_log);
             self.open_input_log(config.general.input_log);
         }
-        if force || config.predict != self.applied_predict {
-            if config.predict.enabled {
-                // 没密钥等失败只记日志、退回不联想：输入优先于一切附加功能
-                match CloudPredictor::new(&config.predict) {
-                    Ok(predictor) => self.engine.set_predictor(Box::new(predictor)),
-                    Err(error) => {
-                        tracing::warn!(%error, "云联想未启用");
-                        self.engine.set_predictor(Box::new(NoPredictor));
-                    }
-                }
-                // 释义兜底随云联想一起开：释义表里没有的词上屏后问云端写进个人释义表
-                match CloudGlossFiller::new(&config.predict) {
-                    Ok(filler) => self.engine.set_gloss_filler(Box::new(filler)),
-                    Err(error) => {
-                        tracing::warn!(%error, "释义兜底未启用");
-                        self.engine.set_gloss_filler(Box::new(NoGlossFiller));
-                    }
-                }
-            } else {
-                self.engine.set_predictor(Box::new(NoPredictor));
-                self.engine.set_gloss_filler(Box::new(NoGlossFiller));
-            }
-            self.monitor.stop();
-            self.sentence = None;
-            self.applied_predict = config.predict.clone();
-        }
         if force || config.dictionaries != self.applied_dictionaries {
             self.reload_dictionaries();
         }
-        // 整句重排的来源 (决策模型 / 本地整句模型) 占用 Engine 里同一个位置, 一起装配
-        let decision_changed = self.applied_decision.as_ref() != Some(&config.decision);
-        let model_changed = self.applied_model.as_ref() != Some(&config.model);
-        if force || decision_changed || model_changed {
-            self.apply_rescorer(&config);
-            self.applied_decision = Some(config.decision.clone());
-            self.applied_model = Some(config.model.clone());
-        }
-        let cloud_active = self.engine.prediction_enabled();
-        self.indicator.set_cloud(cloud_active);
-        // 模式跟着配置一起刷：关掉 Caps Lock 切换或整个英文模式后，指示器要立刻改回「中」
+        // 模式跟着配置一起刷: 关掉 Caps Lock 切换或整个英文模式后, 指示器要立刻改回「中」
         let english = self.refresh_mode();
-        // 标点状态也上标题（中文模式下「中。」/「中.」），切全角开关后立即能看到
+        // 标点状态也上标题 (中文模式下「中。」/「中.」), 切全角开关后立即能看到
         self.indicator
             .set_punctuation(config.general.full_width_punctuation);
         self.indicator.update(english);
-        self.menu.sync(&config, cloud_active, self.settings.error());
-        let key_present = config
-            .predict
-            .api_key
-            .as_deref()
-            .is_some_and(|key| !key.trim().is_empty())
-            || std::env::var(&config.predict.api_key_env).is_ok_and(|key| !key.trim().is_empty());
-        let decision_key_present = config
-            .decision
-            .api_key
-            .as_deref()
-            .is_some_and(|key| !key.trim().is_empty())
-            || std::env::var(&config.decision.api_key_env).is_ok_and(|key| !key.trim().is_empty());
+        self.menu.sync(&config, self.settings.error());
         self.dictionary_list = self.dictionary_infos();
         self.preferences.sync(
             &config,
-            key_present,
-            decision_key_present,
             self.settings.error(),
             &self.dictionary_list,
             &self.update_status,
@@ -210,10 +159,6 @@ impl Host {
     /// 没有新数据时 flush 是空操作（各表按 dirty 位判断），不会每分钟碰一次磁盘。
     pub fn tick(&mut self) {
         self.reload_config_if_changed();
-        let learned = self.engine.poll_glosses();
-        if learned > 0 {
-            tracing::info!(learned, "释义兜底写入个人释义表");
-        }
         if self.last_flush.elapsed() >= LEARNING_FLUSH_INTERVAL {
             self.engine.flush_learning();
             self.last_flush = std::time::Instant::now();

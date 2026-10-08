@@ -6,7 +6,6 @@ mod translation_job;
 pub(super) use notice::Notice;
 pub use translation_job::TranslationJob;
 
-use super::cloud::cloud_candidate;
 use super::*;
 
 impl Host {
@@ -47,21 +46,20 @@ impl Host {
         })
     }
 
-    /// 开始一次翻译：记下选区，窗口先显示「翻译中…」。调用方已发出请求。
-    pub fn begin_translation(&mut self, range: objc2_foundation::NSRange) {
+    /// 开始一次翻译: 记下选区, 窗口立刻显示本机译文.
+    pub fn begin_translation(&mut self, range: objc2_foundation::NSRange, result: String) {
         self.translation = Some(TranslationJob {
             range,
-            result: None,
+            result: Some(result.clone()),
         });
-        self.reset_session(None, vec![cloud_candidate("翻译中…".to_owned())]);
-        self.await_prediction();
+        self.reset_session(None, vec![notice_candidate(result)]);
         self.render();
     }
 
     /// 在候选窗口里显示一行提示，几秒后自动收起（敲键也收）。
     pub fn show_notice(&mut self, text: &str, anchor: NSRect) {
         self.anchor = anchor;
-        self.reset_session(None, vec![cloud_candidate(text.to_owned())]);
+        self.reset_session(None, vec![notice_candidate(text.to_owned())]);
         self.render();
         let mtm = MainThreadMarker::new().expect("Host 只在主线程用");
         self.notice = Some(Notice::schedule(mtm));
@@ -78,7 +76,6 @@ impl Host {
     /// 翻译结束（接受、放弃或失败）：收窗、停轮询。
     pub fn end_translation(&mut self) {
         if self.translation.take().is_some() {
-            self.cancel_prediction();
             self.reset_session(None, Vec::new());
             self.window.hide();
         }
@@ -89,12 +86,11 @@ impl Host {
         self.horizontal_grid && self.layout == LayoutMode::Horizontal
     }
 
-    /// 新一轮候选：每页格数取配置与窗口能画的行数中较小者，云端槽位数取配置。
+    /// 新一轮候选: 每页格数取配置与窗口能画的行数中较小者.
     pub fn reset_session(&mut self, preedit: Option<Preedit>, candidates: Vec<Candidate>) {
         self.status = None;
         let page_size = self.page_size.min(self.window.max_rows()).max(1);
-        self.session
-            .reset(preedit, candidates, page_size, self.cloud_slots);
+        self.session.reset(preedit, candidates, page_size);
     }
 
     /// 按会话状态画候选窗口。候选为空且没有 preedit 时收窗。
@@ -134,30 +130,10 @@ impl Host {
                 };
                 let mut row = Row::from_candidate(offset, candidate);
                 row.index = index;
-                row.cloud = candidate.kind == CandidateKind::Cloud;
                 row
             })
             .collect();
-        // 模型重排过的候选: 在译文之前加一个小标, 说明这次排序是模型定的
-        // (决策模型带置信度 `AI 76% ↑2`; 字级模型没有概率语义, 只标 `AI ↑2`, 见 `Engine::model_hint`)
-        for row in rows.iter_mut() {
-            let Some(hint) = self.engine.model_hint(&row.text) else {
-                continue;
-            };
-            let mut label = match hint.confidence {
-                Some(confidence) => format!("AI {:.0}%", confidence * 100.0),
-                None => "AI".to_owned(),
-            };
-            match hint.shift {
-                0 => {}
-                shift if shift > 0 => label.push_str(&format!(" ↑{shift}")),
-                shift => label.push_str(&format!(" ↓{}", shift.unsigned_abs())),
-            }
-            row.annotation
-                .insert(0, (label, crate::candidates::Tone::Model));
-        }
         // 调频键正按着: 每行前面加上这个词的频次 (全局次数 / 这个输入串下的次数), 以便一边按 K / J 一边看数字怎么变.
-        // 放在模型小标之后插, 于是它排在最前面 (调频时它比「为什么排这儿」更该先看到)
         if self.preview_frequency {
             for (i, row) in rows.iter_mut().enumerate() {
                 let Some(frequency) = cells
@@ -200,9 +176,20 @@ impl Host {
                 Vec::new()
             },
             footer,
-            sentence: self.sentence.clone(),
+            sentence: None,
             status: self.status.clone(),
         };
         self.window.show(frame, self.anchor);
+    }
+}
+
+fn notice_candidate(text: String) -> Candidate {
+    Candidate {
+        text,
+        kind: CandidateKind::Shortcut,
+        syllables: Vec::new(),
+        reading: None,
+        translation: None,
+        aux_code: None,
     }
 }

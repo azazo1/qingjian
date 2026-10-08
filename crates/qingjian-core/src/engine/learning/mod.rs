@@ -20,22 +20,7 @@ pub(super) use muted::MutedLearner;
 pub use phrase::LearnPhraseError;
 
 impl Engine {
-    /// 取回释义兜底写好的释义，记进译者（个人释义表）；返回学了几条。壳定时调，不阻塞。
-    /// 结果的语言与当前学习语言对不上（中途切过语言）就丢。
-    pub fn poll_glosses(&mut self) -> usize {
-        let filled = self.gloss_filler.poll();
-        let mut learned = 0;
-        for gloss in filled {
-            if gloss.translation.language == self.translator.language() {
-                tracing::debug!(word = %gloss.word, "释义兜底写入个人释义表");
-                self.translator.learn(&gloss.word, gloss.translation);
-                learned += 1;
-            }
-        }
-        learned
-    }
-
-    /// 当前学习语言的词汇汇总（偏好设置「统计」页）。
+    /// 当前学习语言的词汇汇总 (偏好设置「统计」页).
     pub fn vocabulary_summary(&self) -> VocabularySummary {
         self.vocabulary.summary(self.translator.language())
     }
@@ -162,7 +147,7 @@ impl Engine {
         }
         let candidate = &candidate_owned;
         let forgotten = match candidate.kind {
-            CandidateKind::Chinese | CandidateKind::Code | CandidateKind::Cloud => {
+            CandidateKind::Chinese | CandidateKind::Code => {
                 self.learner.forget(&candidate.text)
             }
             CandidateKind::English => Forgotten {

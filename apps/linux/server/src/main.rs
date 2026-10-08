@@ -1,13 +1,11 @@
-//! Linux 本地输入服务启动入口；云服务在首版保持关闭，本地整句模型按 `[model]` 开关在后台加载。
+//! Linux 本地输入服务启动入口.
 #[cfg(target_os = "linux")]
 mod paths;
 
 #[cfg(target_os = "linux")]
 fn run() -> Result<(), Box<dyn std::error::Error>> {
     use qingjian_core::Language;
-    use qingjian_linux_server::{
-        AssemblySpec, LanguageModelFiles, Router, RouterConfig, assembly, find_model,
-    };
+    use qingjian_linux_server::{AssemblySpec, Router, RouterConfig, assembly};
     use qingjian_platform::Config;
     use std::path::PathBuf;
     if std::env::args().any(|arg| arg == "--version") {
@@ -59,7 +57,6 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
             .into_iter()
             .filter_map(|n| paths::asset(&root, n))
             .collect(),
-        language_model: LanguageModelFiles::find(&root.join("data/generated")),
         bundled_dicts_dir: Some(root.join("data/generated/dicts")),
         dictionaries: config.dictionaries.clone(),
         levels_dir: Some(root.join("assets/levels")),
@@ -90,7 +87,6 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
     engine.log_session(env!("CARGO_PKG_VERSION"), "linux");
     let mut router = Router::new(engine, RouterConfig::from(&config));
     router.set_config_path(config_path.clone());
-    router.configure_local_model(find_model(Some(&user_dir), &root), &config.model);
     extern "C" fn stop(_: libc::c_int) {
         qingjian_linux_server::ipc::request_shutdown();
     }

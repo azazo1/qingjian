@@ -104,56 +104,12 @@ Windows / Linux 的 `settle_pending` (同上两种情形) 与 `Effect::Passthrou
 - 各表落盘走 Core `storage::write_atomic`（临时文件 + fsync + 改名），加载按行容错（坏行警告跳过，真读不了壳退回内存学习），
   壳激活期间每 60 秒 `Engine::flush_learning`；IMK 回调边界 `imk::catch_panic` 拦 panic、缓冲区字母原样上屏（见 architecture.md「崩溃不丢」）。
 
-## crates/qingjian-predict
-
-- `CloudPredictor`：`Predictor` trait 的网络实现（async-openai，OpenAI 兼容接口，默认 DeepSeek），后台线程防抖 / 缓存 / 超时，`submit` / `poll` 非阻塞。
-  `PredictConfig` 是配置的 `[predict]` 分节。只在组句中联想，一次请求给云端词（容错校验后补进候选第一页末尾 `[predict] slots` 格，缺省 2，不预留不占位，
-  前面的本地候选不挪; 排布在 Core `CandidateLayout`) 和整句补全 (preedit 右侧, Tab, `[predict] sentence` 缺省开, macOS / Windows 云服务页都有开关); 上屏后不联想, 本地历史不进请求.
-  简拼（半数以上音节是缩写）的请求 `max_items = 0`，只求整句补全（`prediction::mostly_abbreviated`）：按声母凑出来的词大多是生造词，
-  拼音校验又按首字母序列匹配放行缩写，拦不住；问字模式的答案不受这条限制。
-- `CloudGlossFiller`：释义兜底（Core `GlossFiller` trait，与 Predictor 分开的线程与通道，攒 1.5 秒 / 8 个词发一次，问过不再问）：
-  随包释义表没有的词库词 / 云端词上屏后入队，结果壳每秒 `Engine::poll_glosses` 经 `Translator::learn` 写进 `qingjian-translate::PersonalGlossary`
-  （`user-glossary-<语言>.tsv`，`LayeredTranslator` 个人表优先）；随云联想开关一起开。
-- 问字键（缺省 `u`）开头是问字模式（`PredictionKind::Question`，答案带读音、不校验拼音），`?` 开头要 `ModeKeys::question_mark` 开着才算（配置 `[shortcut] question_mark`，缺省关，壳用 `Engine::takes_question_mark` 决定空缓冲区的 `?` 是入口还是标点）；`PredictionKind::Translate` 是壳里快捷键触发的「翻译选中文字」
-  （双向：汉字为主译成学习语言，外文译回中文，`prediction::translation_target`），译文走结果的 `sentence`。
-
 ## crates/qingjian-format
 
 `.qj` 数据容器（`Container` mmap 读、`Writer` 写、`Table<T>` / `Text` 零拷贝视图、`hash` 可落盘哈希索引、`Metadata` 名称 / 许可证 / 署名）。
-词库与语言模型都能 `write_qj` / 从 `.qj` 打开，启动 50 ms；`cargo run --release -p qingjian-dict-convert -- pack dict|lm --name … --license …`
-生成 `data/generated/{dict,lm}.qj`，`bundle.sh` 在 TSV 更新时自动重打并只把 `.qj` 打进包。设计见 `docs/design/architecture.md`「数据文件：`.qj` 容器」。
-
-## crates/qingjian-neural
-
-`CharScorer`，Core `sentence::SentenceScorer` trait 的实现：candle 加载字级 Transformer（GPT-2 风格 decoder，训练仓库（本地 `../train`，私有，不在本仓库）导出的
-`model.safetensors` + `config.json` + `vocab.json`），给「前文 + 整句」按字累加 log 概率；前文的每层 K / V 缓存（`PrefixCache`），
-同一段前文只算一次，每个候选只算自己那几个字（64 字前文 × 8 条 28 ms，Metal）。features `accelerate` / `metal` 换后端，壳用 `metal`。
-
-Engine 侧在 `engine/rescoring/`: 接了打分器就取 Viterbi 前 `RESCORE_PATHS` = 6 条路径按 `路径分 + λ·(神经分 − 静态二元分)` 重排 (λ `NEURAL_WEIGHT` 0.5,
-个人 n-gram / 用户加分 / 代价不动; 打分器 `form()` 报 `ScoreForm::Relative` 时 (决策模型) 改成按这一批的均值居中后 `路径分 + λ·(分 − 批内均值)`, 量纲不同不能顶掉静态二元那部分),
-分走 "前文 + 文本 -> 神经分" 缓存 `NeuralCache`; 同步打分器 (`with_sentence_scorer`, CLI 评测) 当场补分,
-异步的 (`with_async_sentence_scorer`, 后台线程 `RescoreWorker`) 查询不等模型: 缺分的记下来, 壳停键后 `request_rescoring`, `poll_rescoring` 到了再 `query` 一次.
-前文优先用壳给的应用光标前文（`set_rescoring_context`），没有用本会话最近 64 个上屏字符。CLI `--neural <导出目录>`（`--neural-weight` / `--neural-context` / `--neural-async`）。
-
-## crates/qingjian-decision
-
-`DecisionScorer`, Core `sentence::SentenceScorer` 的另一个实现: 把 jev / laya 这类 typed decision 模型接成整句重排的第二来源
-(配置 `[decision]`, `DecisionConfig`). 一次 `score` 把这一批候选放进同一个 `choice` 题 (问句与 id 定在 `scorer.rs`),
-拿各候选的概率乘 `[decision] span` (缺省 4.0 nat) 作为决策分; 给的是同一批之间的相对优劣, 所以 `form()` 是 `ScoreForm::Relative`,
-`relative_scale()` 报 span, Core 把 `分 / span` 记成置信度, 把重排前后的名次变化记成位移 (`ModelHint`), 壳据此在候选旁标 `AI 76% ↑2`
-(字级模型没有置信度, 只标 `AI ↑2`).
-只走 HTTP: `LayaBackend` 打本地服务 `POST /api/predict` (`{"state", "questions": [...]}`, `criteria` 是选项数组),
-`JevBackend` 打 `https://api.typesafe.ai/v1/systemone` (`questions` 按 id 索引, `criteria` 是 "选项名 -> 说明" 对象, Bearer 鉴权),
-两者响应形状一致, 解析共用 `backend/response.rs`. 请求在 `backend/http.rs` 的一个 current_thread 运行时里 `block_on`:
-它只在重排后台线程里被调, 那里没有异步上下文. `is_remote()` 按后端回答 (jev 为真), 私密输入期间 Core 不让它参与重排.
-设计见 `docs/design/decision-models.md`.
-
-## crates/qingjian-lm
-
-`BigramModel`，Core `sentence::LanguageModel` trait 的实现，从 `data/generated/lm.qj`（或 `lm-unigram.tsv` / `lm-bigram.tsv`）加载
-（没有这两个文件就退化为一元词频整句）。数据由 `tools/corpus/parquet_to_text.py`（uv 脚本，HF parquet → 简体纯文本）加
-`cargo run --release -p qingjian-dict-convert -- bigram --phrases assets/lexicon/phrases.tsv --phrases assets/lexicon/domain_words.tsv --brand assets/lexicon/brand.tsv --brand assets/lexicon/mixed_words.tsv data/corpus/*.txt` 生成；语料在 `data/corpus/`（gitignore）。
-短语层不当 token 统计（分词时摘掉、统计完按成分合成一元 / 二元，短语得分等于原来两个词的路径，见 `bigram.rs` 模块注释），品牌词按给定次数写进一元与句首二元。
+词库能 `write_qj` / 从 `.qj` 打开, 启动 50 ms; `cargo run --release -p qingjian-dict-convert -- pack dict --name … --license …`
+生成 `data/generated/dict.qj`, `bundle.sh` 在 TSV 更新时自动重打并只把 `.qj` 打进包. 设计见 `docs/design/architecture.md`「数据文件: `.qj` 容器」.
+`Kind::LanguageModel` / `Kind::Model` 编号仍在格式里, 本仓库不再生成或加载这类文件.
 
 ## crates/qingjian-platform
 
@@ -167,9 +123,8 @@ Engine 侧在 `engine/rescoring/`: 接了打分器就取 Viterbi 前 `RESCORE_PA
 都还在读、文件不自动改写。
 
 
-`Config`（TOML 配置文件，`[general]` / `[shortcut]` / `[fuzzy]` / `[dictionaries]` / `[apps]` / `[predict]` 分节，首次运行写模板，
-`set_value` 用 toml_edit 原地改键保留注释；`[model] enabled` 本地整句模型开关，`LocalModelConfig`；
-`[decision]` 决策模型 (整句重排的第二个来源, 与 `[model]` 互斥), `DecisionConfig`;
+`Config` (TOML 配置文件, `[general]` / `[shortcut]` / `[fuzzy]` / `[dictionaries]` / `[apps]` 分节, 首次运行写模板,
+`set_value` 用 toml_edit 原地改键保留注释;
 `[update]` 检查更新, `UpdateConfig`;
 中英模式两项: `[shortcut] switch_mode` (`SwitchKeys`: 勾选 shift / control / ctrl+alt+space, 可多选, 老配置的单个字符串照读, Windows 用) 与 `[general] english_mode` (内置英文模式总开关, 两个平台都认);
 macOS 另有 `[shortcut] mac_switch_single` / `mac_switch_dual` 两个开关 (`MacSwitchPlan` 是 `toggle` 与 `dual` 两个 `Option`, 两个开关可同时开, 同一个键两边都配时双键优先),
@@ -243,7 +198,7 @@ IMK 输入法, 源码按 `app / host / imk / candidates / menubar / preferences 
 - 输入法菜单「录入词组…」 (`learn_phrase/`): 独立 NSWindow, 与偏好设置共用 Accessory 激活策略 (`preferences/panel.rs` 的 `enter_accessory` / `leave_accessory`); 点确认走 `Engine::learn_phrase`, 立刻 `flush_learning`.
   另外配了 `[shortcut] learn_phrase` (缺省 ⌃⌥P) 时按键分发里认这个组合, 走的也是菜单那条 `Host::perform(MenuAction::LearnPhrase)`, 所以两边的行为一字不差; 判定与「翻译选中文字」同一套 (只在没组句时认, 命中吃掉这个键).
 
-- 输入法菜单「重启输入法」 (`host/restart.rs`): 先 `cancel_prediction` 与停掉配置监视, 再 `flush_learning` 落盘学习数据 / 输入统计, 然后 `NSApplication::stop:` 让 `main` 的 run loop 正常返回. 走正常退出而不是 `std::process::exit`, 是为了让日志的非阻塞 `WorkerGuard` 析构、缓冲的日志落盘 (`app/logging`). 进程由系统按需拉起 (同 `bundle.sh --install` 里的 `pkill -x qingjian-macos`), 下次激活青简时起新的.
+- 输入法菜单「重启输入法」 (`host/restart.rs`): 先停掉配置监视, 再 `flush_learning` 落盘学习数据 / 输入统计, 然后 `NSApplication::stop:` 让 `main` 的 run loop 正常返回. 走正常退出而不是 `std::process::exit`, 是为了让日志的非阻塞 `WorkerGuard` 析构, 缓冲的日志落盘 (`app/logging`). 进程由系统按需拉起 (同 `bundle.sh --install` 里的 `pkill -x qingjian-macos`), 下次激活青简时起新的.
 
 - 输入法菜单（状态项 + 系统输入源菜单）与偏好设置窗口都是配置文件的前端：只写 `config.toml`，`Host::apply_config` 一条通路热加载，激活期间每秒看一次文件 mtime。
   输入方案（`[general] scheme`）也在这里装配：双拼 / 注音设给引擎，形码额外按 `paths::code_table_path()` 挂码表
@@ -252,8 +207,7 @@ IMK 输入法, 源码按 `app / host / imk / candidates / menubar / preferences 
   注册、启用并切成当前输入源；签名 / 公证靠 `QINGJIAN_SIGN_IDENTITY` / `QINGJIAN_INSTALLER_IDENTITY` / `QINGJIAN_NOTARY_PROFILE`，没设就 ad-hoc；`QINGJIAN_TARGET` 指定架构，
   成品 `target/pkg/qingjian-<版本>-macos-<arm64|x86_64>.pkg`）；`scripts/uninstall.sh` 卸载。
 - 日志在 `~/Library/Logs/Qingjian/`（按天分文件留 7 天，删了会重建），用户数据与配置在 `~/Library/Application Support/Qingjian/`。
-- 配置项：云联想 `[predict]`（偏好设置「云服务」页有「测试连接」按钮：`qingjian_predict::ConnectionTest` 起线程发一条最小请求，`Host` 用独立定时器 `CloudTestMonitor` 轮询结果显示到窗口底部；
-  `reasoning_effort` 缺省 `none`，DeepSeek V4 默认思考，不关正文为空, 偏好设置「云服务」页有文本框可直接改 (留空即请求里不带这个参数, 给不认它的接口)；`max_tokens` 缺省 200, 写 0 即不带这个参数 (释义兜底取配置值与 600 里大的那个, 写 0 时也不带); `sentence` 缺省开, 「云服务」页有勾选框 (关掉只要云端词); 模糊音 `[fuzzy]` 默认都关；`[general]` 学习语言（`off` 不显示译文）/ 每页候选数 / 翻页键 / 外观 / 竖排横排 / 拼音显示位置 /
+- 配置项: 模糊音 `[fuzzy]` 默认都关; `[general]` 学习语言 (`off` 不显示译文) / 每页候选数 / 翻页键 / 外观 / 竖排横排 / 拼音显示位置 /
   英文模式候选开关 / 中文优先 `chinese_first` / 双拼方案 `shuangpin`（小鹤 / 自然码 / 微软 / 搜狗 / 智能ABC / 小浪 / 首道，空为全拼）/ 日志级别 `log_level`（缺省 info 不含敲的内容，debug 逐键记，热切换）/ 输入日志 `input_log`；
   `[shortcut]` 模式键 v / u、`question_mark`（缺省关，开了空缓冲区敲 `?` 进问字）、上屏第一 / 第二个译词的修饰键 `translation` / `translation_second`、删候选 `delete_candidate`（缺省 shift，用户词整删、词库词清学习）、翻译选中文字 `translate_selection`、录入词组 `learn_phrase`（缺省 `control+option+p`，弹出录入窗口，只在没组句时认）、
   这几项都是 `KeyBinding`（`config/key_binding.rs`）：配着键或写 `none` 关掉，关掉的那项在壳里是 `None`，不命中也不占着那个组合（macOS 录制按钮按 ⌫ 清空、Windows 设置页有「不使用」一项）、
@@ -370,7 +324,7 @@ DLL 不读文件、不查 mtime。`SessionOpened` 只回过协议版本对得上
 - `mine`：从语料挖词库没收的高频词并过滤（`oov_filter.rs`：虚词规则 + 相邻字对 PMI≥3，`--candidates` 只重过滤）。
 - `phrases`：挖短语层（两遍扫语料：相邻两词、两段二元都够频的相邻三词，总次数与对话语料次数都 ≥ 2000 + 边界规则，读音由成分词拼出；我的 / 不知道 / 有没有 这类常用词表不收的组合，
   `assets/lexicon/phrases.tsv`；词库已并入过短语时重跑加 `--refresh`）。
-- `pack dict|lm|glossary|codes`：打 `.qj`（释义表也进容器；`codes` 是唯一带计算的一种，见下）。
+- `pack dict|glossary|codes`: 打 `.qj` (释义表也进容器; `codes` 是唯一带计算的一种, 见下).
 - `stroke`：CNS11643 全字庫筆順（`data/cns/`，官方 Properties.zip / MapingTables.zip 解出，gitignore）+ 大陆序覆盖表
   `assets/stroke/prc-rules.tsv` → `data/generated/codes/stroke.tsv`（随包笔画表的源数据：7,991 字、127 KB，
   1 横 2 竖 3 撇 5 折 n 点捺；首笔按《通用规范汉字笔顺规范》GF 0023—2020 全对：门字头 / 戶→户 两条前缀规则 + 66 行整字覆盖，阝第二笔随规范改竖）；`--verify` 双对照——笔画数按一级字每 12 字取 1（291 字）、首笔按一级字 3,500 全量，白名单
@@ -384,8 +338,8 @@ DLL 不读文件、不查 mtime。`SessionOpened` 只回过协议版本对得上
 
 ## apps/linux
 
-`qingjian-linux-server` 为独立产品 `0.1.0-dev`，装配本地 Engine、词库、释义、频率学习、个人 n-gram、词汇记录与可选输入日志，
-本地整句模型（`data/model/model.qjm`，用户 `~/.local/share/qingjian/model/` 优先）按 `[model] enabled` 在后台加载、停键 80 ms 后重排，节拍与 Windows Server 的 `dispatch/rescore` 相同；不接云服务。`dispatch/session` 交换每个上下文的 EngineSession；真正的能力变化丢弃输入，普通焦点切换隔离保存。
+`qingjian-linux-server` 为独立产品 `0.1.0-dev`, 装配本地 Engine, 词库, 释义, 频率学习, 个人 n-gram, 词汇记录与可选输入日志.
+整句走词库词频, 不接语言模型与云服务. `dispatch/session` 交换每个上下文的 EngineSession; 真正的能力变化丢弃输入, 普通焦点切换隔离保存.
 默认面板插件仅转换事件，Shift 模式、候选点击、分页和失焦提交都由 Server 决定。
 
 Unix socket 用共享长度前缀与 Frame（当前公共版本 7，与 `PROTOCOL_VERSION` 同步，Fcitx5 插件里写死在 `qingjian.cpp` 的 OpenSession）；插件复用一条连接，每个上下文独立会话。Linux v3 扩展逐会话握手、确认 Sensitive/Password/Disable 后接受按下/释放、焦点和点击事实。

@@ -1,7 +1,7 @@
 //! 离线整句转换：把一串音节转成最可能的词序列（`woxiangqu` → 我想去）。
 //!
 //! 词图上每个格子放正好覆盖那几个音节的词（每格只留词频最高的几个），Viterbi + 束搜索找最优路径。
-//! 打分来自 [`LanguageModel`]（bigram，`qingjian-lm` 实现），模型不认识的词用词库词频（一元）兜底并扣分；
+//! 打分来自 [`LanguageModel`]; 壳不再注入实现, 运行时走 [`NoLanguageModel`], 模型不认识的词用词库词频 (一元) 兜底并扣分.
 //! 用户选过的词 (Learner 的 weight) 加分, 按这个词覆盖的音节占整段的比例折算 (不折算的话一段拼音拆成 k 个词就能拿 k 倍加分).
 //! 没接模型时整体退化为一元词频.
 //!
@@ -18,8 +18,6 @@ mod conversion;
 mod interpolation;
 mod language_model;
 mod personal;
-mod score_form;
-mod scorer;
 mod sentence_word;
 mod span;
 mod text_segment;
@@ -31,8 +29,6 @@ pub use conversion::Conversion;
 pub use interpolation::Interpolation;
 pub use language_model::{LanguageModel, NoLanguageModel};
 pub use personal::Personal;
-pub use score_form::ScoreForm;
-pub use scorer::SentenceScorer;
 pub use sentence_word::SentenceWord;
 pub use span::{MAX_SPAN_CACHE_ENTRIES, SpanCache, SpanWord};
 pub(crate) use text_segment::is_han;
@@ -40,7 +36,7 @@ pub use text_segment::{MAX_TEXT_WORD_CHARS, segment_text};
 pub use user_ngram::UserNgram;
 pub use viterbi::{convert, convert_paths, convert_whole, convert_with};
 
-/// 句首标记：个人 n-gram 里句首词的前词。与 `qingjian-lm` 语料统计用的是同一个记号。
+/// 句首标记: 个人 n-gram 里句首词的前词.
 pub const SENTENCE_START: &str = "<s>";
 
 /// 个人概率里 bigram 部分的权重，其余给个人一元。

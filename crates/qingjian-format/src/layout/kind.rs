@@ -5,7 +5,7 @@ pub enum Kind {
     /// 拼音词库（`qingjian-dictionary::Dictionary`）。
     Dictionary = 1,
 
-    /// 词级 bigram 语言模型（`qingjian-lm::BigramModel`）。
+    /// 词级 bigram 语言模型 (编号保留, 本仓库不再生成或加载这类文件).
     LanguageModel = 2,
 
     /// 释义表。
@@ -17,7 +17,7 @@ pub enum Kind {
     /// 英文词表。
     WordList = 5,
 
-    /// 本地整句模型（`qingjian-neural::CharScorer`，扩展名 `.qjm`）。
+    /// 本地整句模型 (扩展名 `.qjm`; 编号保留, 本仓库不再生成或加载这类文件).
     Model = 6,
 
     /// 辅码码表（`qingjian-dictionary::AuxCodeTable`）：词 → 码的映射，辅码态逐键即筛用。

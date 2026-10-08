@@ -53,11 +53,7 @@ impl Host {
         };
         self.engine.annotate(&mut query.candidates);
         let preedit = Preedit::from_marked(&query.marked_segments(), query.segments_cursor());
-        let cloud = self.session.layout.cloud().to_vec();
         self.reset_session(preedit, query.candidates.items);
-        if !cloud.is_empty() {
-            self.session.layout.set_cloud(cloud);
-        }
         self.render();
     }
 }

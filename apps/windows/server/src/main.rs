@@ -8,7 +8,7 @@ use qingjian_core::{Engine, Language};
 use qingjian_platform::{Config, ConfigError, LogLevel, resources};
 use qingjian_windows_server::assembly::{glossary_file, learning_language};
 use qingjian_windows_server::{
-    AssemblySpec, LanguageModelFiles, Router, RouterConfig, ServerError, assembly, dispatch,
+    AssemblySpec, Router, RouterConfig, ServerError, assembly, dispatch,
 };
 
 /// 用户数据目录 `%APPDATA%\Qingjian`。非 Windows 拿不到。
@@ -156,7 +156,6 @@ fn main() {
             .into_iter()
             .filter_map(|name| asset(&root, &format!("emoji/{name}")))
             .collect(),
-        language_model: LanguageModelFiles::find(&root.join("data/generated")),
         bundled_dicts_dir: bundled_dicts_dir.clone(),
         dictionaries: config.dictionaries.clone(),
         bundled_codes_dir: bundled_codes_dir.clone(),
@@ -186,11 +185,8 @@ fn main() {
     engine.set_shift_letter_compose(config.general.shift_letter.compose());
     engine.set_shuangpin_raw_preedit(config.general.shuangpin_raw_preedit);
     engine.log_session(env!("CARGO_PKG_VERSION"), "windows");
-    dispatch::attach_cloud(&mut engine, &config.predict);
     let router_config = RouterConfig::from(&config);
     let mut router = Router::new(engine, router_config.clone());
-    let model_path = dispatch::find_model(user_dir().as_deref(), &root);
-    router.configure_local_model(model_path.clone(), &config.model);
     router.configure_code_table(dispatch::find_code_table(user_dir().as_deref(), &root));
     if let Some(path) = config_path() {
         let user = user_dir();
@@ -217,9 +213,6 @@ fn main() {
         theme = router_config.theme.key(),
         scheme = %if config.general.scheme_label().is_empty() { "全拼".to_owned() } else { config.general.scheme_label() },
         fuzzy = config.fuzzy.any(),
-        cloud = config.predict.enabled,
-        model = model_path.as_deref().map(|p| p.display().to_string()).unwrap_or_default(),
-        model_enabled = config.model.enabled,
         sessions = router.session_count(),
         "青简 Windows Server 就绪"
     );

@@ -1,6 +1,5 @@
-//! 装配 Engine：Server 里唯一知道具体 Translator / Learner 类型的地方，装的东西与 macOS 的 `host::init` 一致。
+//! 装配 Engine: Server 里唯一知道具体 Translator / Learner 类型的地方, 装的东西与 macOS 的 `host::init` 一致.
 
-mod language_model;
 mod spec;
 
 use std::path::{Path, PathBuf};
@@ -14,7 +13,6 @@ use qingjian_translate::{Glossary, LayeredTranslator, LevelTable, PersonalGlossa
 
 use crate::error::ServerError;
 
-pub use self::language_model::LanguageModelFiles;
 pub use self::spec::AssemblySpec;
 
 pub fn assemble(spec: &AssemblySpec) -> Result<Engine, ServerError> {
@@ -75,17 +73,6 @@ pub fn assemble(spec: &AssemblySpec) -> Result<Engine, ServerError> {
     if let Some(table) = load_emoji(&spec.emoji) {
         tracing::info!(words = table.len(), "emoji 表已加载");
         engine = engine.with_emoji(table);
-    }
-    if let Some(files) = &spec.language_model {
-        let started = Instant::now();
-        let model = files.load()?;
-        tracing::info!(
-            words = model.word_count(),
-            bigrams = model.bigram_count(),
-            load_ms = started.elapsed().as_millis(),
-            "语言模型已加载"
-        );
-        engine = engine.with_language_model(Box::new(model));
     }
     Ok(engine)
 }

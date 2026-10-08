@@ -1,6 +1,6 @@
-//! 「翻译选中文字」：快捷键 → 请 DLL 读选区 → 云端翻译 → 候选窗显示译文，回车 / 空格替换、Esc 保留。
-//! 与 macOS 壳对齐；引擎调用在 Core。替换选区靠回给 DLL 的 `commit`：无组句时 `InsertTextAtSelection` 正好替换选区。
-//! 进行态在 [`Translation`]。
+//! 「翻译选中文字」: 快捷键 → 请 DLL 读选区 → 本机释义表 → 候选窗显示译文, 回车 / 空格替换, Esc 保留.
+//! 与 macOS 壳对齐; 引擎调用在 Core. 替换选区靠回给 DLL 的 `commit`: 无组句时 `InsertTextAtSelection` 正好替换选区.
+//! 进行态在 [`Translation`].
 
 mod job;
 
@@ -23,8 +23,8 @@ impl Router {
             && event.modifiers.chord() == KeyModifiers::from(combo.modifiers)
     }
 
-    /// DLL 回来的选区：非空且云服务开着就进入评审；否则回空帧让 DLL 清掉本地翻译态。
-    /// 回给 DLL 的帧恒空（候选窗在 Server 自绘）。
+    /// DLL 回来的选区: 非空且本机释义表有译文就进入评审; 否则回空帧让 DLL 清掉本地翻译态.
+    /// 回给 DLL 的帧恒空 (候选窗在 Server 自绘).
     pub(super) fn handle_selection(
         &mut self,
         session: SessionId,
@@ -43,15 +43,16 @@ impl Router {
         }
         self.pending_selection = None;
         let text = text.trim();
-        if text.is_empty() || !self.engine.prediction_enabled() {
-            tracing::info!("翻译选中文字：没有可读的选区（或云服务已关）");
+        let Some(result) = self.engine.translate_text(text) else {
+            tracing::info!("翻译选中文字: 没有可读的选区, 或词库里没有这条译文");
             return empty;
-        }
+        };
         self.last_rect = Some(rect);
         self.badge_anchor = Some(rect);
-        self.translation = Some(Translation { result: None });
-        self.engine.request_translation(text);
-        tracing::debug!(chars = text.chars().count(), "翻译选中文字：已发翻译请求");
+        self.translation = Some(Translation {
+            result: Some(result),
+        });
+        tracing::debug!(chars = text.chars().count(), "翻译选中文字: 本机释义");
         let frame = self.self_drawn_frame();
         self.reconcile_candidates(&frame);
         empty
@@ -89,7 +90,6 @@ impl Router {
     /// 结束评审：丢进行态、取消在飞的请求、收起候选窗。没在评审时是空操作。
     pub(super) fn end_translation(&mut self) {
         if self.translation.take().is_some() {
-            self.cancel_prediction();
             self.hide_candidate_window();
         }
     }
@@ -120,11 +120,11 @@ impl Router {
     }
 }
 
-/// 译文包成一条云端样式的候选（带云朵标记）。
+/// 译文包成一条占位候选 (不记学习).
 fn translate_candidate(text: String) -> Candidate {
     Candidate {
         text,
-        kind: CandidateKind::Cloud,
+        kind: CandidateKind::Shortcut,
         syllables: Vec::new(),
         reading: None,
         translation: None,
