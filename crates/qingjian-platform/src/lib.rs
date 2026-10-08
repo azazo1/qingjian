@@ -17,9 +17,8 @@ pub use config::{
     DEFAULT_ENGLISH_CANDIDATES_OFF, DEFAULT_ENGLISH_CANDIDATES_OFF_LINUX,
     DEFAULT_ENGLISH_CANDIDATES_OFF_MACOS, DEFAULT_ENGLISH_CANDIDATES_OFF_WINDOWS,
     DEFAULT_PAGE_KEYS, DictionariesConfig, GeneralConfig, KeyBinding, KeyCombo,
-    LEARNING_LANGUAGE_OFF, LayoutMode, LogLevel, MAX_PAGE_SIZE, MacModifier,
-    MacSwitchAction, MacSwitchKey, MacSwitchPlan, Modifiers, PAGE_KEY_OPTIONS, PreeditMode, Scheme,
-    ShiftLetter, ShortcutConfig, SwitchKey, SwitchKeys, ThemeMode, UpdateChannel, UpdateConfig,
-    scheme_label,
+    LEARNING_LANGUAGE_OFF, LayoutMode, LogLevel, MAX_PAGE_SIZE, MacModifier, MacSwitchAction,
+    MacSwitchKey, MacSwitchPlan, Modifiers, PAGE_KEY_OPTIONS, PreeditMode, Scheme, ShiftLetter,
+    ShortcutConfig, SwitchKey, SwitchKeys, ThemeMode, UpdateChannel, UpdateConfig, scheme_label,
 };
 pub use error::ConfigError;

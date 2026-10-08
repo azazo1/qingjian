@@ -225,10 +225,7 @@ fn push_tsv(tsv: &mut String, word: &str, pinyin: &str, weight: u32) {
 /// 合表时跳过英文混输和反查表, 避免把 `He` 这类键写进拼音词库.
 fn skip_imported_table(name: &str) -> bool {
     let stem = name.rsplit('/').next().unwrap_or(name).to_ascii_lowercase();
-    stem == "en"
-        || stem.contains("english")
-        || stem.contains("reverse")
-        || stem.contains("&en")
+    stem == "en" || stem.contains("english") || stem.contains("reverse") || stem.contains("&en")
 }
 
 fn resolve_import(dir: &Path, name: &str) -> PathBuf {

@@ -31,8 +31,8 @@ use qingjian_learning::{FrequencyLearner, InputLog, UsageStats, VocabularyBook};
 use qingjian_platform::extra_dictionaries;
 use qingjian_platform::{
     AppsConfig, CandidateRenderer, DEFAULT_ENGLISH_CANDIDATES_OFF, DictionariesConfig,
-    GeneralConfig, KeyCombo, LEARNING_LANGUAGE_OFF, LayoutMode, LogLevel, MacSwitchPlan,
-    Modifiers, PAGE_KEY_OPTIONS, PreeditMode, Scheme, ShortcutConfig, ThemeMode,
+    GeneralConfig, KeyCombo, LEARNING_LANGUAGE_OFF, LayoutMode, LogLevel, MacSwitchPlan, Modifiers,
+    PAGE_KEY_OPTIONS, PreeditMode, Scheme, ShortcutConfig, ThemeMode,
 };
 use qingjian_translate::{Glossary, LayeredTranslator, LevelTable, PersonalGlossary};
 

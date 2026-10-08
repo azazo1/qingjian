@@ -1,8 +1,6 @@
 //! 私密输入：不学、不记、不发云端；离开后恢复。
 
-use super::{
-    CountingLearner, FixedTranslator, MemoryLogger, MemoryVocabulary, engine,
-};
+use super::{CountingLearner, FixedTranslator, MemoryLogger, MemoryVocabulary, engine};
 use crate::Language;
 use crate::{CandidateKind, Engine, EngineSession};
 use std::collections::HashMap;

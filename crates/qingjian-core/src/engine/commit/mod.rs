@@ -248,11 +248,8 @@ impl Engine {
                 text: candidate.text.clone(),
                 chars: traditional_text.chars().count(),
                 input,
-                chosen: matches!(
-                    candidate.kind,
-                    CandidateKind::Chinese | CandidateKind::Code
-                )
-                .then(|| candidate.text.clone()),
+                chosen: matches!(candidate.kind, CandidateKind::Chinese | CandidateKind::Code)
+                    .then(|| candidate.text.clone()),
                 transitions: std::mem::take(&mut self.recording),
                 typos,
                 erased: 0,

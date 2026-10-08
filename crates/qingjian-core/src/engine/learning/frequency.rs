@@ -29,8 +29,6 @@ pub struct FrequencyChange {
 pub(super) fn adjustable(kind: CandidateKind) -> bool {
     matches!(
         kind,
-        CandidateKind::Chinese
-            | CandidateKind::Code
-            | CandidateKind::English
+        CandidateKind::Chinese | CandidateKind::Code | CandidateKind::English
     )
 }

@@ -39,10 +39,7 @@ impl QingjianInputController {
     /// 返回是否发生了还原。
     pub(super) fn restore_bare_question(&self, client: TextClient<'_>) -> bool {
         let english = host::with(|h| h.refresh_mode()).unwrap_or(false);
-        let restored = host::with(|h| {
-            h.engine.restore_bare_question(english)
-        })
-        .flatten();
+        let restored = host::with(|h| h.engine.restore_bare_question(english)).flatten();
         let Some(mark) = restored else {
             return false;
         };

@@ -51,8 +51,7 @@ impl QingjianInputController {
             }
             // 取消组句：取消掉的是还没确认的拼音，已经选中、还没交给应用的词（`Engine::clear` 的返回值）
             // 照样上屏，用户选过的字不该跟着消失
-            let abandoned = host::with(|h| h.engine.clear())
-            .unwrap_or_default();
+            let abandoned = host::with(|h| h.engine.clear()).unwrap_or_default();
             if !abandoned.is_empty() {
                 client.insert_text(&abandoned);
             }

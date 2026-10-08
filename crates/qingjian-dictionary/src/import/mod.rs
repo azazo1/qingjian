@@ -115,10 +115,7 @@ mod tests {
 
     #[test]
     fn imports_rime_aggregator_with_toned_pinyin() {
-        let dir = std::env::temp_dir().join(format!(
-            "qingjian-import-tone-{}",
-            std::process::id()
-        ));
+        let dir = std::env::temp_dir().join(format!("qingjian-import-tone-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(dir.join("dicts")).unwrap();
         std::fs::write(
