@@ -58,7 +58,7 @@ pub fn serve_pipe(
     };
     thread::spawn(move || accept_loop(&pipe, first, sender));
     tracing::info!(pipe = name, "命名管道监听中");
-    // 按 Router 的节拍来 tick：在等本地整句模型就几十毫秒一次，否则一秒看一次配置文件。
+    // 按 Router 的节拍来 tick: 空闲时一秒看一次配置文件.
     // 到点时间是绝对的，不随消息重新计时——前台进程里的 DLL 隔几百毫秒就问一次切模式（SyncMode），
     // 若每收一条消息就重等一秒，tick 永远到不了，热加载与模型接入都会停摆。
     let mut due = Instant::now() + router.next_tick();

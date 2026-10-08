@@ -32,7 +32,8 @@ if [[ ! -f "$CLONE/wanxiang.dict.yaml" ]]; then
   fi
   echo "clone $REPO -> $CLONE"
   git clone "${clone_args[@]}" "$REPO" "$CLONE"
-  git -C "$CLONE" sparse-checkout set wanxiang.dict.yaml dicts
+  # cone 模式只接受目录: 根上的 wanxiang.dict.yaml 会跟着带上, 不要把文件名塞进去
+  git -C "$CLONE" sparse-checkout set dicts
 fi
 [[ -f "$CLONE/wanxiang.dict.yaml" ]] || {
   echo "clone 之后没有 wanxiang.dict.yaml: $CLONE" >&2

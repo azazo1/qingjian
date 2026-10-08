@@ -213,6 +213,16 @@ impl Router {
         self.last_flush = Instant::now();
     }
 
-    /// 空闲节拍: 学习落盘由 [`Self::handle`] 顺带做, 这里留给管道循环对齐 Linux 的 `tick`.
-    pub fn tick(&mut self) {}
+    /// 工人循环下一次该醒的间隔: 热加载按一秒看一次配置.
+    pub fn next_tick(&self) -> Duration {
+        reload::CONFIG_POLL_INTERVAL
+    }
+
+    /// 空闲节拍: 看配置文件 / 词库目录有没有变, 到点也落盘学习.
+    pub fn tick(&mut self) {
+        self.poll_config_reload();
+        if self.last_flush.elapsed() >= LEARNING_FLUSH_INTERVAL {
+            self.flush_learning();
+        }
+    }
 }

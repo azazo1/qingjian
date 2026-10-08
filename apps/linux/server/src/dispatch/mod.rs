@@ -90,6 +90,10 @@ impl Router {
         self.engine.flush_learning();
         self.last_flush = Instant::now();
     }
+    /// 工人循环下一次该醒的间隔: 空闲时一秒看一次要不要落盘.
+    pub fn next_tick(&self) -> Duration {
+        Duration::from_secs(1)
+    }
     /// 到点了: 落盘学习 (输入停止后也不能一直不落盘). 主循环超时与插件的 `Poll` 都会调.
     pub fn tick(&mut self) {
         if self.last_flush.elapsed() >= LEARNING_FLUSH_INTERVAL {

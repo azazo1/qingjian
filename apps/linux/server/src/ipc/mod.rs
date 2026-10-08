@@ -111,7 +111,7 @@ pub fn serve_socket(path: impl AsRef<Path>, router: &mut Router) -> io::Result<(
             }
         }
     });
-    // 按 Router 的节拍来 tick：在等本地整句模型就几十毫秒一次，否则一秒看一次要不要落盘学习。
+    // 按 Router 的节拍来 tick: 空闲时一秒看一次要不要落盘学习.
     // 到点时间是绝对的，不随消息重新计时——组句期间插件每 80 毫秒问一次，若每收一条消息就重等，tick 永远到不了。
     let mut due = Instant::now() + router.next_tick();
     while !STOP.load(Ordering::Relaxed) {
