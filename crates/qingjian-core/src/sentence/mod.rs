@@ -1,7 +1,7 @@
 //! 离线整句转换：把一串音节转成最可能的词序列（`woxiangqu` → 我想去）。
 //!
 //! 词图上每个格子放正好覆盖那几个音节的词（每格只留词频最高的几个），Viterbi + 束搜索找最优路径。
-//! 打分来自 [`LanguageModel`]; 壳不再注入实现, 运行时走 [`NoLanguageModel`], 模型不认识的词用词库词频 (一元) 兜底并扣分.
+//! 打分来自 [`LanguageModel`]; 壳不再注入实现, 运行时走 [`NoLanguageModel`], 模型不认识的词用词库词频 `ln(1+freq)` 兜底并扣 [`FALLBACK_PENALTY`].
 //! 用户选过的词 (Learner 的 weight) 加分, 按这个词覆盖的音节占整段的比例折算 (不折算的话一段拼音拆成 k 个词就能拿 k 倍加分).
 //! 没接模型时整体退化为一元词频.
 //!
@@ -72,16 +72,16 @@ pub const ABBREVIATED_SPAN_CANDIDATES: usize = 20;
 /// 每个位置最多保留几条部分路径。
 pub const BEAM_WIDTH: usize = 8;
 
-/// 语言模型不认识、只能按词库词频兜底的词扣多少分：模型见过的词更可信。
+/// 语言模型不认识、只能按词库词频兜底的词扣多少分: 模型见过的词更可信.
 pub const FALLBACK_PENALTY: f64 = -4.0;
 
-/// 模型不认识的词的兜底 log 概率：词库词频占总词频的比例再扣 [`FALLBACK_PENALTY`]。`log_total` 是总词频的对数。
+/// 模型不认识的词的兜底 log 概率: 词库词频占总词频的比例再扣 [`FALLBACK_PENALTY`]. `log_total` 是总词频的对数.
 pub fn fallback_log_prob(frequency: u32, log_total: f64) -> f64 {
     (f64::from(frequency) + 1.0).ln() - log_total + FALLBACK_PENALTY
 }
 
-/// `log P(word | context)`：先问静态模型（只看前一个词，不认识就用 `fallback`），再与个人 n-gram（看前两个词）插值。
-/// 整句路径上的每一步和词级排序的上下文得分都用它。
+/// `log P(word | context)`: 先问静态模型 (只看前一个词, 不认识就用 `fallback`), 再与个人 n-gram (看前两个词) 插值.
+/// 整句路径上的每一步和词级排序的上下文得分都用它. 壳不再注入语言模型时相对排序就是词频加个人 n-gram.
 pub fn transition_log_prob(
     model: &dyn LanguageModel,
     personal: Personal<'_>,

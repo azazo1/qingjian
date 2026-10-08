@@ -9,9 +9,11 @@ CLAUDE.md 只保留目录地图与规则，每个 crate / app / tool 的实现�
 `lookup_pattern`（≥ 模式长度）与 `lookup_exact`（正好等长）同一套实现。词库键以 `v` 表示 ü，
 TSV 解析、查询与生成工具把 `lue` / `nue` 统一成 `lve` / `nve`。
 旧 `.qj` 含这些键时，加载器建立规范化的内存词库。新 `.qj` 继续使用 mmap。
+词库导入 `import` 跟 Rime `import_tables` (相对主文件目录合表), 拼音去声调 (`ā bà` → `a ba`), 英文混输 / 反查表跳过; `to_tsv` 仍只解析一份正文, 不去声调, 给形码码表用.
 辅码码表（`aux_code_table/`，`AuxCodeTable` = `Kind::AuxCodeTable` 的 `.qj`）是另一套存储：`TEXT` 词 arena + `CODE` 码 arena +
 `ENTR` 条目（12 字节，词字节序升序、同词相邻）+ `HASH` 词 → 条目区间起点（`qingjian_format::hash`）。查询只有
-`AuxCodeLookup::code_with_prefix` 一个方法：候选词逐个问「有没有以当前码段开头的码」。导入 `import_aux_code_table`
+`AuxCodeLookup::code_with_prefix` 一个方法：候选词逐个问「有没有以当前码段开头的码」。
+导入 `import_aux_code_table`
 解析 Rime `.dict.yaml` 的 `columns`（缺省 text / code / weight）与 `import_tables`（相对主文件目录合表），
 「有词无码」与非法码进统计返回、不静默跳过；一个可用条目都没有时报 `NoCodeEntries`。
 
@@ -311,6 +313,7 @@ DLL 不读文件、不查 mtime。`SessionOpened` 只回过协议版本对得上
 
 产品数据的生成工具，输出到 `data/generated/`（gitignore）。
 
+- `wanxiang`: 读 `$RIME_DIR` (缺省 `~/Library/Rime`) 的 `wanxiang.dict.yaml`, 跟 `import_tables` 合中文表, 去声调后写 `dict.tsv` / `dict.qj` (元数据 CC-BY-4.0 / amzxyz 万象拼音). 英文混输与反查表跳过, 上游 yaml 不进仓库. `bundle.sh` 有 `data/generated/dict.qj` 就用它当基础词库.
 - `lexicon`：从 `assets/lexicon/`（自建词库源：规范字 + 常用词 + THUOCL 领域词）加 Unihan 读音（`data/unihan/Unihan_Readings.txt`）、LLM 多音字标注（`gloss-gen pinyin`，
   结果 `data/generated/pinyin-llm.jsonl`，不进 git）、语料词频（`lm-unigram.tsv`）建基础词库 `dict.tsv`（8.7 万条），并把 THUOCL 领域词按语料次数 < 50 拆成
   `dicts/<领域>.tsv` + `.qj`（11 本、13 万条，`--domain-keep-min`），流程见 `assets/lexicon/QINGJIAN.md`；`--extra-words` 并入人工挑的领域词 `assets/lexicon/domain_words.tsv`。

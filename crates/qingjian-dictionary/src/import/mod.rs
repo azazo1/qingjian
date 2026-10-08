@@ -1,7 +1,7 @@
-//! 导入词库：把用户给的文件（青简 TSV、Rime `.dict.yaml`、现成的 `.qj`）变成用户词库目录里的一个 `.qj`。
+//! 导入词库: 把用户给的文件 (青简 TSV, Rime `.dict.yaml`, 现成的 `.qj`) 变成用户词库目录里的一个 `.qj`.
 //!
-//! 导入时只做格式转换，不做拼音校验：不合法的音节查不到而已，不影响别的词。
-//! 目标文件名取源文件的主干（`law.dict.yaml` → `law.qj`），已存在就覆盖（重新导入即更新）。
+//! 导入时只做格式转换, 不做拼音校验: 不合法的音节查不到而已, 不影响别的词.
+//! Rime 总表会跟 `import_tables`, 拼音去声调. 目标文件名取源文件的主干 (`law.dict.yaml` → `law.qj`), 已存在就覆盖.
 
 mod imported;
 mod rime;
@@ -15,7 +15,7 @@ use crate::error::DictionaryError;
 
 pub use imported::Imported;
 // `dict-convert wubi` 也读 Rime `.dict.yaml`（形码码表的第二列是编码，转换方式一样），共用这一个解析器
-pub use rime::{Parsed, looks_like_rime, to_tsv};
+pub use rime::{Parsed, from_path, looks_like_rime, to_tsv};
 
 /// 把 `source` 导入到 `dest_dir`，返回写出的文件与元数据。
 pub fn import(source: &Path, dest_dir: &Path) -> Result<Imported, DictionaryError> {
@@ -34,7 +34,7 @@ pub fn import(source: &Path, dest_dir: &Path) -> Result<Imported, DictionaryErro
     } else {
         let text = std::fs::read_to_string(source)?;
         let (tsv, name) = if rime::looks_like_rime(&text) {
-            let parsed = rime::to_tsv(&text);
+            let parsed = rime::from_path(source)?;
             (parsed.tsv, parsed.name)
         } else {
             (text, None)
@@ -110,6 +110,32 @@ mod tests {
             dictionary.lookup(&["min", "fa", "dian"], false)[0].text,
             "民法典"
         );
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn imports_rime_aggregator_with_toned_pinyin() {
+        let dir = std::env::temp_dir().join(format!(
+            "qingjian-import-tone-{}",
+            std::process::id()
+        ));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(dir.join("dicts")).unwrap();
+        std::fs::write(
+            dir.join("wanxiang.dict.yaml"),
+            "---\nname: wanxiang\nimport_tables:\n  - dicts/zi\n...\n",
+        )
+        .unwrap();
+        std::fs::write(
+            dir.join("dicts/zi.dict.yaml"),
+            "---\nname: zi\n...\n阿爸\tā bà\t275\n",
+        )
+        .unwrap();
+        let imported = import(&dir.join("wanxiang.dict.yaml"), &dir.join("out")).unwrap();
+        assert_eq!(imported.name, "wanxiang");
+        assert_eq!(imported.entries, 1);
+        let dictionary = Dictionary::from_path(&imported.path).unwrap();
+        assert_eq!(dictionary.lookup(&["a", "ba"], false)[0].text, "阿爸");
         std::fs::remove_dir_all(&dir).unwrap();
     }
 

@@ -32,5 +32,5 @@ pub use code_table::CodeTable;
 pub use dictionary::Dictionary;
 pub use error::DictionaryError;
 pub use matching::Match;
-pub use pattern::{SyllablePattern, canonical_syllable};
+pub use pattern::{SyllablePattern, canonical_syllable, strip_tone};
 pub use word_list::WordList;

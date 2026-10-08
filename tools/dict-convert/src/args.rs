@@ -21,6 +21,17 @@ pub struct Args {
 
 #[derive(Debug, Subcommand)]
 pub enum Command {
+    /// 万象拼音: 读 Rime 用户目录的 `wanxiang.dict.yaml` (import_tables), 去声调后写成 dict.tsv / dict.qj
+    Wanxiang {
+        /// Rime 用户目录. 缺省 `$RIME_DIR`, 再缺省 `~/Library/Rime`
+        #[arg(long)]
+        rime_dir: Option<PathBuf>,
+
+        /// 总表路径, 相对 `--rime-dir`; 绝对路径则忽略目录
+        #[arg(long, default_value = "wanxiang.dict.yaml")]
+        dict: PathBuf,
+    },
+
     /// 青简基础词库：从「输入法字词库_分类整理版」数据包 + Unihan 读音建 dict.tsv（两遍跑，见模块文档）
     Lexicon {
         /// 数据包目录（含 01_characters / 02_common / 03_domains），随仓库放在 assets/lexicon
