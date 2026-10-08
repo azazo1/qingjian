@@ -164,7 +164,7 @@ Windows 的保留键登记对标点主键用 `VkKeyScanW` 查当前布局的 OEM
 
 ## crates/qingjian-update
 
-检查更新（设计见 `docs/design/update.md`）：`index/` 是索引的类型、下载（`fetch.rs`，复用 workspace 的 reqwest + 单线程 tokio，20 秒超时、2 MB 上限）与验签
+检查更新 (设计见 `docs/design/update.md`): 本 fork 的索引默认读 GitHub Release `releases/latest/download/releases.json` (公钥在 `signature.rs`, 不认上游 qingjian.app). `index/` 是索引的类型, 下载 (`fetch.rs`, 复用 workspace 的 reqwest + 单线程 tokio, 20 秒超时, 2 MB 上限) 与验签
 （`signature.rs`，`PUBLIC_KEYS` 列表，`verify_strict`）；`checker/` 是调度（`Checker::poll` 由壳的每秒定时器调，到点起一次性线程）、落盘状态 `UpdateState`（`update.json`，先写临时文件再改名）
 与查到的结果 `Available`。`Version` 自己实现语义化版本比较，不引 semver。`[update]` 配置与 `UpdateChannel` 在 `qingjian-platform`。
 `examples/check.rs` 手动走一遍；`tools/release-sign` 是发版侧的 keygen / sign / verify。

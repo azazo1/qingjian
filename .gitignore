@@ -6,5 +6,6 @@
 /logs
 /data
 .tmp/
+/secrets/
 .playwright-mcp/
 AGENTS.local.md
