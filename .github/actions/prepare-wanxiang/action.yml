@@ -1,0 +1,71 @@
+name: Prepare Wanxiang dictionary
+description: 按万象 commit 缓存 data/generated; 命中则跳过 clone 与 dict-convert
+
+runs:
+  using: composite
+  steps:
+    - name: Resolve Wanxiang revision
+      id: rev
+      shell: bash
+      run: |
+        set -euo pipefail
+        repo="${WANXIANG_REPO:-https://github.com/azazo1/oh-my-rime.git}"
+        ref="${WANXIANG_REF:-wanxiang}"
+        sha="$(git ls-remote "$repo" "refs/heads/$ref" | awk '{print $1; exit}')"
+        if [[ -z "$sha" ]]; then
+          sha="$(git ls-remote "$repo" "$ref" | awk '{print $1; exit}')"
+        fi
+        if [[ -z "$sha" ]]; then
+          echo "ls-remote 没有 $repo $ref" >&2
+          exit 1
+        fi
+        echo "sha=$sha" >> "$GITHUB_OUTPUT"
+        echo "万象 $sha"
+
+    - name: Cache generated dictionary
+      id: cache
+      uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+      with:
+        path: data/generated
+        key: wanxiang-${{ steps.rev.outputs.sha }}-${{ hashFiles('tools/dict-convert/**', 'crates/qingjian-format/**', 'assets/glossary/**', 'assets/lexicon/english.tsv') }}
+        enableCrossOsArchive: true
+
+    # 跟打包 job 的 rust-cache 分开: 那边 key 带 matrix.arch, host 上的
+    # dict-convert 编完也不能给另一个架构 job 用. 命中后直接跑二进制, 不再 cargo run.
+    - name: Cache dict-convert release build
+      if: steps.cache.outputs.cache-hit != 'true'
+      uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+      with:
+        path: .tmp/dict-convert-target
+        key: dict-convert-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('rust-toolchain.toml', 'tools/dict-convert/**', 'crates/qingjian-format/**', 'crates/qingjian-dictionary/**', 'crates/qingjian-core/**', 'crates/qingjian-translate/**') }}
+
+    - name: Convert Wanxiang if cache missed
+      if: steps.cache.outputs.cache-hit != 'true'
+      shell: bash
+      env:
+        CARGO_TARGET_DIR: ${{ github.workspace }}/.tmp/dict-convert-target
+        WANXIANG_SHA: ${{ steps.rev.outputs.sha }}
+      run: tools/release/prepare-wanxiang.sh
+
+    - name: Record data tag
+      shell: bash
+      run: |
+        set -euo pipefail
+        if [[ ! -f data/generated/dict.qj ]]; then
+          echo "没有 data/generated/dict.qj" >&2
+          exit 1
+        fi
+        ls -la data/generated
+        if [[ -n "${GITHUB_ENV:-}" ]]; then
+          rev="${{ steps.rev.outputs.sha }}"
+          if command -v sha256sum >/dev/null 2>&1; then
+            sum="$(sha256sum data/generated/dict.qj | cut -d' ' -f1)"
+          else
+            sum="$(shasum -a 256 data/generated/dict.qj | cut -d' ' -f1)"
+          fi
+          {
+            echo "DATA_TAG=wanxiang-${rev:0:7}"
+            echo "DATA_SHA256=$sum"
+          } >> "$GITHUB_ENV"
+        fi
+        echo "dict.qj ready cache-hit=${{ steps.cache.outputs.cache-hit }}"

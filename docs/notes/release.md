@@ -89,7 +89,7 @@ artifact 名就是包文件名去掉扩展名. 这些包不走发版流程: 没�
 
 本 fork 的基础词库由万象拼音在打包时现场生成, 不拉上游 `data-vN`.
 
-- `tools/release/prepare-wanxiang.sh` (或 `just prepare-wanxiang`): 浅克隆 `azazo1/oh-my-rime` 的 `wanxiang` 分支到 `.tmp/rime-wanxiang` (gitignore), 跑 `dict-convert wanxiang`, 再把 `assets/glossary` / `assets/lexicon/english.tsv` 打进 `data/generated/`. `ci.yml` 的打包 job 和 `release.yml` 三个平台都走它. `build-info.json` 的 `data_tag` 写成 `wanxiang-<短哈希>`.
+- `tools/release/prepare-wanxiang.sh` (或 `just prepare-wanxiang`): 浅克隆 `azazo1/oh-my-rime` 的 `wanxiang` 分支到 `.tmp/rime-wanxiang` (gitignore), 跑 `dict-convert wanxiang`, 再把 `assets/glossary` / `assets/lexicon/english.tsv` 打进 `data/generated/`. CI 走 `.github/actions/prepare-wanxiang`: 先按万象 SHA 缓存 `data/generated` (命中则不编不转); 未命中再缓存 `.tmp/dict-convert-target`, 有二进制就直接跑, 不再 `cargo run`. `build-info.json` 的 `data_tag` 写成 `wanxiang-<短哈希>`.
 - 本机已有 Rime 用户目录时仍可 `cargo run --release -p qingjian-dict-convert -- wanxiang`.
 - 上游的 `data-fetch.sh` / `data.lock` 还在, 本 fork 的 CI 不再调用. 词库 yaml 不进 git.
 

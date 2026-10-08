@@ -7,6 +7,7 @@
 # 覆盖来源: `WANXIANG_REPO` (缺省 https://github.com/azazo1/oh-my-rime.git),
 # `WANXIANG_REF` (缺省 wanxiang 分支).
 # 已有 `.tmp/rime-wanxiang/wanxiang.dict.yaml` 就不再 clone.
+# CI 把 CARGO_TARGET_DIR 指到 `.tmp/dict-convert-target`; 已有 release 二进制就直接跑, 不 cargo run.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
@@ -21,6 +22,30 @@ sha256() {
   else
     shasum -a 256 "$1"
   fi | cut -d' ' -f1
+}
+
+# 缓存命中时直接跑二进制, 不要 cargo run (会重新 rustc).
+dict_convert() {
+  local dir="${CARGO_TARGET_DIR:-$ROOT/target}"
+  local bin=""
+  if [[ -x "$dir/release/qingjian-dict-convert.exe" ]]; then
+    bin="$dir/release/qingjian-dict-convert.exe"
+  elif [[ -x "$dir/release/qingjian-dict-convert" ]]; then
+    bin="$dir/release/qingjian-dict-convert"
+  else
+    cargo build --release --locked -p qingjian-dict-convert
+    if [[ -x "$dir/release/qingjian-dict-convert.exe" ]]; then
+      bin="$dir/release/qingjian-dict-convert.exe"
+    else
+      bin="$dir/release/qingjian-dict-convert"
+    fi
+  fi
+  [[ -x "$bin" ]] || {
+    echo "没有 dict-convert 二进制: $dir/release" >&2
+    exit 1
+  }
+  echo "dict-convert $bin"
+  "$bin" "$@"
 }
 
 mkdir -p "$ROOT/.tmp"
@@ -41,7 +66,7 @@ fi
 }
 
 echo "convert wanxiang $(git -C "$CLONE" rev-parse --short HEAD)"
-cargo run --release --locked -p qingjian-dict-convert -- wanxiang --rime-dir "$CLONE"
+dict_convert wanxiang --rime-dir "$CLONE"
 
 for lang in en ja zh es; do
   src="assets/glossary/glossary-$lang.tsv"
@@ -55,7 +80,7 @@ for lang in en ja zh es; do
     attribution="LLM 生成（DeepSeek），qingjian-gloss-gen"
   fi
   if [[ ! -f "$out" || "$src" -nt "$out" ]]; then
-    cargo run --release --locked -q -p qingjian-dict-convert -- pack glossary --language "$lang" --input "$src" \
+    dict_convert pack glossary --language "$lang" --input "$src" \
       --name "青简释义表（${lang}）" --license "$license" --attribution "$attribution"
   fi
 done
