@@ -23,7 +23,7 @@ pub struct Args {
 pub enum Command {
     /// 万象拼音: 读 Rime 用户目录的 `wanxiang.dict.yaml` (import_tables), 去声调后写成 dict.tsv / dict.qj
     Wanxiang {
-        /// Rime 用户目录. 缺省 `$RIME_DIR`, 再缺省 `~/Library/Rime`
+        /// Rime 目录 (本机用户目录, 或 prepare-wanxiang.sh 克隆出来的 oh-my-rime). 缺省 `$RIME_DIR`, 再缺省 `~/Library/Rime`
         #[arg(long)]
         rime_dir: Option<PathBuf>,
 

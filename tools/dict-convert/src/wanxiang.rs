@@ -1,6 +1,7 @@
-//! 万象拼音词库: 读 Rime 用户目录的总表 (`wanxiang.dict.yaml` 的 `import_tables`),
+//! 万象拼音词库: 读 Rime 目录的总表 (`wanxiang.dict.yaml` 的 `import_tables`),
 //! 去掉声调后写成青简基础词库 `dict.tsv` / `dict.qj`.
 //!
+//! 目录可以是本机 `$RIME_DIR` / `~/Library/Rime`, 也可以是 `tools/release/prepare-wanxiang.sh` 浅克隆到 `.tmp/` 的 `oh-my-rime` (`wanxiang` 分支).
 //! 不把上游 yaml 打进 git. 英文混输表和反查表在合表时跳过.
 //! 许可是 CC BY 4.0, 打包时写入元数据.
 

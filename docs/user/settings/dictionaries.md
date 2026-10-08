@@ -6,7 +6,7 @@ description: 基础词库与 11 本随包领域词库；导入用户词库（青
 
 ## 随包词库
 
-本仓库的基础词库改由万象拼音生成 (约 200 万条, CC BY 4.0), 用 `qingjian-dict-convert wanxiang` 从 `$RIME_DIR` (缺省 `~/Library/Rime`) 写出 `data/generated/dict.qj`, 安装脚本优先用它. 另有 11 本领域词库随包: 法律, 医学, 地名, 成语, 诗词名句, IT, 财经, 饮食, 动物, 汽车, 历史人物.
+本仓库的基础词库改由万象拼音生成 (约 200 万条, CC BY 4.0). 本机可 `just prepare-wanxiang` (临时 clone `azazo1/oh-my-rime` 的 `wanxiang` 分支) 或 `qingjian-dict-convert wanxiang` (读 `$RIME_DIR` / `~/Library/Rime`), 写出 `data/generated/dict.qj`, 安装脚本优先用它. 另有 11 本领域词库随包: 法律, 医学, 地名, 成语, 诗词名句, IT, 财经, 饮食, 动物, 汽车, 历史人物.
 缺省只开启成语, 其余在「偏好设置 → 词库」勾选. 领域词库只影响「是否有这个词」, 不改变整句转换的权重.
 
 ## 导入用户词库

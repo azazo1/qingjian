@@ -6,7 +6,6 @@ import os
 from pathlib import Path
 import shutil
 import sys
-import tarfile
 
 
 def digest(path):
@@ -50,29 +49,11 @@ def main():
     if sample != 'true':
         generated = root / 'data/generated'
         dictionary = generated / 'dict.qj'
-        archive = root / 'target/release-data/qingjian-data.tar.gz'
-        lock = dict(line.strip().split(' = ', 1) for line in (root / 'tools/release/data.lock').read_text().splitlines() if ' = ' in line)
-        if not dictionary.is_file() or not archive.is_file():
-            raise SystemExit('缺少产品数据，请先运行 tools/release/data-fetch.sh，或用 --sample 体验样例词库')
-        if digest(archive) != lock.get('qingjian-data.tar.gz'):
-            raise SystemExit('产品数据包与 tools/release/data.lock 校验值不符')
-        verified = {}
-        with tarfile.open(archive) as bundle:
-            for member in bundle.getmembers():
-                if not member.isfile():
-                    continue
-                source = (generated / member.name).resolve()
-                if not source.is_relative_to(generated.resolve()):
-                    raise SystemExit('数据包路径越界')
-                checksum = hashlib.file_digest(bundle.extractfile(member), 'sha256').hexdigest()
-                if not source.is_file() or digest(source) != checksum:
-                    raise SystemExit(f'产品数据校验失败：{member.name}')
-                verified[source] = checksum
+        if not dictionary.is_file():
+            raise SystemExit('缺少产品数据，请先运行 tools/release/prepare-wanxiang.sh，或用 --sample 体验样例词库')
         wanted = ('dict.qj', 'english.tsv')
         for source in generated.rglob('*'):
             if source.is_file() and (source.name in wanted or source.name.startswith('glossary-') or source.parent.name == 'dicts'):
-                if source.resolve() not in verified:
-                    raise SystemExit(f'产品数据没有校验记录：{source}')
                 files[resources / source.relative_to(root)] = source
     # 安装前先检查所有目标，避免覆盖其他来源的同名文件。
     for target in files:

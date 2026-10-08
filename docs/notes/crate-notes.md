@@ -313,7 +313,7 @@ DLL 不读文件、不查 mtime。`SessionOpened` 只回过协议版本对得上
 
 产品数据的生成工具，输出到 `data/generated/`（gitignore）。
 
-- `wanxiang`: 读 `$RIME_DIR` (缺省 `~/Library/Rime`) 的 `wanxiang.dict.yaml`, 跟 `import_tables` 合中文表, 去声调后写 `dict.tsv` / `dict.qj` (元数据 CC-BY-4.0 / amzxyz 万象拼音). 英文混输与反查表跳过, 上游 yaml 不进仓库. `bundle.sh` 有 `data/generated/dict.qj` 就用它当基础词库.
+- `wanxiang`: 读 `--rime-dir` / `$RIME_DIR` / `~/Library/Rime` 的 `wanxiang.dict.yaml`, 跟 `import_tables` 合中文表, 去声调后写 `dict.tsv` / `dict.qj` (元数据 CC-BY-4.0 / amzxyz 万象拼音). 英文混输与反查表跳过, yaml 不进仓库. CI 与本机没 Rime 时跑 `tools/release/prepare-wanxiang.sh` (或 `just prepare-wanxiang`): 浅克隆 `azazo1/oh-my-rime` 的 `wanxiang` 分支到 `.tmp/rime-wanxiang` 再转换, 并打释义表 / 英文词表. `bundle.sh` 有 `data/generated/dict.qj` 就用它当基础词库.
 - `lexicon`：从 `assets/lexicon/`（自建词库源：规范字 + 常用词 + THUOCL 领域词）加 Unihan 读音（`data/unihan/Unihan_Readings.txt`）、LLM 多音字标注（`gloss-gen pinyin`，
   结果 `data/generated/pinyin-llm.jsonl`，不进 git）、语料词频（`lm-unigram.tsv`）建基础词库 `dict.tsv`（8.7 万条），并把 THUOCL 领域词按语料次数 < 50 拆成
   `dicts/<领域>.tsv` + `.qj`（11 本、13 万条，`--domain-keep-min`），流程见 `assets/lexicon/QINGJIAN.md`；`--extra-words` 并入人工挑的领域词 `assets/lexicon/domain_words.tsv`。

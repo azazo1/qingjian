@@ -6,7 +6,7 @@
 
 这是自用 fork, `upstream` 指向 [qingjian-team/qingjian](https://github.com/qingjian-team/qingjian). 相对上游的改动都记在这里, 便于日后 merge upstream 时对照.
 
-- 候选排序改成接近万象拼音: 基础词库用万象 (CC BY 4.0, `dict-convert wanxiang` 从 `$RIME_DIR` / `~/Library/Rime` 生成 `data/generated/dict.qj`, 不把上游 yaml 打进 git), 排序按词库词频 `ln(1+freq)` 加用户学习; Rime 导入会去声调并跟 `import_tables`.
+- 候选排序改成接近万象拼音: 基础词库用万象 (CC BY 4.0, `just prepare-wanxiang` 临时 clone `azazo1/oh-my-rime` 的 `wanxiang` 分支到 `.tmp/` 再转成 `data/generated/dict.qj`, 本机有 Rime 时也可 `dict-convert wanxiang`; 不把 yaml 打进 git). CI 打包走同一条脚本, 不拉青简上游 `data-vN`. 排序按词库词频 `ln(1+freq)` 加用户学习; Rime 导入会去声调并跟 `import_tables`.
 - 拆除整句语言模型 / 本地神经重排 / jev 决策模型 / 云联想: 去掉 `qingjian-lm` `qingjian-neural` `qingjian-decision` `qingjian-predict` 四个 crate, 以及配置 `[predict]` `[model]` `[decision]` 与偏好设置「云服务」页. 候选只走词库词频与用户学习; 整句格子仍在, 但壳不再注入语言模型. 格式里的 `Kind::LanguageModel` / `Kind::Model` 只为读旧文件保留编号.
 - macOS 输入法菜单「录入词组…」: 填一个词, 拼音按词库自动生成且可改, 确认后效果等同于打这段全拼并选一次该词 (词库没有则记成用户词). 见 `docs/user/settings/preferences.md`.
 - 输入法菜单多一项「重启输入法」: macOS 在输入法菜单里, Windows 在任务栏「中 / 英」图标的右键菜单里. 点一下先把学习数据与输入统计落盘, 再让输入法进程退出, 由系统 / 前台应用的 DLL 按需把新进程拉起来 (macOS 走 `NSApplication::stop:` 让 run loop 正常返回, 日志才落盘; Windows 只重启后台的 `qingjian-server`, 不动已加载进应用进程的 DLL, 新进程由 DLL 的下一拍轮询补连时拉起, 期间约一两秒打不了字), 正在组的拼音会丢. 见 `docs/user/settings/preferences.md`.

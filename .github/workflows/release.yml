@@ -140,12 +140,10 @@ jobs:
           echo "sign=${{ secrets.QINGJIAN_CERT_P12 != '' }}" >> "$GITHUB_OUTPUT"
           echo "notarize=${{ secrets.QINGJIAN_NOTARY_KEY != '' }}" >> "$GITHUB_OUTPUT"
 
-      - name: Fetch product data
-        env:
-          GH_TOKEN: ${{ github.token }}
+      - name: Prepare Wanxiang dictionary
         run: |
-          tools/release/data-fetch.sh
-          ls -la data/generated data/generated/dicts data/model
+          tools/release/prepare-wanxiang.sh
+          ls -la data/generated
 
       - name: Import signing certificates
         if: steps.secrets.outputs.sign == 'true'
@@ -223,12 +221,10 @@ jobs:
 
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
 
-      - name: Fetch product data
-        env:
-          GH_TOKEN: ${{ github.token }}
+      - name: Prepare Wanxiang dictionary
         run: |
-          tools/release/data-fetch.sh
-          ls -la data/generated data/generated/dicts data/model
+          tools/release/prepare-wanxiang.sh
+          ls -la data/generated
 
       # 与开发机同版本（7.1.0，自带简体中文翻译；Chocolatey 只有 6.x，6 的安装包不带简中）。钉死 GitHub Release 上的文件。
       - name: Install Inno Setup 7.1.0
@@ -278,12 +274,10 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y cmake g++ pkg-config libssl-dev libfcitx5core-dev libfcitx5config-dev libfcitx5utils-dev nlohmann-json3-dev fcitx5
 
-      - name: Fetch product data
-        env:
-          GH_TOKEN: ${{ github.token }}
+      - name: Prepare Wanxiang dictionary
         run: |
-          tools/release/data-fetch.sh
-          ls -la data/generated data/generated/dicts data/model
+          tools/release/prepare-wanxiang.sh
+          ls -la data/generated
 
       - name: Build package
         run: apps/linux/scripts/package.sh

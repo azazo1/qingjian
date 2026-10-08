@@ -21,8 +21,6 @@ if ((${#missing[@]})); then
   exit 1
 fi
 install_prefix=$(realpath -m -- "$install_prefix")
-mkdir -p "$here/data/generated"
-# 数据包在 macOS 上打，带 LIBARCHIVE.xattr 扩展头，GNU tar 会逐个警告
-tar --warning=no-unknown-keyword -xzf "$here/target/release-data/qingjian-data.tar.gz" -C "$here/data/generated"
+[[ -f "$here/data/generated/dict.qj" ]] || { echo '包里缺少 data/generated/dict.qj' >&2; exit 1; }
 python3 "$here/files.py" install "$install_prefix" "$here" "$here/bin/qingjian-linux-server" "$here/lib/qingjian.so" false
 printf '已安装。手动启动：%s/bin/qingjian-linux-server\n重启 Fcitx5，在配置工具取消“仅显示当前语言”后添加“青简”。\n' "$install_prefix"

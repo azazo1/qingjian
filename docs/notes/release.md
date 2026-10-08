@@ -87,21 +87,13 @@ artifact 名就是包文件名去掉扩展名. 这些包不走发版流程: 没�
 
 ## 产品数据从哪来
 
-词库, 释义表 (`data/generated/*.qj`, `dicts/*.qj`, 英文词表) 不在 git 里, 由本机数据管道生成.
-它们发在仓库里一个个**不可变**的预发布 Release 上: `data-v1`, `data-v2`……每次数据重生成发一个新号, 从不覆盖
-(预发布不会成为 GitHub 的 latest, 官网取 latest 时不会拿到它). 仓库里 `tools/release/data.lock` 钉住当前要用的标签与数据包的 SHA-256,
-跟用到新数据的代码同一个提交进去: checkout 哪个提交就拿到它对应的那版数据, 离线自编译的人不会因为我们改了数据而编出坏包.
+本 fork 的基础词库由万象拼音在打包时现场生成, 不拉上游 `data-vN`.
 
-- `tools/release/data-bundle.sh`: 把 `data/generated/` 打成 `qingjian-data.tar.gz`,
-  连同 LLM 续跑中间产物 `qingjian-llm-intermediates.tar.gz` 发到下一个 `data-vN` (`--tag` 可指定, 已存在就拒绝), 然后改写 `data.lock`.
-- `tools/release/data-fetch.sh`: 按 `data.lock` 下载 (有 gh 用 gh, 没有就 curl 直连), 按锁文件里的哈希校验 (不信 Release 自己那份 `SHA256SUMS`),
-  数据包解到 `data/generated/`. `release.yml` 两个 job 和离线自编译走同一个脚本;
-  `bundle.sh` 见到 `dict.qj` 就按产品数据打包.
-  标签与哈希记进 `build-info.json` (`data_tag` / `data_sha256`).
+- `tools/release/prepare-wanxiang.sh` (或 `just prepare-wanxiang`): 浅克隆 `azazo1/oh-my-rime` 的 `wanxiang` 分支到 `.tmp/rime-wanxiang` (gitignore), 跑 `dict-convert wanxiang`, 再把 `assets/glossary` / `assets/lexicon/english.tsv` 打进 `data/generated/`. `ci.yml` 的打包 job 和 `release.yml` 三个平台都走它. `build-info.json` 的 `data_tag` 写成 `wanxiang-<短哈希>`.
+- 本机已有 Rime 用户目录时仍可 `cargo run --release -p qingjian-dict-convert -- wanxiang`.
+- 上游的 `data-fetch.sh` / `data.lock` 还在, 本 fork 的 CI 不再调用. 词库 yaml 不进 git.
 
-数据重生成之后 (重跑 lexicon / gloss-gen export) 跑一次 `data-bundle.sh`,
-把锁文件的改动提交 (`chore(data): 数据 data-vN`), 否则 CI 打的包还是锁文件指的旧数据.
-2026-09-16 之前用的是滚动覆盖的 `data` Release，已冻结不再更新。
+`bundle.sh` 见到 `data/generated/dict.qj` 就按产品数据打包; 没有则退回 `assets/sample/` 样例. 词库是运行时 mmap 的 sidecar, 不链进二进制.
 
 ## 版本索引的签名
 

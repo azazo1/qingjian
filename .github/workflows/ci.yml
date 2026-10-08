@@ -131,8 +131,8 @@ jobs:
           # 两个架构的 target 目录不同，缓存 key 要分开，否则互相顶掉
           key: ${{ matrix.arch }}
 
-      - name: Fetch product data
-        run: tools/release/data-fetch.sh
+      - name: Prepare Wanxiang dictionary
+        run: tools/release/prepare-wanxiang.sh
 
       # 没有签名 Secrets，出来的是 ad-hoc 签名的包，装的时候要在「隐私与安全性」里放行（与 release.yml 无证书时的分支一致）
       - name: Build pkg (${{ matrix.arch }})
@@ -219,9 +219,9 @@ jobs:
 
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
 
-      - name: Fetch product data
+      - name: Prepare Wanxiang dictionary
         shell: bash
-        run: tools/release/data-fetch.sh
+        run: tools/release/prepare-wanxiang.sh
 
       # 与 release.yml 同版本（7.1.0，自带简体中文翻译；Chocolatey 只有 6.x，6 的安装包不带简中）。钉死 GitHub Release 上的文件。
       - name: Install Inno Setup 7.1.0
