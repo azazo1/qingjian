@@ -386,6 +386,17 @@ impl QingjianInputController {
             host::with(|h| h.perform(menubar::MenuAction::LearnPhrase));
             return true;
         }
+        // 查字快捷键 (配置 `[shortcut] look_up`, 缺省 ⌃⌥L): 弹出查字窗口, 与输入法菜单里的「查字…」
+        // 是同一件事. 与录入词组一样只在没组句时认: 正在打拼音时这个组合照旧归应用
+        let combo = host::with(|h| h.look_up_keys).flatten();
+        if let Some(combo) = combo
+            && pressed == combo.modifiers
+            && typed.as_deref().and_then(|t| t.chars().next()) == Some(combo.key)
+            && !host::with(|h| !h.engine.composition().is_empty()).unwrap_or(false)
+        {
+            host::with(|h| h.perform(menubar::MenuAction::Lookup));
+            return true;
+        }
         // 中文 / 英文标点切换 (配置 `[shortcut] punctuation_toggle`, 缺省 ⌃.): 与输入法菜单里的
         // 「中文标点」是同一件事. 任何时候都认, 正在组句也不打断; 菜单栏「中。/中.」跟着变
         let combo = host::with(|h| h.punctuation_toggle_keys).flatten();

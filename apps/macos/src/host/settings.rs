@@ -87,6 +87,7 @@ impl Host {
                 self.engine.prepare_phrase_readings();
                 self.learn_phrase.show();
             }
+            MenuAction::Lookup => self.lookup.show(),
             MenuAction::OpenLogs => {
                 if let Some(dir) = logging::log_dir() {
                     open_with_system(&[&dir.to_string_lossy()]);
@@ -304,13 +305,15 @@ impl Host {
             (
                 Setting::TranslateSelectionKeys
                 | Setting::LearnPhraseKeys
-                | Setting::PunctuationToggleKeys,
+                | Setting::PunctuationToggleKeys
+                | Setting::LookUpKeys,
                 SettingValue::Text(text),
             ) => match text.parse::<KeyBinding<KeyCombo>>() {
                 Ok(chosen) => {
                     let name = match setting {
                         Setting::LearnPhraseKeys => "learn_phrase",
                         Setting::PunctuationToggleKeys => "punctuation_toggle",
+                        Setting::LookUpKeys => "look_up",
                         _ => "translate_selection",
                     };
                     self.settings
@@ -383,6 +386,8 @@ impl Host {
                     "punctuation_toggle",
                     defaults.punctuation_toggle.to_string(),
                 );
+                self.settings
+                    .set_value("shortcut", "look_up", defaults.look_up.to_string());
                 self.settings.set_value(
                     "shortcut",
                     "delete_candidate",

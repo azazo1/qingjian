@@ -101,6 +101,7 @@ pub fn init(mtm: MainThreadMarker, info: &BundleInfo) -> Result<(), HostError> {
     indicator.set_menu(&menu.ns_menu());
     let preferences = PreferencesWindow::new(mtm, &languages, version, &info.build);
     let learn_phrase = LearnPhraseWindow::new(mtm);
+    let lookup = LookupWindow::new(mtm);
     let watch = ConfigWatch::new(mtm);
     HOST.with(|host| {
         *host.borrow_mut() = Some(Host {
@@ -111,6 +112,7 @@ pub fn init(mtm: MainThreadMarker, info: &BundleInfo) -> Result<(), HostError> {
             menu,
             preferences,
             learn_phrase,
+            lookup,
             settings,
             watch,
             last_flush: std::time::Instant::now(),
@@ -136,6 +138,7 @@ pub fn init(mtm: MainThreadMarker, info: &BundleInfo) -> Result<(), HostError> {
             translate_keys: Some(KeyCombo::TRANSLATE_DEFAULT),
             learn_phrase_keys: Some(KeyCombo::LEARN_PHRASE),
             punctuation_toggle_keys: Some(KeyCombo::PUNCTUATION_TOGGLE),
+            look_up_keys: Some(KeyCombo::LOOK_UP),
             translation: None,
             notice: None,
             preedit_mode: PreeditMode::default(),

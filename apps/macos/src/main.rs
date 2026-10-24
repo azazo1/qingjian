@@ -11,6 +11,7 @@ mod error;
 mod host;
 mod imk;
 mod learn_phrase;
+mod lookup;
 mod menubar;
 mod preferences;
 

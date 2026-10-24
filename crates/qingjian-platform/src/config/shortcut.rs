@@ -65,6 +65,10 @@ pub struct ShortcutConfig {
     /// 的快捷键, 缺省 `control+.` (微软拼音的惯例); 写 `none` 就是不用这个键. 任何时候都认,
     /// 正在组句也不打断.
     pub punctuation_toggle: KeyBinding<KeyCombo>,
+
+    /// 打开「查字」窗口的快捷键 (缺省 `control+option+l`, 与「录入词组」同一族的组合键);
+    /// 写 `none` 就是不用这个键. 只在 macOS 接, 只在没在组句时认.
+    pub look_up: KeyBinding<KeyCombo>,
 }
 
 impl Default for ShortcutConfig {
@@ -96,6 +100,8 @@ impl Default for ShortcutConfig {
             learn_phrase: KeyBinding::on(KeyCombo::LEARN_PHRASE),
             // 中英标点切换缺省用 ⌃. (微软拼音的惯例), 三端同一个写法
             punctuation_toggle: KeyBinding::on(KeyCombo::PUNCTUATION_TOGGLE),
+            // 查字窗口缺省用 ⌃⌥L: 与 ⌃⌥T 翻译、⌃⌥P 录入词组同一族, L 取 look up
+            look_up: KeyBinding::on(KeyCombo::LOOK_UP),
         }
     }
 }
@@ -461,6 +467,28 @@ mod tests {
                 .key()
                 .map(|combo| combo.key_string()),
             Some("control+shift+.".to_owned())
+        );
+    }
+
+    #[test]
+    fn look_up_defaults_to_control_option_l_and_can_be_switched_off() {
+        let default = ShortcutConfig::default();
+        assert_eq!(default.look_up, KeyBinding::on(KeyCombo::LOOK_UP));
+        assert_eq!(
+            default.look_up.key().unwrap().key_string(),
+            "control+option+l"
+        );
+        let parsed: ShortcutConfig = toml::from_str("").unwrap();
+        assert_eq!(parsed.look_up, default.look_up);
+
+        let off: ShortcutConfig = toml::from_str("look_up = \"none\"\n").unwrap();
+        assert!(off.look_up.is_off());
+
+        // `alt` 与 `option` 是同一个修饰键
+        let custom: ShortcutConfig = toml::from_str("look_up = \"alt+ctrl+k\"\n").unwrap();
+        assert_eq!(
+            custom.look_up.key().map(|combo| combo.key_string()),
+            Some("control+option+k".to_owned())
         );
     }
 }

@@ -19,6 +19,9 @@ pub enum MenuAction {
     /// 打开录入词组窗口: 填词并记一次选择.
     LearnPhrase,
 
+    /// 打开查字窗口: 输入汉字查结构与释义, 或输入几个部件查字.
+    Lookup,
+
     /// 在访达里打开日志目录。
     OpenLogs,
 
@@ -38,6 +41,7 @@ impl MenuAction {
             Self::LearnPhrase => 4,
             Self::OpenDownload => 5,
             Self::Restart => 6,
+            Self::Lookup => 8,
             Self::ToggleFuzzy(index) => FUZZY_TAG_BASE + index as NSInteger,
         }
     }
@@ -50,6 +54,7 @@ impl MenuAction {
             4 => Self::LearnPhrase,
             5 => Self::OpenDownload,
             6 => Self::Restart,
+            8 => Self::Lookup,
             _ => {
                 let index = usize::try_from(tag.checked_sub(FUZZY_TAG_BASE)?).ok()?;
                 (index < FuzzyRules::NAMES.len()).then_some(Self::ToggleFuzzy(index))?
@@ -69,6 +74,7 @@ mod tests {
             MenuAction::OpenPreferences,
             MenuAction::OpenLogs,
             MenuAction::LearnPhrase,
+            MenuAction::Lookup,
             MenuAction::OpenDownload,
             MenuAction::Restart,
             MenuAction::ToggleFuzzy(0),

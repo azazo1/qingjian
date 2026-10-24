@@ -38,6 +38,7 @@ impl Host {
         self.translate_keys = config.shortcut.translate_selection.key();
         self.learn_phrase_keys = config.shortcut.learn_phrase.key();
         self.punctuation_toggle_keys = config.shortcut.punctuation_toggle.key();
+        self.look_up_keys = config.shortcut.look_up.key();
         self.page_size = config.general.page_size();
         self.page_keys = config.general.page_keys();
         self.preedit_mode = config.general.preedit;

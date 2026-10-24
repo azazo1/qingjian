@@ -200,6 +200,12 @@ IMK 输入法, 源码按 `app / host / imk / candidates / menubar / preferences 
 - 输入法菜单「录入词组…」 (`learn_phrase/`): 独立 NSWindow, 与偏好设置共用 Accessory 激活策略 (`preferences/panel.rs` 的 `enter_accessory` / `leave_accessory`); 点确认走 `Engine::learn_phrase`, 立刻 `flush_learning`.
   另外配了 `[shortcut] learn_phrase` (缺省 ⌃⌥P) 时按键分发里认这个组合, 走的也是菜单那条 `Host::perform(MenuAction::LearnPhrase)`, 所以两边的行为一字不差; 判定与「翻译选中文字」同一套 (只在没组句时认, 命中吃掉这个键).
 
+- 输入法菜单「查字…」 (`lookup/`): 另一个独立 NSWindow, 与「录入词组」同一套面板与 Accessory 策略 (`lookup/panel.rs`).
+  输入一个汉字走 `https://zi.tools/api/zi/{字}`, 只取 `yi.kv` 的 `ids_zi_tools` (第一个变体), `dict` 里的《康熙字典》与 `origin` 前三条, 各截到 300 / 80 字; 第三方有版权的字典不收.
+  输入 2 到 6 个部件走 `https://zi.tools/api/lookup/lookup/{部件 空格分隔}` (实测 `木 木 木` 600 ms 出「森」), 响应里数组套数组, 组 0 是同位置命中, 条目里有真字也有 `⿰木林` 这种构形描述, 只留单字.
+  接口无文档, 所以逐字段从 `serde_json::Value` 取, 缺了就少显示一段. 请求跑在 `std::thread` 里 (一次一个 tokio current-thread runtime, 6 秒超时, 2 MB 上限), 结果写进 `Arc<Mutex<Option<Outcome>>>`, 窗口用 0.1 秒的 `NSTimer` 轮询; 单字详情按字缓存在内存里 (64 个).
+  窗口不抢输入焦点也不打断组句; 快捷键 `[shortcut] look_up` (缺省 ⌃⌥L) 只在没组句时认, 与菜单项走同一条 `MenuAction::Lookup`.
+
 - 输入法菜单「重启输入法」 (`host/restart.rs`): 先停掉配置监视, 再 `flush_learning` 落盘学习数据 / 输入统计, 然后 `NSApplication::stop:` 让 `main` 的 run loop 正常返回. 走正常退出而不是 `std::process::exit`, 是为了让日志的非阻塞 `WorkerGuard` 析构, 缓冲的日志落盘 (`app/logging`). 进程由系统按需拉起 (同 `bundle.sh --install` 里的 `pkill -x qingjian-macos`), 下次激活青简时起新的.
 
 - 输入法菜单（状态项 + 系统输入源菜单）与偏好设置窗口都是配置文件的前端：只写 `config.toml`，`Host::apply_config` 一条通路热加载，激活期间每秒看一次文件 mtime。

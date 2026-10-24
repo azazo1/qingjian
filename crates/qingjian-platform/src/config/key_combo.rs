@@ -50,6 +50,17 @@ impl KeyCombo {
         key: 'p',
     };
 
+    /// 打开「查字」窗口的缺省键 (配置 `[shortcut] look_up`): 与「录入词组」「翻译选中文字」同一族的 ⌃⌥ 组合, L 取 look up.
+    pub const LOOK_UP: Self = Self {
+        modifiers: Modifiers {
+            option: true,
+            shift: false,
+            control: true,
+            command: false,
+        },
+        key: 'l',
+    };
+
     /// 中文模式下切换中文 / 英文标点的缺省键 (配置 `[shortcut] punctuation_toggle`), 微软拼音的惯例.
     pub const PUNCTUATION_TOGGLE: Self = Self {
         modifiers: Modifiers::CONTROL,

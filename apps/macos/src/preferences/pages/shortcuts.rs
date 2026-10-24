@@ -48,6 +48,9 @@ pub struct ShortcutsPage {
 
     /// 中文模式下切换中文 / 英文标点的组合键。
     punctuation_toggle: Retained<KeyRecorder>,
+
+    /// 打开「查字」窗口的组合键。
+    look_up: Retained<KeyRecorder>,
 }
 
 impl ShortcutsPage {
@@ -197,6 +200,21 @@ impl ShortcutsPage {
              菜单栏的「中。 / 中.」跟着变; 英文模式下标点本来就是半角, 不受影响. 打着拼音也能按, 不打断组句.",
         );
         layout.space(GROUP_GAP);
+        let look_up = row_recorder(
+            layout,
+            mtm,
+            "查字",
+            Setting::LookUpKeys,
+            RecorderKind::Combo,
+            target,
+        );
+        note(
+            layout,
+            mtm,
+            "按这个键打开查字窗口, 与输入法菜单里的「查字…」是同一件事: 输入一个汉字查结构与释义, \
+             输入 2 到 6 个部件 (如 木木木) 查含这些部件的字. 只在没在输入拼音时认; 查询时才联网.",
+        );
+        layout.space(GROUP_GAP);
         note_full(
             layout,
             mtm,
@@ -225,6 +243,7 @@ impl ShortcutsPage {
             translate_selection,
             learn_phrase,
             punctuation_toggle,
+            look_up,
         }
     }
 
@@ -260,6 +279,7 @@ impl ShortcutsPage {
         );
         show_combo(&self.learn_phrase, config.shortcut.learn_phrase);
         show_combo(&self.punctuation_toggle, config.shortcut.punctuation_toggle);
+        show_combo(&self.look_up, config.shortcut.look_up);
     }
 }
 

@@ -79,6 +79,12 @@ impl InputMenu {
         ));
         menu.addItem(&action_item(
             mtm,
+            "查字…",
+            Some(MenuAction::Lookup),
+            &target,
+        ));
+        menu.addItem(&action_item(
+            mtm,
             "打开日志目录",
             Some(MenuAction::OpenLogs),
             &target,

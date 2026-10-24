@@ -41,6 +41,7 @@ use crate::app::{Settings, logging, paths};
 use crate::candidates::{CandidateWindow, Frame, Preedit, Row};
 use crate::error::HostError;
 use crate::learn_phrase::LearnPhraseWindow;
+use crate::lookup::LookupWindow;
 use crate::menubar::{InputMenu, MenuAction, ModeBadge, ModeIndicator};
 use crate::preferences::{PreferencesWindow, Setting, SettingValue, UpdateStatus};
 
@@ -73,6 +74,9 @@ pub struct Host {
 
     /// 菜单栏「录入词组」窗口.
     pub learn_phrase: LearnPhraseWindow,
+
+    /// 菜单栏「查字」窗口 (zi.tools).
+    pub lookup: LookupWindow,
 
     /// 配置文件的当前值与修改时间。
     pub settings: Settings,
@@ -143,6 +147,10 @@ pub struct Host {
     /// 中文模式下切换中文 / 英文标点的快捷键 (配置 `[shortcut] punctuation_toggle`, 缺省 ⌃.); `None` 是关掉了.
     /// 任何时候都认, 正在组句也不打断.
     pub punctuation_toggle_keys: Option<KeyCombo>,
+
+    /// 打开「查字」窗口的快捷键 (配置 `[shortcut] look_up`, 缺省 ⌃⌥L); `None` 是关掉了.
+    /// 只在没在组句时认, 与输入法菜单里的「查字…」是同一件事.
+    pub look_up_keys: Option<KeyCombo>,
 
     /// 进行中的「翻译选中文字」；有它时候选窗口显示的是译文（或「翻译中…」），按键先归它处理。
     pub translation: Option<TranslationJob>,

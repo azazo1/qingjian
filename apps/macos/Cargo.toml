@@ -20,6 +20,9 @@ qingjian-platform.workspace = true
 qingjian-render.workspace = true
 qingjian-translate.workspace = true
 qingjian-update.workspace = true
+reqwest = { workspace = true, features = ["native-tls", "system-proxy"] }
+serde_json.workspace = true
+tokio.workspace = true
 thiserror.workspace = true
 tracing.workspace = true
 tracing-appender.workspace = true
