@@ -203,6 +203,7 @@ IMK 输入法, 源码按 `app / host / imk / candidates / menubar / preferences 
 - 输入法菜单「查字…」 (`lookup/`): 另一个独立 NSWindow, 与「录入词组」同一套面板与 Accessory 策略 (`lookup/panel.rs`).
   输入一个汉字走 `https://zi.tools/api/zi/{字}`, 只取 `yi.kv` 的 `ids_zi_tools` (第一个变体), `dict` 里的《康熙字典》与 `origin` 前三条, 各截到 300 / 80 字; 第三方有版权的字典不收.
   输入 2 到 6 个部件走 `https://zi.tools/api/lookup/lookup/{部件 空格分隔}` (实测 `木 木 木` 600 ms 出「森」), 响应里数组套数组, 组 0 是同位置命中, 条目里有真字也有 `⿰木林` 这种构形描述, 只留单字.
+  部件结果放在结果区的一列 `NSTableView` 里 (`lookup/list.rs`): 上方一行回显部件与命中数, 每行「序号 + 汉字」, 只许单选; 双击或 Cmd+C 把选中的字写进剪贴板 (列表不处理 `copy:`, 响应链走到 `LookupPanel` 的 `copy:`, 输入框与详情文本的 Cmd+C 仍归各自的 field editor). 单字详情仍是一块 `NSTextView`, 两块控件同一位置, 按查询类型切换显隐.
   接口无文档, 所以逐字段从 `serde_json::Value` 取, 缺了就少显示一段. 请求跑在 `std::thread` 里 (一次一个 tokio current-thread runtime, 6 秒超时, 2 MB 上限), 结果写进 `Arc<Mutex<Option<Outcome>>>`, 窗口用 0.1 秒的 `NSTimer` 轮询; 单字详情按字缓存在内存里 (64 个).
   窗口不抢输入焦点也不打断组句; 快捷键 `[shortcut] look_up` (缺省 ⌃⌥L) 只在没组句时认, 与菜单项走同一条 `MenuAction::Lookup`.
 

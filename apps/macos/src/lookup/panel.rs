@@ -1,6 +1,7 @@
 //! 查字窗口本体: 关窗时把激活策略交还, 与「录入词组」同一套做法.
 
 use objc2::rc::Retained;
+use objc2::runtime::AnyObject;
 use objc2::{MainThreadMarker, MainThreadOnly, define_class, msg_send};
 use objc2_app_kit::{NSBackingStoreType, NSWindow, NSWindowStyleMask};
 use objc2_foundation::{NSObjectProtocol, NSRect};
@@ -21,6 +22,13 @@ define_class!(
             let mtm = MainThreadMarker::from(self);
             let _: () = unsafe { msg_send![super(self), close] };
             crate::preferences::leave_accessory(mtm);
+        }
+
+        /// 焦点在结果列表上时的 Cmd+C: 列表自己不处理, 响应链走到窗口这里.
+        /// 焦点在输入框或详情文本里时由那边的 field editor 处理, 到不了这里.
+        #[unsafe(method(copy:))]
+        fn copy(&self, _sender: Option<&AnyObject>) {
+            crate::host::with(|h| h.lookup.copy_selected());
         }
     }
 

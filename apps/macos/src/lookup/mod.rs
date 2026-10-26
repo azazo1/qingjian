@@ -5,6 +5,7 @@
 //! 平时零网络; Core 不依赖这里, 也永远不联网.
 
 mod fetch;
+mod list;
 mod panel;
 mod target;
 mod window;

@@ -2,6 +2,8 @@
 //!
 //! 窗口照「录入词组」做: 独立 NSWindow, 不跟光标跑, 也不打断正在打的拼音.
 //! 输入一个汉字查详情, 输入几个部件 (如 `木木木`) 就按部件查字.
+//! 结果区放两块控件: 单字详情是一段可读的长文本, 部件查字是一列可选的汉字
+//! (`LookupList`), 按这次查询的类型切换显隐.
 //! 网络在 [`super::fetch`] 里跑一次性线程, 这里用 0.1 秒的定时器等结果.
 
 use std::collections::HashMap;
@@ -17,6 +19,7 @@ use objc2_app_kit::{
 use objc2_foundation::{NSObject, NSObjectProtocol, NSPoint, NSRect, NSSize, NSString, NSTimer};
 
 use super::fetch::{self, Entry, LookupError};
+use super::list::LookupList;
 use super::panel::LookupPanel;
 use super::target::LookupTarget;
 
@@ -58,6 +61,10 @@ pub struct LookupWindow {
     panel: Retained<LookupPanel>,
     input: Retained<NSTextField>,
     result: Retained<NSTextView>,
+    /// 详情区的滚动框: 显示部件结果时藏起来, 位置让给列表.
+    detail_scroll: Retained<NSScrollView>,
+    /// 部件查字的结果列表.
+    list: LookupList,
     status: Retained<NSTextField>,
     timer: Option<Retained<NSTimer>>,
     job: Option<Job>,
@@ -138,19 +145,19 @@ impl LookupWindow {
 
         let result_top = button_y - GAP;
         let result_bottom = PAD + 18.0 + GAP;
-        let result_size = NSSize::new(WIDTH - 2.0 * PAD, result_top - result_bottom);
-
-        let scroll = NSScrollView::initWithFrame(
-            mtm.alloc(),
-            NSRect::new(NSPoint::new(PAD, result_bottom), result_size),
+        let result_area = NSRect::new(
+            NSPoint::new(PAD, result_bottom),
+            NSSize::new(WIDTH - 2.0 * PAD, result_top - result_bottom),
         );
+
+        let scroll = NSScrollView::initWithFrame(mtm.alloc(), result_area);
         scroll.setHasVerticalScroller(true);
         scroll.setBorderType(NSBorderType::BezelBorder);
         let result = NSTextView::initWithFrame(
             mtm.alloc(),
             NSRect::new(
                 NSPoint::ZERO,
-                NSSize::new(result_size.width, result_size.height),
+                NSSize::new(result_area.size.width, result_area.size.height),
             ),
         );
         result.setEditable(false);
@@ -163,6 +170,10 @@ impl LookupWindow {
         }
         scroll.setDocumentView(Some(&result));
         content.addSubview(&scroll);
+
+        // 部件查字的结果也放这一块: 回显行 + 一列汉字, 与详情区按查询类型切换
+        let list = LookupList::new(mtm, result_area, &target);
+        list.attach(&content);
 
         let status = NSTextField::labelWithString(&NSString::from_str(""), mtm);
         status.setFont(Some(&NSFont::systemFontOfSize(11.0)));
@@ -177,6 +188,8 @@ impl LookupWindow {
             panel,
             input,
             result,
+            detail_scroll: scroll,
+            list,
             status,
             timer: None,
             job: None,
@@ -234,19 +247,23 @@ impl LookupWindow {
             match outcome {
                 Outcome::Detail(Ok(entry)) if !entry.is_empty() => {
                     self.remember(entry.zi, entry.clone());
-                    self.set_result(&entry.render());
+                    self.show_detail(&entry.render());
                     self.set_status("", false);
                 }
                 Outcome::Detail(Ok(_)) => {
                     self.set_status("这个字在 zi.tools 上没有可显示的内容", true)
                 }
                 Outcome::Detail(Err(error)) => self.set_status(&format!("查询失败: {error}"), true),
-                Outcome::Components(Ok(found)) if !found.is_empty() => {
-                    self.set_result(&components_text(&parts, &found));
-                    self.set_status("", false);
+                Outcome::Components(Ok(found)) => {
+                    self.list.set_rows(&parts, &found);
+                    if found.is_empty() {
+                        self.set_status("没有找到含这几个部件的字", true);
+                    } else {
+                        self.set_status("选中一行, Cmd+C 或双击复制", false);
+                    }
                 }
-                Outcome::Components(Ok(_)) => self.set_status("没有找到含这几个部件的字", true),
                 Outcome::Components(Err(error)) => {
+                    self.list.show_failure(&parts, "查询失败");
                     self.set_status(&format!("查询失败: {error}"), true)
                 }
             }
@@ -255,6 +272,11 @@ impl LookupWindow {
         if elapsed > Duration::from_secs(7) {
             self.job = None;
             self.stop_timer();
+            if parts.is_empty() {
+                self.show_detail("");
+            } else {
+                self.list.show_failure(&parts, "查询超时");
+            }
             self.set_status("查询超时, 站点没有回应", true);
         }
     }
@@ -263,11 +285,11 @@ impl LookupWindow {
     fn start_detail(&mut self, zi: char) {
         self.stop_timer();
         if let Some(entry) = self.cache.get(&zi).cloned() {
-            self.set_result(&entry.render());
+            self.show_detail(&entry.render());
             self.set_status("", false);
             return;
         }
-        self.set_result("");
+        self.show_detail("");
         self.set_status("查询中…", false);
         self.job = Some(spawn_job(
             move || Outcome::Detail(fetch::detail(zi)),
@@ -276,11 +298,12 @@ impl LookupWindow {
         self.start_timer();
     }
 
-    /// 按部件查字.
+    /// 按部件查字: 结果进列表, 详情区先让出来.
     fn start_components(&mut self, parts: &[char]) {
         self.stop_timer();
         let parts = parts.to_vec();
-        self.set_result("");
+        self.detail_scroll.setHidden(true);
+        self.list.show_pending(&parts);
         self.set_status("查询中…", false);
         let query = parts.clone();
         self.job = Some(spawn_job(
@@ -297,8 +320,18 @@ impl LookupWindow {
         self.cache.insert(zi, entry);
     }
 
-    fn set_result(&self, text: &str) {
+    /// 切到详情模式: 显示文本, 列表让位.
+    fn show_detail(&self, text: &str) {
+        self.list.hide();
+        self.detail_scroll.setHidden(false);
         self.result.setString(&NSString::from_str(text));
+    }
+
+    /// Cmd+C 与双击列表共用的复制: 复制选中的那个字, 状态行给一句提示.
+    pub fn copy_selected(&self) {
+        if let Some(zi) = self.list.copy_selected() {
+            self.set_status(&format!("已复制 {zi}"), false);
+        }
     }
 
     fn set_status(&self, text: &str, error: bool) {
@@ -349,28 +382,6 @@ fn spawn_job(work: impl FnOnce() -> Outcome + Send + 'static, parts: Vec<char>) 
         parts,
         started: Instant::now(),
     }
-}
-
-/// 部件查字的结果: 回显部件, 再按行列出命中的字 (每行 8 个).
-fn components_text(parts: &[char], found: &[char]) -> String {
-    let parts = parts
-        .iter()
-        .map(|c| c.to_string())
-        .collect::<Vec<_>>()
-        .join(" ");
-    let mut out = format!(
-        "部件  {parts}\n命中  {} 个字 (来源 zi.tools 字統网)\n\n",
-        found.len()
-    );
-    for (index, zi) in found.iter().enumerate() {
-        out.push(*zi);
-        if (index + 1) % 8 == 0 {
-            out.push('\n');
-        } else {
-            out.push_str("  ");
-        }
-    }
-    out
 }
 
 fn y_from_top(top: f64) -> f64 {

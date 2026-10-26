@@ -25,6 +25,12 @@ define_class!(
         fn close_window(&self, _sender: Option<&AnyObject>) {
             host::with(|h| h.lookup.close());
         }
+
+        /// 双击列表里的一行: 复制这个字.
+        #[unsafe(method(copySelected:))]
+        fn copy_selected(&self, _sender: Option<&AnyObject>) {
+            host::with(|h| h.lookup.copy_selected());
+        }
     }
 
     unsafe impl NSObjectProtocol for LookupTarget {}
