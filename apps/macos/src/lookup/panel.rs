@@ -6,7 +6,7 @@ use objc2::{MainThreadMarker, MainThreadOnly, define_class, msg_send};
 use objc2_app_kit::{NSBackingStoreType, NSWindow, NSWindowStyleMask};
 use objc2_foundation::{NSObjectProtocol, NSRect};
 
-use crate::preferences::enter_accessory;
+use crate::preferences::present_accessory;
 
 define_class!(
     // SAFETY: NSWindow 允许子类化; 没有实现 Drop.
@@ -52,9 +52,7 @@ impl LookupPanel {
     }
 
     pub fn present(&self) {
-        let mtm = MainThreadMarker::from(self);
-        enter_accessory(mtm);
         self.center();
-        self.makeKeyAndOrderFront(None);
+        present_accessory(self);
     }
 }
