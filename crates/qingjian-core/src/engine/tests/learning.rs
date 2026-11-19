@@ -489,7 +489,7 @@ fn annotate_fills_only_known_words() {
     );
     let report = engine.annotate(&mut query.candidates);
     assert_eq!(report.hits, 1);
-    assert_eq!(report.total, 5);
+    assert_eq!(report.total, query.candidates.items.len());
     assert_eq!(
         query.candidates.items[0]
             .translation

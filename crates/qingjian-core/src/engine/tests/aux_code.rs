@@ -10,7 +10,7 @@ fn codes() -> Arc<dyn AuxCodeLookup> {
     Arc::new(
         AuxCodeTable::from_pairs([
             ("开发".to_owned(), "kf".to_owned()),
-            ("开发者".to_owned(), "kfz".to_owned()),
+            ("开饭".to_owned(), "kfz".to_owned()),
             ("开".to_owned(), "kh".to_owned()),
         ])
         .unwrap(),
@@ -63,7 +63,7 @@ fn trigger_enters_aux_without_filtering() {
         .map(|c| c.text.clone())
         .collect();
     assert_eq!(before, after);
-    assert!(after.contains(&"开发者".to_owned()));
+    assert!(after.contains(&"开饭".to_owned()));
 }
 
 /// 微软 / 搜狗双拼里能当韵母的 `;` 优先当韵母（`x;` = xing），不进辅码态。
@@ -107,11 +107,11 @@ fn each_code_letter_narrows_the_candidates() {
     engine.set_input("kaifa");
     engine.enter_aux();
     assert!(engine.push_aux_code('k'));
-    // 都不是完全匹配，按码长降序：kfz(3) 的 开发者 最先，剩下两条同长保持原序
-    assert_eq!(candidates(&engine), ["开发者", "开发", "开"]);
+    // 都不是完全匹配，按码长降序：kfz(3) 的 开饭 最先，剩下两条同长保持原序
+    assert_eq!(candidates(&engine), ["开饭", "开发", "开"]);
     assert!(engine.push_aux_code('f'));
     assert_eq!(engine.aux_code(), "kf");
-    assert_eq!(candidates(&engine), ["开发", "开发者"]);
+    assert_eq!(candidates(&engine), ["开发", "开饭"]);
     let query = engine.query().unwrap();
     assert_eq!(query.marked_text(), "kai'fa;kf");
     assert_eq!(
@@ -157,11 +157,11 @@ fn pure_pinyin_skips_first_code_unless_shown() {
 
     engine.set_aux_show(true);
     let query = engine.query().unwrap();
-    // 测试码表只有 开发=kf、开发者=kfz、开=kh：其余候选一律不带码
+    // 测试码表只有 开发=kf、开饭=kfz、开=kh：其余候选一律不带码
     for candidate in &query.candidates.items {
         let expected = match candidate.text.as_str() {
             "开发" => Some("kf"),
-            "开发者" => Some("kfz"),
+            "开饭" => Some("kfz"),
             "开" => Some("kh"),
             _ => None,
         };
@@ -210,10 +210,10 @@ fn backspace_widens_then_stays_in_aux_mode() {
     assert!(candidates(&engine).is_empty());
     assert!(engine.backspace());
     assert_eq!(engine.aux_code(), "kf");
-    assert_eq!(candidates(&engine), ["开发", "开发者"]);
+    assert_eq!(candidates(&engine), ["开发", "开饭"]);
     assert!(engine.backspace());
     assert_eq!(engine.aux_code(), "k");
-    assert_eq!(candidates(&engine), ["开发者", "开发", "开"]);
+    assert_eq!(candidates(&engine), ["开饭", "开发", "开"]);
     // 删到空：停在辅码态，`;` 仍在 preedit，候选全回来
     assert!(engine.backspace());
     assert!(engine.in_aux());
@@ -222,7 +222,7 @@ fn backspace_widens_then_stays_in_aux_mode() {
     assert_eq!(candidates(&engine), full);
     // 再敲字母重新筛——辅码态还活着
     assert!(engine.push_aux_code('k'));
-    assert_eq!(candidates(&engine), ["开发者", "开发", "开"]);
+    assert_eq!(candidates(&engine), ["开饭", "开发", "开"]);
     assert!(engine.backspace());
     assert!(engine.in_aux());
     // 空码段再按退格：退出辅码态，拼音一字不动
@@ -369,7 +369,7 @@ fn exact_code_matches_come_first_and_longer_codes_before_shorter_ones() {
         .unwrap(),
     );
     let mut engine = engine().with_aux_codes(vec![table]);
-    engine.set_input("kai");
+    engine.set_input("kaifa");
     engine.enter_aux();
     engine.push_aux_code('k');
     engine.push_aux_code('f');

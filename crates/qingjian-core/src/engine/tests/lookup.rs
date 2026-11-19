@@ -3,13 +3,13 @@
 use super::*;
 
 #[test]
-fn exact_word_first_then_longer_then_prefix_expansions_then_prefix_words() {
-    assert_eq!(texts("kaifa"), ["开发", "开放", "开饭", "开发者", "开"]);
+fn full_input_offers_matching_words_then_prefix_words() {
+    assert_eq!(texts("kaifa"), ["开发", "开放", "开饭", "开"]);
 }
 
 #[test]
 fn partial_last_syllable_expands() {
-    assert_eq!(texts("kaif"), ["开放", "开发", "开饭", "开发者", "开"]);
+    assert_eq!(texts("kaif"), ["开放", "开发", "开饭", "开"]);
 }
 
 #[test]
@@ -44,14 +44,7 @@ fn unparsable_tail_is_kept_aside() {
     assert_eq!(query.marked_text(), "kai'v");
     assert_eq!(query.candidates.items[0].text, "开");
 
-    let kaifa = query
-        .candidates
-        .items
-        .iter()
-        .find(|c| c.text == "开发")
-        .unwrap()
-        .clone();
-    engine.commit(&kaifa);
+    engine.commit(&query.candidates.items[0]);
     assert_eq!(engine.composition().text(), "v");
     // 剩下的 v 进表达式模式：没候选但也不报错
     assert!(engine.query().unwrap().candidates.items.is_empty());
@@ -103,7 +96,7 @@ fn marked_text_joins_best_segmentation_with_apostrophes() {
 
 #[test]
 fn prefix_words_appear_after_full_matches() {
-    // 开放 / 开饭 来自 `kai f… a zhe` 这种切分的前缀 `kai f…`，排在覆盖更多字母的 开发 之后
+    // 前缀只能在 kai'fa'zhe 的音节之间结束.
     let all = texts("kaifazhe");
     assert_eq!(&all[..2], ["开发者", "开发"]);
     assert_eq!(all.last().map(String::as_str), Some("开"));

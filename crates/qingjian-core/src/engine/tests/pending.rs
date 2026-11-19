@@ -57,6 +57,28 @@ fn raw_preedit_keeps_the_pending_word_in_front() {
 }
 
 #[test]
+fn phonetic_schemes_match_started_syllables_and_keep_the_rest_after_a_pick() {
+    let dict = Dictionary::parse(
+        "为人\twei ren\t20\n伪\twei\t1\n人\tren\t30\n为人民\twei ren min\t5000\n微热\twei re\t900\n",
+    )
+    .unwrap();
+    let mut engine = Engine::new(dict);
+    for (scheme, input, rest, longer) in [
+        (None, "weiren", "ren", "weirenm"),
+        (Some(Scheme::Xiaohe), "wwrf", "rf", "wwrfm"),
+    ] {
+        engine.set_shuangpin(scheme);
+        engine.set_input(input);
+        assert_eq!(texts_of(&engine), ["为人", "伪"]);
+        assert_eq!(commit_text(&mut engine, "伪"), "");
+        assert_eq!(engine.composition().text(), rest);
+        assert_eq!(commit_text(&mut engine, "人"), "伪人");
+        engine.set_input(longer);
+        assert_eq!(texts_of(&engine)[0], "为人民");
+    }
+}
+
+#[test]
 fn backspace_takes_the_selected_word_back_into_the_buffer() {
     let mut engine = engine();
     engine.set_input("kaifazhe");

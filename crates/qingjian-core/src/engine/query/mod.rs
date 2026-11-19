@@ -193,6 +193,14 @@ impl Engine {
         let mut scored = Vec::new();
         // 不同切分共享很多前缀（`zh g d o…` 的各种切法前几段一样），同一次查询里同一个模式只查一遍
         let mut memo: HashMap<String, Vec<Match<'_>>> = HashMap::new();
+        // 短词只能在拼音行显示的音节边界处截断, 例如 wei'ren 可以先选 wei.
+        // 整段仍查所有切分, 因此 xian 也可以选 xi'an.
+        let mut boundaries = Vec::new();
+        let mut end = 0;
+        for syllable in &segmentations[0].syllables {
+            end += syllable.text.len();
+            boundaries.push(end);
+        }
         for segmentation in &segmentations {
             let mut patterns = segmentation.patterns();
             let count = patterns.len();
@@ -207,7 +215,8 @@ impl Engine {
             let positions = expanded.positions();
             let abbreviated = abbreviated_count(&patterns);
             // 没有替代写法时每条命中都是敲的原音节，`penalty` 直接给 0（单字母简拼能命中几万条）
-            let hits = self.lookup_all(&positions);
+            // 每个已输入的音节只占一个词库位置, 末尾未完成的音节仍可按前缀匹配该位置.
+            let hits = self.lookup_exact_all(&positions);
             scored.reserve(hits.len());
             for hit in hits {
                 let full_last = last.complete
@@ -227,6 +236,9 @@ impl Engine {
             for prefix_len in (1..count).rev() {
                 let prefix = &patterns[..prefix_len];
                 let prefix_letters: usize = prefix.iter().map(|p| p.text.len()).sum();
+                if boundaries.binary_search(&prefix_letters).is_err() {
+                    continue;
+                }
                 let hits = memo
                     .entry(pattern_key(prefix))
                     .or_insert_with(|| self.lookup_exact_all(&positions[..prefix_len]));
@@ -706,18 +718,6 @@ impl Engine {
             }
         }
         expanded
-    }
-
-    /// 主词库与用户词一起查 (每个位置多种写法). 用户词是用户自己选过的, 排序上靠 weight 自然靠前.
-    pub(super) fn lookup_all(
-        &self,
-        positions: &[Vec<qingjian_dictionary::SyllablePattern<'_>>],
-    ) -> Vec<Match<'_>> {
-        let mut hits = self.dictionary.lookup_pattern_alt(positions);
-        for dictionary in self.all_dictionaries().into_iter().skip(1) {
-            hits.extend(dictionary.lookup_pattern_alt(positions));
-        }
-        hits
     }
 
     /// 只要音节数正好等于位置数的词，主词库与用户词一起查。
