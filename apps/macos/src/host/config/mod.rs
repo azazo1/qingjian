@@ -6,7 +6,7 @@ mod watch;
 pub(super) use text_replacements::TextReplacement;
 pub(super) use watch::ConfigWatch;
 
-use super::init::load_glossary;
+use super::init::{load_emoji_tables, load_glossary};
 use super::*;
 
 impl Host {
@@ -62,6 +62,7 @@ impl Host {
         self.window.set_font(&config.general.font);
         self.window.set_renderer(config.general.renderer);
         self.apply_learning_language(&config.general);
+        self.apply_emoji(&config.general);
         if self.input_log_enabled != Some(config.general.input_log) {
             self.input_log_enabled = Some(config.general.input_log);
             self.open_input_log(config.general.input_log);
@@ -145,6 +146,27 @@ impl Host {
                 self.learning_language = Some(language);
             }
             Err(error) => tracing::warn!(%error, "释义表加载失败，学习语言不变"),
+        }
+    }
+
+    /// emoji 开关变了就装 / 卸 emoji 表；表读不了时保持原样，只记日志。
+    fn apply_emoji(&mut self, general: &GeneralConfig) {
+        if general.emoji == self.emoji_enabled {
+            return;
+        }
+        if !general.emoji {
+            self.engine.set_emoji(None);
+            self.emoji_enabled = false;
+            tracing::info!("emoji 提示已关");
+            return;
+        }
+        match load_emoji_tables(&["emoji-zh.tsv", "emoji-en.tsv"]) {
+            Some(table) => {
+                tracing::info!(words = table.len(), "emoji 表已重新加载");
+                self.engine.set_emoji(Some(table));
+                self.emoji_enabled = true;
+            }
+            None => tracing::warn!("找不到 emoji 表，emoji 提示仍关着"),
         }
     }
 

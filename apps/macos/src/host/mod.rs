@@ -96,6 +96,9 @@ pub struct Host {
     /// 当前学习语言；`None` 为关（不显示译文）。
     learning_language: Option<Language>,
 
+    /// emoji 表装没装（`[general] emoji`）：开关变了才重新加载 / 卸掉。
+    emoji_enabled: bool,
+
     /// 打进包里的释义表语言，设置窗口按这个顺序列。
     languages: Vec<Language>,
 

@@ -173,8 +173,20 @@ fn load_vocabulary(user_dir: &Path, levels_dir: Option<&Path>) -> VocabularyBook
     vocabulary
 }
 
-/// 几张 emoji 表合成一张；坏的跳过。
-fn load_emoji(paths: &[std::path::PathBuf]) -> Option<EmojiTable> {
+/// 随包 emoji 表路径；`[general] emoji` 关着时为空（装配与热加载共用）。
+pub fn emoji_files(root: &Path, enabled: bool) -> Vec<PathBuf> {
+    if !enabled {
+        return Vec::new();
+    }
+    ["emoji-zh.tsv", "emoji-en.tsv"]
+        .into_iter()
+        .map(|name| root.join("assets/emoji").join(name))
+        .filter(|path| path.is_file())
+        .collect()
+}
+
+/// 读几张 emoji 表合成一张；坏的跳过，都读不了或没有表返回 `None`。
+pub fn load_emoji(paths: &[PathBuf]) -> Option<EmojiTable> {
     let mut merged: Option<EmojiTable> = None;
     for path in paths {
         match EmojiTable::from_path(path) {

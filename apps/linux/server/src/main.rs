@@ -53,10 +53,14 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
         english_glossary: glossary(Language::Chinese),
         english: paths::generated(&root, "english.tsv")
             .or_else(|| paths::asset(&root, "sample/english.tsv")),
-        emoji: ["emoji/emoji-zh.tsv", "emoji/emoji-en.tsv"]
-            .into_iter()
-            .filter_map(|n| paths::asset(&root, n))
-            .collect(),
+        emoji: if config.general.emoji {
+            ["emoji/emoji-zh.tsv", "emoji/emoji-en.tsv"]
+                .into_iter()
+                .filter_map(|n| paths::asset(&root, n))
+                .collect()
+        } else {
+            Vec::new()
+        },
         bundled_dicts_dir: Some(root.join("data/generated/dicts")),
         dictionaries: config.dictionaries.clone(),
         levels_dir: Some(root.join("assets/levels")),

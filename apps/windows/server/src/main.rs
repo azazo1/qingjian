@@ -50,11 +50,6 @@ fn generated(root: &Path, name: &str) -> Option<PathBuf> {
     existing(root.join("data/generated").join(name))
 }
 
-/// `<root>/assets/<rel>`，不存在为 `None`。
-fn asset(root: &Path, rel: &str) -> Option<PathBuf> {
-    existing(root.join("assets").join(rel))
-}
-
 fn existing(path: PathBuf) -> Option<PathBuf> {
     path.is_file().then_some(path)
 }
@@ -152,10 +147,7 @@ fn main() {
         glossary: glossary.clone(),
         english_glossary: glossary_file(&root, Language::Chinese),
         english: generated(&root, "english.tsv"),
-        emoji: ["emoji-zh.tsv", "emoji-en.tsv"]
-            .into_iter()
-            .filter_map(|name| asset(&root, &format!("emoji/{name}")))
-            .collect(),
+        emoji: assembly::emoji_files(&root, config.general.emoji),
         bundled_dicts_dir: bundled_dicts_dir.clone(),
         dictionaries: config.dictionaries.clone(),
         bundled_codes_dir: bundled_codes_dir.clone(),

@@ -14,6 +14,8 @@ pub(crate) enum Message {
     Wubi(bool),
     Traditional(bool),
     EnglishCandidates(bool),
+    /// 候选词后面跟不跟 emoji 提示。
+    Emoji(bool),
     ChineseFirst(bool),
     /// 中文模式下 Shift+字母：交给应用（缺省）还是进组句缓冲区。
     ShiftLetter(Option<usize>),

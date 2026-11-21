@@ -35,6 +35,9 @@ pub struct GeneralPage {
     /// 英文模式也给候选。
     english: Retained<NSButton>,
 
+    /// 候选词后面跟 emoji 提示。
+    emoji: Retained<NSButton>,
+
     /// 终端 / 编辑器里不给英文候选。
     english_off_in_apps: Retained<NSButton>,
 
@@ -169,6 +172,13 @@ impl GeneralPage {
             mtm,
             "Tab 或方向键选词；空格、回车、标点仍原样上屏敲的字母，不选词时与直接打字一样。",
         );
+        let emoji = checkbox(mtm, "候选词后面跟 emoji 提示", Setting::Emoji, target);
+        row_checkbox(layout, &emoji);
+        note(
+            layout,
+            mtm,
+            "ku 出「哭 😢 😭」，英文模式 smile 出 smile 🙂 😊；不勾就不再出 emoji 候选，其余候选不变。",
+        );
         let english_off_in_apps = checkbox(
             mtm,
             "但在终端和代码编辑器里不给",
@@ -280,6 +290,7 @@ impl GeneralPage {
             shuangpin_raw_preedit,
             traditional,
             english,
+            emoji,
             english_off_in_apps,
             chinese_first,
             shift_letter,
@@ -329,6 +340,7 @@ impl GeneralPage {
             .setEnabled(general.scheme().is_shuangpin());
         set_checked(&self.traditional, general.traditional);
         set_checked(&self.english, general.english_candidates);
+        set_checked(&self.emoji, general.emoji);
         set_checked(
             &self.english_off_in_apps,
             config.apps.has_english_candidates_off(),

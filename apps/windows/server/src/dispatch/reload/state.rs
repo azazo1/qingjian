@@ -77,6 +77,9 @@ pub(crate) struct ConfigReload {
     /// 已应用的学习语言（`None` 为关）。
     pub(super) applied_language: Option<Language>,
 
+    /// 已应用的 `[general] emoji`（emoji 候选开没开）。
+    pub(super) applied_emoji: bool,
+
     /// 最近加载的用户词库文件快照（路径、修改时间、长度）。
     pub(super) dictionary_files: Vec<(PathBuf, Option<SystemTime>, u64)>,
 

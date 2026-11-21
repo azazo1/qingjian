@@ -101,6 +101,9 @@ pub enum Setting {
     /// `[general] english_candidates`，勾选框。
     EnglishCandidates,
 
+    /// `[general] emoji`，勾选框：候选词后面跟不跟 emoji 提示。
+    Emoji,
+
     /// `[general] chinese_first`，勾选框：中英混输时中文候选排在英文词前。
     ChineseFirst,
 
@@ -225,6 +228,7 @@ impl Setting {
             Self::Layout => 12,
             Self::Preedit => 13,
             Self::EnglishCandidates => 14,
+            Self::Emoji => 76,
             Self::ChineseFirst => 42,
             Self::ShiftLetter => 50,
             Self::PunctuationFirst => 71,
@@ -296,6 +300,7 @@ impl Setting {
             12 => Self::Layout,
             13 => Self::Preedit,
             14 => Self::EnglishCandidates,
+            76 => Self::Emoji,
             42 => Self::ChineseFirst,
             50 => Self::ShiftLetter,
             71 => Self::PunctuationFirst,
@@ -383,6 +388,7 @@ mod tests {
             Setting::Layout,
             Setting::Preedit,
             Setting::EnglishCandidates,
+            Setting::Emoji,
             Setting::TranslationKeys,
             Setting::TranslationSecondKeys,
             Setting::TranslateSelectionKeys,

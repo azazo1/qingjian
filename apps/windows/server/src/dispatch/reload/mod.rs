@@ -107,6 +107,7 @@ impl Router {
             applied_aux_code: config.aux_code.clone(),
             dictionary_files,
             applied_language: assembly::learning_language(config),
+            applied_emoji: config.general.emoji,
             update: config.update.clone(),
             updates,
         });
@@ -164,6 +165,7 @@ impl Router {
 
     /// 应用新配置。学习语言变了换释义表（词汇等级表启动时已全装，不用换）。
     fn apply_config(&mut self, config: &Config) {
+        self.apply_emoji(config);
         self.engine.set_fuzzy(config.fuzzy);
         // 拼音侧与形码侧一起装配（双拼 / 注音 / 混输都在里面）
         self.reload_code_table(config.general.scheme(), config.general.wubi());
@@ -212,6 +214,39 @@ impl Router {
         if config.aux_code != reload.applied_aux_code {
             reload.applied_aux_code = config.aux_code.clone();
             self.reload_aux_codes();
+        }
+    }
+
+    /// `[general] emoji` 变了就装 / 卸 emoji 表；表找不到时保持原样，只记警告。
+    fn apply_emoji(&mut self, config: &Config) {
+        let Some(root) = self.reload.as_ref().map(|reload| reload.root.clone()) else {
+            return;
+        };
+        let applied = self
+            .reload
+            .as_ref()
+            .is_some_and(|reload| reload.applied_emoji);
+        if applied == config.general.emoji {
+            return;
+        }
+        if !config.general.emoji {
+            self.engine.set_emoji(None);
+            tracing::info!("emoji 提示已关");
+            if let Some(reload) = &mut self.reload {
+                reload.applied_emoji = false;
+            }
+            return;
+        }
+        let paths = assembly::emoji_files(&root, true);
+        match assembly::load_emoji(&paths) {
+            Some(table) => {
+                tracing::info!(words = table.len(), "emoji 表已重新加载");
+                self.engine.set_emoji(Some(table));
+                if let Some(reload) = &mut self.reload {
+                    reload.applied_emoji = true;
+                }
+            }
+            None => tracing::warn!("找不到 emoji 表，emoji 提示仍关着"),
         }
     }
 

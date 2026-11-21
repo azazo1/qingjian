@@ -226,6 +226,11 @@ impl Engine {
         self
     }
 
+    /// 换 emoji 表；`None` 不再出 emoji 候选（配置 `[general] emoji` 关掉时用）。
+    pub fn set_emoji(&mut self, table: Option<EmojiTable>) {
+        self.emoji = table;
+    }
+
     pub fn with_fuzzy(mut self, rules: FuzzyRules) -> Self {
         self.fuzzy = rules;
         self

@@ -90,7 +90,8 @@ pub fn init(mtm: MainThreadMarker, info: &BundleInfo) -> Result<(), HostError> {
     if let Some(words) = english {
         engine = engine.with_english(words);
     }
-    if let Some(table) = load_emoji_tables(&["emoji-zh.tsv", "emoji-en.tsv"]) {
+    let emoji_enabled = settings.config().general.emoji;
+    if emoji_enabled && let Some(table) = load_emoji_tables(&["emoji-zh.tsv", "emoji-en.tsv"]) {
         tracing::info!(words = table.len(), "emoji 表已加载");
         engine = engine.with_emoji(table);
     }
@@ -119,6 +120,7 @@ pub fn init(mtm: MainThreadMarker, info: &BundleInfo) -> Result<(), HostError> {
             applied_dictionaries: DictionariesConfig::default(),
             dictionary_list: Vec::new(),
             learning_language,
+            emoji_enabled,
             languages,
             version: version.to_owned(),
             build: info.build.clone(),

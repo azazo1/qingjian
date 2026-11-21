@@ -251,6 +251,8 @@ font = ""
 preedit = "both"
 # 英文模式（Caps Lock 亮着）是否给英文候选：Tab 或方向键选词，空格、回车、标点仍原样上屏敲的字母；false 就是纯直通
 english_candidates = true
+# 候选词后面是否跟 emoji 提示：ku 出「哭 😢 😭」，smile 出 smile 🙂 😊；false 就不再出 emoji 候选
+emoji = true
 
 # 繁体输出模式。开启后上屏繁体，不影响词库和个人词频的简体记录。
 traditional = false

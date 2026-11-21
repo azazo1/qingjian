@@ -22,6 +22,27 @@ fn english_words_bring_their_emoji_and_the_emoji_consumes_the_whole_input() {
 }
 
 #[test]
+fn set_emoji_none_turns_the_hint_off_and_back_on() {
+    let table = || EmojiTable::parse("开\t🔓\n").unwrap();
+    let mut engine = engine().with_emoji(table());
+    engine.set_input("kai");
+    let has_emoji = |engine: &mut Engine| {
+        engine
+            .query()
+            .unwrap()
+            .candidates
+            .items
+            .iter()
+            .any(|c| c.kind == CandidateKind::Emoji)
+    };
+    assert!(has_emoji(&mut engine));
+    engine.set_emoji(None);
+    assert!(!has_emoji(&mut engine));
+    engine.set_emoji(Some(table()));
+    assert!(has_emoji(&mut engine));
+}
+
+#[test]
 fn emoji_follow_their_word_and_consume_its_syllables() {
     let table = EmojiTable::parse("开发\t👨‍💻 🛠️ 🧑‍💻\n开\t🔓\n").unwrap();
     let mut engine = engine().with_emoji(table);
