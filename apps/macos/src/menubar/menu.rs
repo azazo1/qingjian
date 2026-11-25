@@ -25,6 +25,9 @@ pub struct InputMenu {
     /// 「有新版本 x.y.z…」，点了打开下载页；没有新版时隐藏。
     update: Retained<NSMenuItem>,
 
+    /// 「申请「辅助功能」权限…」: native popover 面板里上屏要用的系统授权, 点了打开系统设置.
+    permission: Retained<NSMenuItem>,
+
     /// 所有条目的 target，要和菜单活得一样久。
     _target: Retained<MenuTarget>,
 }
@@ -96,6 +99,16 @@ impl InputMenu {
             &target,
         ));
         // 可点的条目只能放在这一组：放到下面两个纯展示条目之间，IMK 会在每次按键后停用再新建会话，打不了字
+        let permission = action_item(
+            mtm,
+            &format!(
+                "申请「{}」权限…",
+                crate::imk::synthetic::permission_pane_name()
+            ),
+            Some(MenuAction::OpenPermissions),
+            &target,
+        );
+        menu.addItem(&permission);
         let update = action_item(mtm, "", Some(MenuAction::OpenDownload), &target);
         update.setHidden(true);
         menu.addItem(&update);
@@ -115,8 +128,20 @@ impl InputMenu {
             fuzzy,
             error,
             update,
+            permission,
             _target: target,
         }
+    }
+
+    /// 收不下写回文字的输入框 (Zen 的 native popover 面板等) 里上屏要靠系统授权: 这一行常驻, `missing` 时
+    /// 改成一句更醒目的问法. `pane` 是那一栏在当前系统版本上的名字 (macOS 27.3 起从「辅助功能」里拆出去了).
+    pub fn sync_permission(&self, missing: bool, pane: &str) {
+        let title = if missing {
+            format!("上屏需要「{pane}」权限…")
+        } else {
+            format!("申请「{pane}」权限…")
+        };
+        self.permission.setTitle(&NSString::from_str(&title));
     }
 
     /// 查到新版本就露出「有新版本」那一行，没有就藏起来。

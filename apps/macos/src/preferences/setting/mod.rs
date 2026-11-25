@@ -207,6 +207,9 @@ pub enum Setting {
     /// 「高级」页「清空输入日志」按钮.
     ClearInputLog,
 
+    /// 「高级」页「申请辅助功能权限」按钮: Zen 的 native popover 面板里上屏要用 (发合成键盘事件).
+    OpenAccessibilityPermission,
+
     /// 「关于」页「官网」按钮.
     OpenWebsite,
 
@@ -263,6 +266,7 @@ impl Setting {
             Self::ClearInputLog => 28,
             Self::OpenWebsite => 30,
             Self::OpenRepository => 31,
+            Self::OpenAccessibilityPermission => 77,
             Self::UpdateCheck => 53,
             Self::UpdateChannel => 54,
             Self::CheckUpdateNow => 55,
@@ -336,6 +340,7 @@ impl Setting {
             28 => Self::ClearInputLog,
             30 => Self::OpenWebsite,
             31 => Self::OpenRepository,
+            77 => Self::OpenAccessibilityPermission,
             53 => Self::UpdateCheck,
             54 => Self::UpdateChannel,
             55 => Self::CheckUpdateNow,
@@ -421,6 +426,7 @@ mod tests {
             Setting::PunctuationFirst,
             Setting::HorizontalGrid,
             Setting::ClearInputLog,
+            Setting::OpenAccessibilityPermission,
             Setting::OpenWebsite,
             Setting::OpenRepository,
             Setting::DictionaryEnabled(0),

@@ -84,7 +84,9 @@ impl<'a> TextClient<'a> {
     ///
     /// 已知场景：Zen 等 Gecko 浏览器开着 `widget.macos.native-popovers` 时，书签面板、扩展弹窗这类 native popover
     /// 里的输入框。输入视图没进 `_NSPopoverWindow` 的响应链，IMK 拿到的 client 背后没有编辑框：
-    /// `length` 是 `INT32_MAX`（2147483647）、`selectedRange` 是 NotFound（正常的空输入框是 `0` 与 `0+0`）。
+    /// `selectedRange` 是 NotFound (正常的空输入框是 `0` 与 `0+0`), `length` 一开始是 `INT32_MAX`
+    /// (2147483647), 后续系统版本上可能是 0 或别的值. 判据因此只看选区, `length` 只作旁证:
+    /// 正常文本框的选区总有有效位置, NotFound 说明背后没有编辑框.
     /// 按键交还应用时走的是应用自己的 `interpretKeyEvents:`，能正常出字（系统 ABC、Rime 的英文状态就是这样）。
     /// 见 zen-browser/desktop#12626。
     pub fn rejects_text(&self) -> bool {
@@ -94,7 +96,11 @@ impl<'a> TextClient<'a> {
                 msg_send![self.object, selectedRange],
             )
         };
-        length == i32::MAX as usize && selected.location == NSNotFound as usize
+        let rejects = selected.location == NSNotFound as usize || length == i32::MAX as usize;
+        if rejects {
+            tracing::debug!(length, selected = ?selected, "输入框收不下写回的文字");
+        }
+        rejects
     }
 
     /// 应用里当前选中的文字与它的范围（翻译用）。没有选区、应用不支持读文本、超过 `max_chars` 个字符都返回 `None`。

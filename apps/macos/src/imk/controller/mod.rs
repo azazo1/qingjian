@@ -244,7 +244,12 @@ impl QingjianInputController {
         // 修饰键事件不问 (它们不上屏, 切换键上屏的拼音照样用这一段组句的判断)
         let rejects = synthetic::rejects_for(composing || !key_down, || client.rejects_text());
         let client = client.with_rejects(rejects, rejects && synthetic::can_post());
-        host::with(|h| h.force_window_preedit = client.detached());
+        // 收不下的 client 拿不到行内 marked text: 拼音改画在候选窗口顶部. 以前只在能发合成事件时才这样,
+        // 没有授权时拼音反而哪儿都不显示, 用户连自己在打什么都没看见
+        host::with(|h| h.force_window_preedit = client.rejects());
+        // 收不下文字, 又发不了合成事件: 这一键的上屏只能退回 `insertText:` (多半被丢掉). 菜单里露出授权入口,
+        // 不然用户只看到「候选有词, 正文没字」, 不知道该去系统设置
+        host::with(|h| h.set_post_access_missing(client.rejects() && !client.detached()));
         let handled = self.route_event(event, client);
         if !client.detached() || !synthetic::has_pending() {
             return handled;

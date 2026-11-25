@@ -41,6 +41,8 @@ unsafe extern "C" {
     fn CGEventPost(tap: u32, event: CGEventRef);
     fn CGPreflightPostEventAccess() -> bool;
     fn CGRequestPostEventAccess() -> bool;
+    /// 走辅助功能 (AX) 的那套信任查询, 用来区分「辅助功能都没授」与「辅助功能授了但发按键事件仍被拒」.
+    fn AXIsProcessTrusted() -> bool;
 }
 
 #[link(name = "CoreFoundation", kind = "framework")]
@@ -142,12 +144,55 @@ pub fn can_post() -> bool {
     if unsafe { CGPreflightPostEventAccess() } {
         return true;
     }
-    if !REQUESTED.replace(true) {
-        tracing::warn!("没有辅助功能权限，发不了合成键盘事件，请求一次权限");
-        // SAFETY: 无参数。
-        unsafe { CGRequestPostEventAccess() };
+    // 两种缺权限分清楚: 连辅助功能都没授, 与辅助功能授了但发按键事件仍被拒. 后者在重新构建并安装输入法之后
+    // 常见 (adhoc 签名的 cdhash 变了, 系统设置里那条勾选对不上新二进制), 要让人去设置里重新授权.
+    // SAFETY: 无参数的纯查询函数.
+    let accessibility = unsafe { AXIsProcessTrusted() };
+    if !REQUESTED.get() {
+        tracing::warn!(
+            accessibility,
+            pane = permission_pane_name(),
+            "没有发送按键事件的权限, 合成事件上屏不可用, 请求一次权限"
+        );
+        request_access();
     }
     false
+}
+
+/// 系统版本是否至少 `major.minor`. macOS 27.3 起, 发按键事件的授权从「辅助功能」里拆了出来.
+pub fn system_at_least(major: isize, minor: isize) -> bool {
+    use objc2_foundation::{NSOperatingSystemVersion, NSProcessInfo};
+    NSProcessInfo::processInfo().isOperatingSystemAtLeastVersion(NSOperatingSystemVersion {
+        majorVersion: major,
+        minorVersion: minor,
+        patchVersion: 0,
+    })
+}
+
+/// 系统设置里给「发送按键事件」授权的面板名: macOS 27.3 起叫「系统与应用保护覆盖」, 之前与辅助功能共用一栏.
+pub fn permission_pane_name() -> &'static str {
+    if system_at_least(27, 3) {
+        "系统与应用保护覆盖"
+    } else {
+        "辅助功能"
+    }
+}
+
+/// 系统设置里那一栏的地址. macOS 27.3 起拆出去的那一栏还没有公开的锚点, 先打开「隐私与安全性」首页.
+pub fn permission_panel_url() -> &'static str {
+    if system_at_least(27, 3) {
+        "x-apple.systempreferences:com.apple.preference.security"
+    } else {
+        "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility"
+    }
+}
+
+/// 主动请求一次「发送按键事件」的权限: 系统设置里才会把青简列进那一栏, 并弹一次通知.
+pub fn request_access() {
+    REQUESTED.set(true);
+    // SAFETY: 无参数的纯查询 / 请求函数.
+    let granted = unsafe { CGRequestPostEventAccess() };
+    tracing::info!(granted, "请求发送按键事件的权限");
 }
 
 /// 把发件箱里的文字（以及排在后面的原按键）作为合成键盘事件发出去；什么都没攒就什么都不做。

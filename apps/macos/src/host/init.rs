@@ -145,6 +145,7 @@ pub fn init(mtm: MainThreadMarker, info: &BundleInfo) -> Result<(), HostError> {
             notice: None,
             preedit_mode: PreeditMode::default(),
             force_window_preedit: false,
+            post_access_missing: false,
             layout: LayoutMode::default(),
             horizontal_grid: false,
             english_candidates: true,

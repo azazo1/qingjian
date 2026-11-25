@@ -30,6 +30,9 @@ pub enum MenuAction {
 
     /// 打开下载页（菜单里「有新版本」那一行）。
     OpenDownload,
+
+    /// 打开系统设置里给青简授权「发送按键事件」的那一栏 (native popover 面板里上屏要用).
+    OpenPermissions,
 }
 
 impl MenuAction {
@@ -42,6 +45,7 @@ impl MenuAction {
             Self::OpenDownload => 5,
             Self::Restart => 6,
             Self::Lookup => 8,
+            Self::OpenPermissions => 9,
             Self::ToggleFuzzy(index) => FUZZY_TAG_BASE + index as NSInteger,
         }
     }
@@ -55,6 +59,7 @@ impl MenuAction {
             5 => Self::OpenDownload,
             6 => Self::Restart,
             8 => Self::Lookup,
+            9 => Self::OpenPermissions,
             _ => {
                 let index = usize::try_from(tag.checked_sub(FUZZY_TAG_BASE)?).ok()?;
                 (index < FuzzyRules::NAMES.len()).then_some(Self::ToggleFuzzy(index))?
@@ -77,6 +82,7 @@ mod tests {
             MenuAction::Lookup,
             MenuAction::OpenDownload,
             MenuAction::Restart,
+            MenuAction::OpenPermissions,
             MenuAction::ToggleFuzzy(0),
             MenuAction::ToggleFuzzy(FuzzyRules::NAMES.len() - 1),
         ];

@@ -95,6 +95,11 @@ impl Host {
             }
             MenuAction::Restart => self.restart(),
             MenuAction::OpenDownload => open_with_system(&[qingjian_update::DOWNLOAD_URL]),
+            MenuAction::OpenPermissions => {
+                // 先请求一次, 系统设置里才会把青简列进那一栏; 再把人送过去
+                crate::imk::synthetic::request_access();
+                open_with_system(&[crate::imk::synthetic::permission_panel_url()]);
+            }
         }
     }
 
@@ -552,6 +557,16 @@ impl Host {
                 if let Some(dir) = logging::log_dir() {
                     open_with_system(&[&dir.to_string_lossy()]);
                 }
+                return;
+            }
+            (Setting::OpenAccessibilityPermission, _) => {
+                // 先请求一次, 系统设置里才会把青简列进那一栏; 再把人送过去
+                crate::imk::synthetic::request_access();
+                open_with_system(&[crate::imk::synthetic::permission_panel_url()]);
+                let pane = crate::imk::synthetic::permission_pane_name();
+                self.preferences.set_status(&format!(
+                    "请在系统设置的「{pane}」里打开青简; 授权后点输入法菜单的「重启输入法」才生效"
+                ));
                 return;
             }
             (Setting::CopyDiagnostics, _) => {
