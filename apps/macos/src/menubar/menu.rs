@@ -98,7 +98,10 @@ impl InputMenu {
         // 可点的条目只能放在这一组：放到下面两个纯展示条目之间，IMK 会在每次按键后停用再新建会话，打不了字
         let permission = action_item(
             mtm,
-            "申请辅助权限…",
+            &format!(
+                "申请「{}」权限…",
+                crate::imk::synthetic::permission_pane_name()
+            ),
             Some(MenuAction::OpenPermissions),
             &target,
         );

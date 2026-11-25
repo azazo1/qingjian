@@ -27,11 +27,14 @@ impl AdvancedPage {
     pub fn build(layout: &mut Layout, mtm: MainThreadMarker, target: &PreferencesTarget) -> Self {
         let permit = button(
             mtm,
-            "申请辅助权限…",
+            &format!(
+                "申请「{}」权限…",
+                crate::imk::synthetic::permission_pane_name()
+            ),
             Setting::OpenAccessibilityPermission,
             target,
         );
-        layout.place(&permit, PAGE_PADDING, 160.0, ROW_HEIGHT + 4.0);
+        layout.place(&permit, PAGE_PADDING, 200.0, ROW_HEIGHT + 4.0);
         layout.next_row(ROW_HEIGHT + 4.0);
         note_full(
             layout,
