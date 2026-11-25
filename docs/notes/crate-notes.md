@@ -247,7 +247,7 @@ IMK 输入法, 源码按 `app / host / imk / candidates / menubar / preferences 
   `DecisionScorer` 只在主线程构造 (建 HTTP 客户端与运行时), 接上与本地模型同一条重排链路; 壳等结果的上限 (`RescoreMonitor::set_max_wait`) 跟着 `[decision] timeout_ms` 放宽 (多留一秒),
   本地模型仍用两秒缺省; "云服务" 页有开关, 后端, 接口地址与密钥框.
 - Zen 的 native popover 面板 (扩展弹窗 / 书签面板) 里收不下 `insertText:` / `setMarkedText:` 的 client: `imk/client.rs` 的 `TextClient::rejects_text` 判据是选区 NotFound (或 `length == INT32_MAX`), 命中后 `imk/synthetic.rs` 用 `CGEventKeyboardSetUnicodeString` 发合成键盘事件让应用自己插字, 事件回到青简由 `take_echo` 认出放行.
-  发事件要系统授权 (`CGPreflightPostEventAccess`); 没有授权时拼音回退画到候选窗顶部 (`Host::force_window_preedit`), 输入法菜单与偏好设置「高级」页给出「申请「辅助功能」权限…」入口 (`synthetic::request_access` 先 `CGRequestPostEventAccess` 再 open 系统设置那一栏), 授权后要重启输入法才生效 (preflight 结果按进程缓存).
+  发事件要系统授权 (`CGPreflightPostEventAccess`); 没有授权时拼音回退画到候选窗顶部 (`Host::force_window_preedit`), 输入法菜单与偏好设置「高级」页给出「申请辅助权限…」入口 (`synthetic::request_access` 先 `CGRequestPostEventAccess` 再 open 系统设置那一栏), 授权后要重启输入法才生效 (preflight 结果按进程缓存).
   adhoc 签名每次重新构建 cdhash 都会变, 系统设置里那条旧勾选对不上新二进制, 这是「权限看着还在却发不出事件」的常见原因, 要在设置里删掉青简再重新添加.
   macOS 27.3 把发按键事件的授权从「辅助功能」拆成「系统与应用保护覆盖」, 面板名与地址由 `synthetic::permission_pane_name` / `permission_panel_url` 按 `NSProcessInfo` 判断.
 - 端到端验证可用 `osascript` 的 System Events 往 TextEdit 发按键再读回文本（终端需要辅助功能权限；输入法得在中文模式）。

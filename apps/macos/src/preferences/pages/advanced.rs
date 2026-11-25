@@ -25,19 +25,18 @@ pub struct AdvancedPage {
 
 impl AdvancedPage {
     pub fn build(layout: &mut Layout, mtm: MainThreadMarker, target: &PreferencesTarget) -> Self {
-        let pane = crate::imk::synthetic::permission_pane_name();
         let permit = button(
             mtm,
-            &format!("申请「{pane}」权限…"),
+            "申请辅助权限…",
             Setting::OpenAccessibilityPermission,
             target,
         );
-        layout.place(&permit, PAGE_PADDING, 200.0, ROW_HEIGHT + 4.0);
+        layout.place(&permit, PAGE_PADDING, 160.0, ROW_HEIGHT + 4.0);
         layout.next_row(ROW_HEIGHT + 4.0);
         note_full(
             layout,
             mtm,
-            "Zen 等浏览器的扩展弹窗和书签面板收不下输入法写回的文字, 上屏要发合成键盘事件, 这项系统权限就是给它用的. 点一下会打开系统设置并请求授权, 授权后要点输入法菜单的「重启输入法」才生效.",
+            "Zen 等浏览器的扩展弹窗和书签面板上屏要发合成键盘事件, 需要这项系统权限; 授权后要点输入法菜单的「重启输入法」才生效.",
         );
         layout.space(GROUP_GAP);
         let open = button(

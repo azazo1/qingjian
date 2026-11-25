@@ -168,10 +168,6 @@ pub struct Host {
     /// 由 IMK 控制器按每一键的判断填 (见 `TextClient::rejects`).
     pub force_window_preedit: bool,
 
-    /// 收不下写回文字的输入框要发合成键盘事件才能上屏, 而系统拒绝了这件事 (没有「发送按键事件」的授权).
-    /// 为真时输入法菜单里多出一行引导用户去系统设置 (见 `InputMenu::sync_permission`).
-    pub post_access_missing: bool,
-
     /// 候选窗口竖排 / 横排（配置 `[general] layout`）。
     pub layout: LayoutMode,
 

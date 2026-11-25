@@ -9,17 +9,6 @@ pub use translation_job::TranslationJob;
 use super::*;
 
 impl Host {
-    /// 收不下写回文字的输入框 (Zen 的 native popover 面板等) 要发合成键盘事件才能上屏, 系统拒绝了这件事:
-    /// 在输入法菜单里露出授权入口. 按键路径每键都会调到它, 所以只在状态变化时动菜单.
-    pub fn set_post_access_missing(&mut self, missing: bool) {
-        if self.post_access_missing == missing {
-            return;
-        }
-        self.post_access_missing = missing;
-        self.menu
-            .sync_permission(missing, crate::imk::synthetic::permission_pane_name());
-    }
-
     /// 删掉当前页第 `offset` 格的候选：用户词整个删、词库词清学习。返回给用户看的一句话；那格没有候选返回 `None`。
     pub fn forget_candidate(&mut self, offset: usize) -> Option<String> {
         let index = self.session.index_on_page(offset)?;
